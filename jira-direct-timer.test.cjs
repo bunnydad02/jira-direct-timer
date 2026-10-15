@@ -18,12 +18,13 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     let id = 0;
     const context = {
         window, document: {body: element(), createElement: element, getElementById: () => null,
-            querySelector: () => ({content: 'PMA-OLD'})},
+            querySelector: selector => selector === '#summary-val' ? {textContent: 'Full issue title <safe text>'} : {content: 'PMA-OLD'}},
         location: {pathname: '/browse/DEMO-101'},
         localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }, removeItem: () => { state = null; }},
         Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval() {},
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
+            if (path.endsWith('?fields=summary')) return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
             if (options.method === 'POST') {
                 const body = JSON.parse(options.body);
                 posts.push({path, body});
@@ -91,11 +92,15 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(verified.state().issue, 'DEMO-101');
     assert.equal(verified.state().phase, 'saved');
     const switching = setup(running());
-    assert.equal(switching.nodes['[data-stop]'].textContent, 'Ukoncit a ulozit DEMO-102 (nic dalsiho nespoustet)');
+    assert.equal(switching.nodes['[data-stop]'].textContent, 'STOP');
+    assert.equal(switching.nodes['[data-start]'].textContent, 'START');
     await switching.click('start');
     assert.equal(switching.posts.length, 1);
     assert.equal(switching.state().phase, 'running');
     assert.equal(switching.state().issue, 'DEMO-101');
+    assert.equal(switching.state().title, 'Full issue title <safe text>');
+    assert.match(switching.nodes['[data-status]'].textContent, /Full issue title <safe text>/);
+    assert.ok(!switching.nodes['[data-status]'].textContent.includes('Bezi'));
     const short = running();
     short.started = 199991000;
     const minimum = setup(short);
@@ -120,7 +125,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(stopFailure.confirmations(), 0);
     const cancelOther = setup(running());
     assert.equal(cancelOther.nodes['[data-cancel]'].hidden, false);
-    assert.equal(cancelOther.nodes['[data-cancel]'].textContent, 'Zrusit DEMO-102');
+    assert.equal(cancelOther.nodes['[data-cancel]'].textContent, 'CANCEL');
     await cancelOther.click('cancel');
     assert.equal(cancelOther.state(), null);
     assert.equal(cancelOther.posts.length, 0);
@@ -128,7 +133,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(cancelOther.nodes['[data-cancel]'].hidden, true);
     const sameIssue = {...running(), issue: 'DEMO-101'};
     const cancelSame = setup(sameIssue);
-    assert.equal(cancelSame.nodes['[data-cancel]'].textContent, 'Zrusit');
+    assert.equal(cancelSame.nodes['[data-cancel]'].textContent, 'CANCEL');
     await cancelSame.click('cancel');
     assert.equal(cancelSame.state(), null);
     const saved = {...running(), ended: 200000000, phase: 'saved', worklogId: 'untouched'};
@@ -141,6 +146,12 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(cancelPending.nodes['[data-cancel]'].hidden, true);
     await cancelPending.click('cancel');
     assert.equal(cancelPending.state().phase, 'pending');
+    const titled = setup({...running(), title: 'Persisted full title'});
+    assert.match(titled.nodes['[data-status]'].textContent, /Persisted full title/);
+    const legacyTitle = setup(running());
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(legacyTitle.nodes['[data-status]'].textContent, /Other issue full title/);
+    assert.equal(legacyTitle.posts.length, 0);
     console.log('PASS: manual 30 min, active timer save order, current issue, invalid input, two failure stages, crash recovery, deduplication, task switching, one-minute minimum');
 })().catch(e => { console.error(e); process.exitCode = 1; });
 

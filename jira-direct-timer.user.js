@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.7
+// @version      1.8
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -19,7 +19,7 @@
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
     manualRow.style.cssText = 'margin-top:10px;margin-bottom:10px';
-    manualRow.innerHTML = '<label>Rucne minut: <input data-minutes type="number" min="1" step="1" placeholder="30" style="width:70px"></label> <button data-manual>Zapsat do tohoto ukolu</button>';
+    manualRow.innerHTML = '<label>ADD MINUTES <input data-minutes type="number" min="1" step="1" style="width:70px"></label> <button data-manual>Zapsat do tohoto ukolu</button>';
     panel.appendChild(manualRow);
     const status = panel.querySelector('[data-status]');
     const error = panel.querySelector('[data-error]');
@@ -34,6 +34,38 @@
     const manual = panel.querySelector('[data-manual]');
     let busy = false;
     let notice = '';
+    const titles = new Map();
+    const titleRequests = new Set();
+
+    function titleFor(value) {
+        if (value.title) return value.title;
+        if (titles.has(value.issue)) return titles.get(value.issue);
+        if (value.issue === issue()) {
+            const summary = document.querySelector('#summary-val');
+            if (summary && summary.textContent.trim()) {
+                const title = summary.textContent.trim();
+                titles.set(value.issue, title);
+                return title;
+            }
+        }
+        if (!titleRequests.has(value.issue)) {
+            titleRequests.add(value.issue);
+            request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}?fields=summary`)
+                .then(body => {
+                    if (typeof body.fields?.summary !== 'string') throw new Error('Jira nevratila nazev ukolu.');
+                    titles.set(value.issue, body.fields.summary);
+                    render();
+                })
+                .catch(e => {
+                    notice = e.message;
+                    render();
+                });
+        }
+        return '';
+    }
+    function newTimer(key, started) {
+        return {id: crypto.randomUUID(), issue: key, title: titleFor({issue: key}), started, ended: null, phase: 'running'};
+    }
 
     function read() {
         const raw = localStorage.getItem(KEY);
@@ -70,16 +102,19 @@
             const active = value && (value.phase !== 'saved' || queuedManual);
             const seconds = value ? (value.phase === 'saved' && Number.isFinite(value.recordedSeconds) ? value.recordedSeconds : duration(value)) : 0;
             const clock = [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
-            status.textContent = value ? `${value.issue} | ${clock}\n${{running: 'Bezi', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[value.phase]}` : 'Pripraveno. Pred Start zastav jine stopky.';
+            const title = value ? titleFor(value) : '';
+            const stateText = value ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[value.phase] : '';
+            status.style.overflowWrap = 'anywhere';
+            status.textContent = value ? `${value.issue} | ${clock}${title ? `\n${title}` : ''}${stateText ? `\n${stateText}` : ''}` : 'Pripraveno. Pred Start zastav jine stopky.';
             if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             const switching = active && value.issue !== issue();
             start.disabled = busy || !issue() || !!queuedManual || (!!active && !switching);
-            start.textContent = switching ? `Prepnout na ${issue()} (ulozi ${value.issue})` : 'Start na tomto ukolu';
+            start.textContent = 'START';
             stop.disabled = busy || !value || value.phase !== 'running';
-            stop.textContent = value ? `Ukoncit a ulozit ${value.issue} (nic dalsiho nespoustet)` : 'Ukoncit a ulozit (nic dalsiho nespoustet)';
+            stop.textContent = 'STOP';
             cancel.hidden = !value || value.phase !== 'running';
             cancel.disabled = busy || cancel.hidden;
-            cancel.textContent = value && value.issue !== issue() ? `Zrusit ${value.issue}` : 'Zrusit';
+            cancel.textContent = 'CANCEL';
             save.disabled = busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual));
             panel.querySelector('[data-save-row]').hidden = !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual);
             save.textContent = value && value.phase === 'pending' ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
@@ -152,10 +187,10 @@
             old.nextIssue = key;
             write(old);
             await saveEntry(old);
-            write({id: crypto.randomUUID(), issue: key, started: old.ended, ended: null, phase: 'running'});
+            write(newTimer(key, old.ended));
             return;
         }
-        write({id: crypto.randomUUID(), issue: key, started: Date.now(), ended: null, phase: 'running'});
+        write(newTimer(key, Date.now()));
     });
     stop.onclick = () => act(async () => {
         const value = read();
@@ -187,7 +222,7 @@
         const old = read();
         if (old && (old.phase === 'pending' || old.manualNext)) throw new Error('Nejprve over predchozi zapis.');
         const end = Date.now();
-        const entry = {id: crypto.randomUUID(), issue: key, started: end - count * 60000, ended: end, phase: 'stopped', manual: true};
+        const entry = {...newTimer(key, end - count * 60000), ended: end, phase: 'stopped', manual: true};
         if (old && old.phase !== 'saved') {
             if (old.phase === 'running') {
                 old.ended = end;
@@ -234,7 +269,7 @@
         if (!(value && value.phase === 'saved' && value.manualNext)) await saveEntry(value);
         await finishManual(value);
         if (value.phase === 'saved' && value.nextIssue) {
-            write({id: crypto.randomUUID(), issue: value.nextIssue, started: value.ended, ended: null, phase: 'running'});
+            write(newTimer(value.nextIssue, value.ended));
         }
     });
     window.addEventListener('storage', event => { if (event.key === KEY) render(); });

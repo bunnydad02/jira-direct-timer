@@ -7,6 +7,14 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.8: Vyplnene navrhy z textoveho katalogu jsou zapracovane.
+  Jednotne START take prepina na otevreny ukol a uklada predchozi.
+  STOP uklada a ukoncuje mereni, CANCEL ho rusi bez ulozeni.
+  Pole ADD MINUTES je bez vychoziho prikladu.
+  Stav zobrazuje take cely nazev mereneho ukolu, vcetne po prechodu jinam.
+  Nazev se cte ze stranky; pro starsi zaznamy na jinem ukolu z Jira API.
+  Samostatny text "Bezi" se nezobrazuje.
+  Nevyplnene polozky katalogu zustaly beze zmeny.
 - Verze 1.7: "Zrusit" je viditelne pouze pri bezicich stopkach.
   Na jinem ukolu obsahuje take klic beziciho ukolu (napr. "Zrusit DEMO-103").
   Bez potvrzeni zrusi rozpracovane mereni v prohlizeci, nic nezapise do Jiry
