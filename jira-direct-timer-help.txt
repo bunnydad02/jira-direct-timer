@@ -4,9 +4,14 @@ Instalace:
 1. V Tampermonkey vytvor novy skript.
 2. Nahrad cely obsah souborem jira-direct-timer.user.js a uloz Ctrl+S.
 3. Povol rozsireni pristup k https://jira.alza.cz a pouzivani uzivatelskych skriptu.
-4. Obnov stranku ukolu. Vpravo dole se objevi "Jira stopky (bez Clockify)".
+4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.4: Start je bez potvrzovaciho dialogu.
+  "Zastavit a ulozit" zastavi mereni a rovnou zapise worklog bez dialogu.
+  Minimum je stale 1 minuta i pri okamzitem zastaveni.
+  Tlacitko Ulozit / Overit je viditelne jen pri nedokoncenem zapisu.
+  Rucni zadani minut si ponechava vlastni potvrzeni.
 - Verze 1.3: Pole "Rucne minut" prijima kladne cele minuty (napr. 30).
   Otevri cilovy ukol a klikni "Zapsat do tohoto ukolu". Potvrzeni uvadi klic ukolu.
   Rucni interval konci okamzikem potvrzeni a zacina o zadane minuty drive.
@@ -28,15 +33,13 @@ Pouziti:
   Pri nejistem vysledku se POST neopakuje. Overeni nalezeneho worklogu
   dokonci rozpracovane prepnuti; cilovy ukol je ulozen spolu s casem zastaveni.
 - Nejprve zastav jine stopky, vcetne Clockify. Tyto stopky Clockify neridi.
-- Na otevrenem ukolu klikni Start a potvrd spravny klic ukolu.
-- Po praci klikni Zastavit. To jeste nevytvori pracovni zaznam.
-- Klikni Ulozit do Jira worklogu a potvrd delku a ukol.
+- Na otevrenem ukolu klikni Start.
+- Po praci klikni Zastavit a ulozit. Zapis probehne automaticky.
 - Odhad zbyvajici prace zustane nezmeneny.
 - Na overene instanci Jira byl 9sekundovy zapis odmitnut.
   Skript proto odesila nejmene jednu minutu, vcetne kratsich mereni.
 - Overeny zapis 61 sekund Jira ulozila jako 60 sekund.
-  Pred potvrzenim se proto zobrazi pocet celych minut, ktere budou zapsany;
-  zbyvajici sekundy se nezapisi.
+  U delsich mereni se ukladaji cele minuty; zbyvajici sekundy se nezapisi.
 - Zaznamy se ukladaji primo do Jiry, NE do Clockify.
   Nezapisuj pak stejny cas znovu pres Clockify.
 

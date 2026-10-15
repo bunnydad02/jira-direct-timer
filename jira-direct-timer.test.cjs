@@ -5,6 +5,7 @@ const source = fs.readFileSync(`${__dirname}\\jira-direct-timer.user.js`, 'utf8'
 
 function setup(initial, failureAt = 0, input = '30', existing = false) {
     let state = initial;
+    let confirmations = 0;
     const posts = [];
     const nodes = {};
     function element() {
@@ -19,7 +20,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
             querySelector: () => ({content: 'PMA-OLD'})},
         location: {pathname: '/browse/DEMO-101'},
         localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }},
-        Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => true, setInterval() {},
+        Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval() {},
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
             if (options.method === 'POST') {
@@ -34,7 +35,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     };
     vm.runInNewContext(source, context);
     nodes['[data-minutes]'].value = input;
-    return {nodes, posts, state: () => state, click: name => nodes[`[data-${name}]`].onclick()};
+    return {nodes, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick()};
 }
 const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended: null, phase: 'running'});
 (async () => {
@@ -97,6 +98,23 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     const minimum = setup(short);
     await minimum.click('start');
     assert.equal(minimum.posts[0].body.timeSpentSeconds, 60);
+    const fresh = setup(null);
+    await fresh.click('start');
+    assert.equal(fresh.state().phase, 'running');
+    assert.equal(fresh.confirmations(), 0);
+    await fresh.click('stop');
+    assert.equal(fresh.posts.length, 1);
+    assert.equal(fresh.posts[0].body.timeSpentSeconds, 60);
+    assert.equal(fresh.state().phase, 'saved');
+    assert.equal(fresh.confirmations(), 0);
+    assert.equal(fresh.nodes['[data-save-row]'].hidden, true);
+    const stopFailure = setup(running(), 1);
+    await stopFailure.click('stop');
+    assert.equal(stopFailure.state().phase, 'pending');
+    assert.equal(stopFailure.nodes['[data-save-row]'].hidden, false);
+    await stopFailure.click('save');
+    assert.equal(stopFailure.posts.length, 1);
+    assert.equal(stopFailure.confirmations(), 0);
     console.log('PASS: manual 30 min, active timer save order, current issue, invalid input, two failure stages, crash recovery, deduplication, task switching, one-minute minimum');
 })().catch(e => { console.error(e); process.exitCode = 1; });
 
