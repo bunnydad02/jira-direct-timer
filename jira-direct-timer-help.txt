@@ -7,11 +7,13 @@ Instalace:
 4. Obnov stranku ukolu. Vpravo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
-- Verze 1.1: Pri prechodu na jiny ukol klikni "Prepnout na ...".
+- Verze 1.2: Pri prechodu na jiny ukol klikni "Prepnout na ...".
   Predchozi stopky se automaticky zastavi a ulozi do Jiry bez dalsiho potvrzeni.
   Nove stopky navazuji od okamziku zastaveni predchozich, bez cekani na API.
   Pouhe otevreni jineho ukolu mereni neprepina.
-  Pokud predchozi mereni nema minutu, prepnuti se odmitne a puvodni bezi dal.
+  Mereni kratsi nez minuta se na prani uzivatele ulozi jako 1 minuta.
+  Komentar worklogu uvadi skutecne merenou delku a navyseni na minimum.
+  Pri rychlem prepinani muze soucet vykazaneho casu presahnout realny cas.
   Pri chybe zapisu se nove stopky nespusti a predchozi zaznam zustane ulozeny.
   Pri nejistem vysledku se POST neopakuje. Overeni nalezeneho worklogu
   dokonci rozpracovane prepnuti; cilovy ukol je ulozen spolu s casem zastaveni.
@@ -21,7 +23,7 @@ Pouziti:
 - Klikni Ulozit do Jira worklogu a potvrd delku a ukol.
 - Odhad zbyvajici prace zustane nezmeneny.
 - Na overene instanci Jira byl 9sekundovy zapis odmitnut.
-  Skript proto nepovoli novy zapis pod jednu minutu a cas nenavysuje.
+  Skript proto odesila nejmene jednu minutu, vcetne kratsich mereni.
 - Overeny zapis 61 sekund Jira ulozila jako 60 sekund.
   Pred potvrzenim se proto zobrazi pocet celych minut, ktere budou zapsany;
   zbyvajici sekundy se nezapisi.
