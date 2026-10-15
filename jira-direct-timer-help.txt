@@ -7,6 +7,9 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.6: Tlacitko ukonceni uvadi konkretni ukol:
+  "Ukoncit a ulozit DEMO-103 (nic dalsiho nespoustet)".
+  Ulozi pouze bezici ukol, nespusti stopky na prave otevrenem ukolu.
 - Verze 1.4: Start je bez potvrzovaciho dialogu.
   "Zastavit a ulozit" zastavi mereni a rovnou zapise worklog bez dialogu.
   Minimum je stale 1 minuta i pri okamzitem zastaveni.

@@ -90,6 +90,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(verified.state().issue, 'DEMO-101');
     assert.equal(verified.state().phase, 'saved');
     const switching = setup(running());
+    assert.equal(switching.nodes['[data-stop]'].textContent, 'Ukoncit a ulozit DEMO-102 (nic dalsiho nespoustet)');
     await switching.click('start');
     assert.equal(switching.posts.length, 1);
     assert.equal(switching.state().phase, 'running');

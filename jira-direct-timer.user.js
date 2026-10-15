@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.5
+// @version      1.6
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -72,6 +72,7 @@
             start.disabled = busy || !issue() || !!queuedManual || (!!active && !switching);
             start.textContent = switching ? `Prepnout na ${issue()} (ulozi ${value.issue})` : 'Start na tomto ukolu';
             stop.disabled = busy || !value || value.phase !== 'running';
+            stop.textContent = value ? `Ukoncit a ulozit ${value.issue} (nic dalsiho nespoustet)` : 'Ukoncit a ulozit (nic dalsiho nespoustet)';
             save.disabled = busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual));
             panel.querySelector('[data-save-row]').hidden = !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual);
             save.textContent = value && value.phase === 'pending' ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
