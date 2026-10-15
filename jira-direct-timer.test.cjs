@@ -187,4 +187,3 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(legacyTitle.posts.length, 0);
     console.log('PASS: manual 30 min, active timer save order, current issue, invalid input, two failure stages, crash recovery, deduplication, task switching, one-minute minimum');
 })().catch(e => { console.error(e); process.exitCode = 1; });
-

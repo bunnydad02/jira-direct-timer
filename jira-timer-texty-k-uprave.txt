@@ -1,0 +1,203 @@
+TEXTY JIRA STOPEK 1.7 K UPRAVE
+=============================
+Vypln radky "NOVE:". Prazdny radek = ponechat puvodni text.
+Pokud chces text odstranit, napis do NOVE: [SMAZAT].
+Zastupne promenne v {zavorkach} ponech tam, kde je chces zobrazit.
+Skript se zatim nemeni. Soubor obsahuje i malo caste chybove stavy.
+Texty jsou opsane ze skriptu vcetne soucasneho psani bez diakritiky.
+
+A. HLAVICKA A OVLADANI
+---------------------
+[01] Nadpis panelu
+NYNI: Jira stopky (bez Clockify)
+NOVE:
+
+[02] Start (na otevrenem ukolu)
+NYNI: Start na tomto ukolu
+NOVE: START
+
+[03] Prepnuti: {cilovyUkol} je otevreny, {beziciUkol} se uklada
+NYNI: Prepnout na {cilovyUkol} (ulozi {beziciUkol})
+NOVE: /* tuhle celou volbu prostě zmažema, bude jen jedno start co uloží aktivní timer a spuít rovnou nový */ 
+
+[04] Ukonceni s ulozenim, kdyz existuje stav mereni
+NYNI: Ukoncit a ulozit {ukol} (nic dalsiho nespoustet)
+NOVE: STOP
+
+[05] Ukonceni bez existujiciho mereni (neaktivni tlacitko)
+NYNI: Ukoncit a ulozit (nic dalsiho nespoustet)
+NOVE: STOP
+
+[06] Zruseni bez ulozeni, na stejnem ukolu
+NYNI: Zrusit
+NOVE: CANCEL
+
+[07] Zruseni bez ulozeni, na jinem ukolu
+NYNI: Zrusit {beziciUkol}
+NOVE: CANCEL
+
+[08] Dodatecne ulozeni nedokonceneho zaznamu
+NYNI: Ulozit do Jira worklogu
+NOVE: 
+
+[09] Overeni nejisteho zapisu
+NYNI: Overit predchozi zapis (bez opakovani)
+NOVE:
+
+[10] Popisek pole pro manualni zadani
+NYNI: Rucne minut:
+NOVE: ADD MINUTES
+
+[11] Priklad uvnitr prazdneho ciselneho pole (placeholder)
+NYNI: 30
+NOVE: /* zde prosím nic */
+
+[12] Rucni zapis do otevreneho ukolu
+NYNI: Zapsat do tohoto ukolu
+NOVE: 
+
+B. STAV MERENI
+--------------
+[13] Radek s ukolem a casem; {cas} ma format HH:MM:SS
+NYNI: {ukol} | {cas}
+NOVE: /* zde chci i nadpis úkolu celý title v html to asi bude */
+
+[14] Stav: bezi
+NYNI: Bezi
+NOVE: /* smaž, nechci */
+
+[15] Stav: zastaveno, dosud neulozeno
+NYNI: Zastaveno, zatim neulozeno
+NOVE:
+
+[16] Stav: neni jiste, zda server zapis prijal
+NYNI: Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.
+NOVE:
+
+[17] Stav: ulozeno
+NYNI: Ulozeno do Jiry
+NOVE:
+
+[18] Vychozi stav bez zaznamu
+NYNI: Pripraveno. Pred Start zastav jine stopky.
+NOVE:
+
+[19] Dodatecny radek pri cekajicim rucnim zadani
+NYNI: Ceka rucni zapis do {ukol}. Dokonci tlacitkem Ulozit / Overit.
+NOVE:
+
+C. CHYBOVE ZPRAVY
+----------------
+[20] Poskozena ulozena data
+NYNI: Ulozeny stav stopek je poskozeny. Nemaz data; je nutna kontrola.
+NOVE:
+
+[21] Neplatne datum
+NYNI: Neplatny cas zacatku.
+NOVE:
+
+[22] Chyba API; {kod} je HTTP status a {podrobnosti} obsahuje odpoved serveru
+NYNI: Jira HTTP {kod}: {podrobnosti}
+NOVE:
+
+[23] Neplatny tvar seznamu worklogu
+NYNI: Neocekavana odpoved Jira worklogu.
+NOVE:
+
+[24] Nedokoncene strankovani seznamu worklogu
+NYNI: Jira nevratila vsechny zaznamy. Zapis nebyl opakovan.
+NOVE:
+
+[25] Prohlizec bez Web Locks API
+NYNI: Prohlizec nepodporuje zamykani mezi kartami. Pouzij standardni Jira Log work.
+NOVE:
+
+[26] Prave probiha operace v jine karte
+NYNI: Stopky prave meni jina karta. Zkus pozdeji.
+NOVE:
+
+[27] Spolecny dovetek za chybami operaci (na novem radku)
+NYNI: Cas zustava ulozeny v tomto prohlizeci. Neopakuj zapis jinym zpusobem bez kontroly duplicit.
+NOVE:
+
+[28] Stranka neni konkretni ukol; spolecne pro Start i rucni zapis
+NYNI: Otevri konkretni ukol Jiry.
+NOVE:
+
+[29] Start blokovany rozpracovanym rucnim zapisem
+NYNI: Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit.
+NOVE:
+
+[30] Start na ukolu, ktery uz ma rozpracovane mereni
+NYNI: Tento ukol uz ma rozpracovane stopky.
+NOVE:
+
+[31] Pokus o zastaveni nebo zruseni nebezicich stopek
+NYNI: Stopky uz nebezi.
+NOVE:
+
+[32] Neplatny rucni pocet minut
+NYNI: Zadej kladny cely pocet minut.
+NOVE:
+
+[33] Rucni zapis blokovany predchozi nedokoncenou operaci
+NYNI: Nejprve over predchozi zapis.
+NOVE:
+
+[34] Ukladani bez zastaveneho nebo cekajiciho zaznamu
+NYNI: Neni co ulozit.
+NOVE:
+
+[35] Nejisty zapis nebyl nalezen; skript ho automaticky neopakuje
+NYNI: Zapis zatim nebyl nalezen. Automaticky ho neopakuji; over Work log v Jire.
+NOVE:
+
+[36] Odpoved po vytvoreni neobsahuje ID worklogu
+NYNI: Jira nevratila ID noveho worklogu. Over predchozi zapis.
+NOVE:
+
+D. KOMENTARE UKLADANE DO JIRA WORKLOGU
+------------------------------------
+Nejde o texty panelu. Zmena ovlivni jen budouci zaznamy, ne existujici.
+
+[37] Komentar merene prace
+NYNI: Prace na ukolu (Jira stopky)
+NOVE:
+
+[38] Komentar rucne zadane prace
+NYNI: Rucni vykaz (Jira stopky)
+NOVE:
+
+[39] Dodatek pri mereni pod 1 minutu; {sekundy} je skutecne mereny cas
+NYNI: Mereno {sekundy} s; ulozeno minimum 1 minuta.
+NOVE:
+
+[40] Technicka znacka na samostatnem radku komentare
+NYNI: [jira-direct-timer:{id}]
+NOVE: [TECHNICKE - NEMENIT]
+POZNAMKA: Slouzi k ochrane pred duplicitami, neni to bezny uzivatelsky popisek.
+
+E. NAZEV SKRIPTU V TAMPERMONKEY
+-------------------------------
+[41] Nazev
+NYNI: Jira direct worklog timer
+NOVE:
+
+[42] Popis
+NYNI: Persistent stopwatch that saves directly to Jira, without Clockify.
+NOVE:
+
+F. POCATECNI TEXT PREPSANY PRI PRVNIM VYKRESLENI
+---------------------------------------------
+[43] Vychozi HTML tlacitka Stop; behem inicializace se prepise textem 04/05
+NYNI: Zastavit a ulozit
+NOVE:
+
+G. TEXTY, KTERE NEJSOU PEVNE DANE SKRIPTEM
+---------------------------------------
+- Odpovedi Jiry v {podrobnosti} (polozka 22).
+- Chyby site, prohlizece, JSON nebo localStorage; ukazuje se jejich e.message.
+- Nativni validacni napoveda ciselneho pole zavisi na prohlizeci.
+- Cisla ukolu, cas HH:MM:SS, ID zaznamu a HTTP statusy jsou dynamicka data.
+Tyto zpravy nelze jednotlive predem vypsat; lze upravit jejich obal
+(polozky 22 a 27). Zadny potvrzovaci dialog uz verze 1.7 neobsahuje.

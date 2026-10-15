@@ -100,4 +100,3 @@ Overeni 15. 10. 2026:
 - Start, stop a preziti obnoveni stranky: overeno v prihlasene Jire.
 - Ochrana pred duplicitou: overena se simulovanou odpovedi, bez druheho POST.
 - Identifikatory skutecneho diagnostickeho zapisu jsou zamerne vynechany.
-
