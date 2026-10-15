@@ -1,0 +1,46 @@
+JIRA STOPKY BEZ CLOCKIFY
+
+Instalace:
+1. V Tampermonkey vytvor novy skript.
+2. Nahrad cely obsah souborem jira-direct-timer.user.js a uloz Ctrl+S.
+3. Povol rozsireni pristup k https://jira.alza.cz a pouzivani uzivatelskych skriptu.
+4. Obnov stranku ukolu. Vpravo dole se objevi "Jira stopky (bez Clockify)".
+
+Pouziti:
+- Nejprve zastav jine stopky, vcetne Clockify. Tyto stopky Clockify neridi.
+- Na otevrenem ukolu klikni Start a potvrd spravny klic ukolu.
+- Po praci klikni Zastavit. To jeste nevytvori pracovni zaznam.
+- Klikni Ulozit do Jira worklogu a potvrd delku a ukol.
+- Odhad zbyvajici prace zustane nezmeneny.
+- Na overene instanci Jira byl 9sekundovy zapis odmitnut.
+  Skript proto nepovoli novy zapis pod jednu minutu a cas nenavysuje.
+- Overeny zapis 61 sekund Jira ulozila jako 60 sekund.
+  Pred potvrzenim se proto zobrazi pocet celych minut, ktere budou zapsany;
+  zbyvajici sekundy se nezapisi.
+- Zaznamy se ukladaji primo do Jiry, NE do Clockify.
+  Nezapisuj pak stejny cas znovu pres Clockify.
+
+Trvalost a omezeni:
+- Start, konec a stav zapisu zustavaji v localStorage tohoto prohlizece
+  pro jira.alza.cz. Obnoveni stranky nebo zavreni karty cas neztrati.
+- Pri prechodu na jiny ukol zustavaji stopky spojene s puvodnim ukolem.
+- Pouzivej stale stejny profil prohlizece. Nemaz data webu behem mereni.
+- Je podporovan jeden rozpracovany casovac na tento profil a web.
+- Behem rozpracovaneho zaznamu nemen prihlaseneho uzivatele Jiry.
+- Zamykani mezi kartami vyzaduje prohlizec s Web Locks API.
+- Po nejasnem vysledku odeslani se zapis automaticky neopakuje.
+  Tlacitko Overit predchozi zapis pouze vyhleda unikatni znacku ve worklogu.
+  Nenajde-li ji, je nutna kontrola v Jire; skript nevytvori druhy zapis.
+- Chyby API se zobrazuji v panelu. Zadny API klic neni potreba.
+
+Clockify:
+Pri diagnostice jeho API vratilo HTTP 429 s vysvetlenim:
+"You have reached the limit of 30 requests per hour allowed on a Free plan.
+To increase the rate limit please upgrade your workspace or wait for one hour."
+Tyto Jira stopky omezeni Clockify neobchazeji; pouzivaji nezavislou evidenci Jiry.
+
+Overeni 15. 10. 2026:
+- Start, stop a preziti obnoveni stranky: overeno v prihlasene Jire.
+- Ochrana pred duplicitou: overena se simulovanou odpovedi, bez druheho POST.
+- Identifikatory skutecneho diagnostickeho zapisu jsou zamerne vynechany.
+
