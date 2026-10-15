@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.10
+// @version      1.11
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -18,9 +18,15 @@
     styles.textContent = `
         #jira-direct-timer {position:fixed;left:20px;bottom:20px;z-index:10000;width:240px;max-width:calc(100vw - 40px);box-sizing:border-box;padding:14px;border:1px solid #e4b9b9;border-radius:12px;background:#fff2f2;color:#253249;box-shadow:0 6px 24px #172b4d24;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
         #jira-direct-timer[data-running="true"] {background:#effaf2;border-color:#a6d8b4}
+        #jira-direct-timer[data-other="true"] {background:#edf4ff;border-color:#9abce8}
         #jira-direct-timer strong {display:block;font-size:12px;font-weight:600;color:#526078;margin-bottom:10px}
         #jira-direct-timer [data-clock] {display:block;font-size:34px;line-height:1.2;font-weight:750;letter-spacing:1px;font-variant-numeric:tabular-nums;color:#8d3030;margin:4px 0 8px}
         #jira-direct-timer[data-running="true"] [data-clock] {color:#176538}
+        #jira-direct-timer[data-other="true"] [data-clock] {color:#20559a}
+        #jira-direct-timer [data-measuring] {font-size:14px;font-weight:750;color:#20559a;overflow-wrap:anywhere}
+        #jira-direct-timer a[data-issue],#jira-direct-timer a[data-title],#jira-direct-timer a[data-measuring] {display:block;color:inherit;text-decoration:none}
+        #jira-direct-timer a[data-measuring] {color:#20559a}
+        #jira-direct-timer a:focus-visible {outline:2px solid #0052cc;outline-offset:2px}
         #jira-direct-timer [data-issue] {font-weight:700;font-size:13px}
         #jira-direct-timer [data-title] {font-size:12px;margin-bottom:8px;overflow-wrap:anywhere}
         #jira-direct-timer [data-status] {font-size:11px;color:#526078;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -43,7 +49,7 @@
         #jira-direct-timer [data-error]:not(:empty) {margin-top:8px}
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<strong>Jira stopky (bez Clockify)</strong><div data-issue></div><time data-clock>00:00:00</time><div data-title></div><div data-link-row style="overflow-wrap:anywhere"><a data-link></a></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<strong>Jira stopky (bez Clockify)</strong><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
     manualRow.dataset.manualRow = '';
@@ -112,7 +118,8 @@
     }
     function issue() {
         const meta = document.querySelector('meta[name="ajs-issue-key"]');
-        const value = (location.pathname.match(/\/browse\/([A-Z][A-Z0-9_]*-\d+)/) || [])[1] || meta && meta.content;
+        const selected = new URLSearchParams(location.search).get('selectedIssue');
+        const value = selected || (location.pathname.match(/\/browse\/([A-Z][A-Z0-9_]*-\d+)/) || [])[1] || meta && meta.content;
         return /^[A-Z][A-Z0-9_]*-\d+$/.test(value || '') ? value : null;
     }
     function duration(value) {
@@ -133,13 +140,18 @@
             const title = value ? titleFor(value) : '';
             const stateText = value ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[value.phase] : '';
             panel.dataset.running = String(!!value && value.phase === 'running');
+            const other = !!value && value.phase === 'running' && value.issue !== issue();
+            panel.dataset.other = String(other);
+            const measuring = panel.querySelector('[data-measuring]');
+            measuring.hidden = !other;
+            measuring.textContent = other ? `Nyn\u00ed se m\u011b\u0159\u00ed: ${value.issue}` : '';
             panel.querySelector('[data-issue]').textContent = value ? value.issue : '';
+            panel.querySelector('[data-issue]').hidden = other || !value;
             panel.querySelector('[data-clock]').textContent = clock;
             panel.querySelector('[data-title]').textContent = title;
-            const link = panel.querySelector('[data-link]');
-            panel.querySelector('[data-link-row]').hidden = !value;
-            link.href = value ? `https://jira.alza.cz/browse/${encodeURIComponent(value.issue)}` : '';
-            link.textContent = value ? link.href : '';
+            for (const selector of ['[data-issue]', '[data-title]', '[data-measuring]']) {
+                panel.querySelector(selector).href = value ? `https://jira.alza.cz/browse/${encodeURIComponent(value.issue)}` : '';
+            }
             status.textContent = value ? stateText : 'Pripraveno. Pred Start zastav jine stopky.';
             if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             const switching = active && value.issue !== issue();
@@ -158,6 +170,7 @@
             error.textContent = notice;
         } catch (e) {
             panel.dataset.running = 'false';
+            panel.dataset.other = 'false';
             start.disabled = stop.disabled = save.disabled = true;
             manual.disabled = true;
             cancel.hidden = true;

@@ -7,6 +7,12 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.11: Vypsana URL byla odstranena. Cislo i cely nazev ukolu
+  jsou klikaci, bez podtrzeni a bez klasicke modre barvy odkazu.
+  Zelena znamena mereni otevreneho ukolu; modra mereni jineho ukolu;
+  cervena znamena, ze nic nebezi. Na jinem ukolu je vyrazny nadpis
+  "Nyni se meri: QA-xxxx" a pod nim nazev mereneho ukolu.
+  Odkazy vzdy vedou na mereny ukol. Podporuje take parametr selectedIssue.
 - Verze 1.10: Pod nazvem mereneho ukolu je jeho klikaci URL.
   Odkaz smeruje na mereny zaznam, nikoli na prave otevreny ukol.
   Bez zaznamu je skryty. Dosavadni styly a barevne stavy zustaly stejne.

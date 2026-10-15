@@ -8,6 +8,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     let confirmations = 0;
     const posts = [];
     const nodes = {};
+    let panel;
     function element() {
         return {style: {}, dataset: {}, value: '', querySelector: s => nodes[s] ||= element(), appendChild() {}, insertBefore() {},
             after(child) { if ('cancel' in child.dataset) nodes['[data-cancel]'] = child; }};
@@ -17,9 +18,9 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     class Clock extends Date { static now() { return 200000000; } }
     let id = 0;
     const context = {
-        window, document: {body: element(), createElement: element, getElementById: () => null,
+        window, document: {body: element(), createElement: tag => { const node = element(); if (tag === 'section') panel = node; return node; }, getElementById: () => null,
             querySelector: selector => selector === '#summary-val' ? {textContent: 'Full issue title <safe text>'} : {content: 'PMA-OLD'}},
-        location: {pathname: '/browse/DEMO-101'},
+        location: {pathname: '/browse/DEMO-101', search: ''}, URLSearchParams,
         localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }, removeItem: () => { state = null; }},
         Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval() {},
         navigator: {locks: {request: async (k, o, f) => f({})}},
@@ -37,7 +38,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     };
     vm.runInNewContext(source, context);
     nodes['[data-minutes]'].value = input;
-    return {nodes, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick()};
+    return {nodes, panel, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick()};
 }
 const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended: null, phase: 'running'});
 (async () => {
@@ -92,16 +93,21 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(verified.state().issue, 'DEMO-101');
     assert.equal(verified.state().phase, 'saved');
     const switching = setup(running());
-    assert.equal(switching.nodes['[data-link]'].href, 'https://jira.alza.cz/browse/DEMO-102');
-    assert.equal(switching.nodes['[data-link]'].textContent, 'https://jira.alza.cz/browse/DEMO-102');
-    assert.equal(switching.nodes['[data-link-row]'].hidden, false);
+    assert.equal(switching.panel.dataset.other, 'true');
+    assert.equal(switching.panel.dataset.running, 'true');
+    assert.equal(switching.nodes['[data-issue]'].href, 'https://jira.alza.cz/browse/DEMO-102');
+    assert.equal(switching.nodes['[data-title]'].href, 'https://jira.alza.cz/browse/DEMO-102');
+    assert.equal(switching.nodes['[data-measuring]'].textContent, 'Nyní se měří: DEMO-102');
+    assert.equal(switching.nodes['[data-measuring]'].hidden, false);
     assert.equal(switching.nodes['[data-stop]'].textContent, 'STOP');
     assert.equal(switching.nodes['[data-start]'].textContent, 'START');
     await switching.click('start');
     assert.equal(switching.posts.length, 1);
     assert.equal(switching.state().phase, 'running');
     assert.equal(switching.state().issue, 'DEMO-101');
-    assert.equal(switching.nodes['[data-link]'].href, 'https://jira.alza.cz/browse/DEMO-101');
+    assert.equal(switching.panel.dataset.other, 'false');
+    assert.equal(switching.nodes['[data-issue]'].href, 'https://jira.alza.cz/browse/DEMO-101');
+    assert.equal(switching.nodes['[data-measuring]'].hidden, true);
     assert.equal(switching.state().title, 'Full issue title <safe text>');
     assert.match(switching.nodes['[data-title]'].textContent, /Full issue title <safe text>/);
     assert.ok(!switching.nodes['[data-status]'].textContent.includes('Bezi'));
@@ -111,7 +117,9 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await minimum.click('start');
     assert.equal(minimum.posts[0].body.timeSpentSeconds, 60);
     const fresh = setup(null);
-    assert.equal(fresh.nodes['[data-link-row]'].hidden, true);
+    assert.equal(fresh.panel.dataset.running, 'false');
+    assert.equal(fresh.panel.dataset.other, 'false');
+    assert.equal(fresh.nodes['[data-issue]'].hidden, true);
     await fresh.click('start');
     assert.equal(fresh.state().phase, 'running');
     assert.equal(fresh.confirmations(), 0);
@@ -136,7 +144,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(cancelOther.posts.length, 0);
     assert.equal(cancelOther.confirmations(), 0);
     assert.equal(cancelOther.nodes['[data-cancel]'].hidden, true);
-    assert.equal(cancelOther.nodes['[data-link-row]'].hidden, true);
+    assert.equal(cancelOther.nodes['[data-issue]'].hidden, true);
     const sameIssue = {...running(), issue: 'DEMO-101'};
     const cancelSame = setup(sameIssue);
     assert.equal(cancelSame.nodes['[data-cancel]'].textContent, 'CANCEL');
