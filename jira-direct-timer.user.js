@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.11
+// @version      1.12
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -135,24 +135,27 @@
             const value = read();
             const queuedManual = value && value.manualNext;
             const active = value && (value.phase !== 'saved' || queuedManual);
-            const seconds = value ? (value.phase === 'saved' && Number.isFinite(value.recordedSeconds) ? value.recordedSeconds : duration(value)) : 0;
+            const recentCompletion = value && value.phase === 'saved' && Number.isFinite(value.completedAt) &&
+                Date.now() - value.completedAt >= 0 && Date.now() - value.completedAt < 5000;
+            const displayValue = value && (value.phase !== 'saved' || queuedManual || recentCompletion) ? value : null;
+            const seconds = displayValue ? (displayValue.phase === 'saved' && Number.isFinite(displayValue.recordedSeconds) ? displayValue.recordedSeconds : duration(displayValue)) : 0;
             const clock = [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
-            const title = value ? titleFor(value) : '';
-            const stateText = value ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[value.phase] : '';
+            const title = displayValue ? titleFor(displayValue) : '';
+            const stateText = displayValue ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[displayValue.phase] : '';
             panel.dataset.running = String(!!value && value.phase === 'running');
             const other = !!value && value.phase === 'running' && value.issue !== issue();
             panel.dataset.other = String(other);
             const measuring = panel.querySelector('[data-measuring]');
             measuring.hidden = !other;
             measuring.textContent = other ? `Nyn\u00ed se m\u011b\u0159\u00ed: ${value.issue}` : '';
-            panel.querySelector('[data-issue]').textContent = value ? value.issue : '';
-            panel.querySelector('[data-issue]').hidden = other || !value;
+            panel.querySelector('[data-issue]').textContent = displayValue ? displayValue.issue : '';
+            panel.querySelector('[data-issue]').hidden = other || !displayValue;
             panel.querySelector('[data-clock]').textContent = clock;
             panel.querySelector('[data-title]').textContent = title;
             for (const selector of ['[data-issue]', '[data-title]', '[data-measuring]']) {
-                panel.querySelector(selector).href = value ? `https://jira.alza.cz/browse/${encodeURIComponent(value.issue)}` : '';
+                panel.querySelector(selector).href = displayValue ? `https://jira.alza.cz/browse/${encodeURIComponent(displayValue.issue)}` : '';
             }
-            status.textContent = value ? stateText : 'Pripraveno. Pred Start zastav jine stopky.';
+            status.textContent = displayValue ? stateText : 'Nyn\u00ed se nic nem\u011b\u0159\u00ed.';
             if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             const switching = active && value.issue !== issue();
             start.disabled = busy || !issue() || !!queuedManual || (!!active && !switching);
@@ -295,6 +298,7 @@
             value.phase = 'saved';
             value.worklogId = existing.id;
             value.recordedSeconds = existing.timeSpentSeconds;
+            value.completedAt = Date.now();
             write(value);
             return;
         }
@@ -311,6 +315,7 @@
         value.phase = 'saved';
         value.worklogId = body.id;
         value.recordedSeconds = body.timeSpentSeconds;
+        value.completedAt = Date.now();
         write(value);
     }
     save.onclick = () => act(async () => {

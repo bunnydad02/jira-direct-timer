@@ -7,6 +7,10 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.12: Po uspesnem ulozeni se posledni zaznam zobrazuje 5 sekund.
+  Pak panel zobrazi "Nyni se nic nemeri." a vynuluje viditelne stopky.
+  Ulozeny stav zustava v localStorage kvuli ochrane pred duplicitami,
+  ale stary ukol a jeho cas uz se v panelu nezobrazuji.
 - Verze 1.11: Vypsana URL byla odstranena. Cislo i cely nazev ukolu
   jsou klikaci, bez podtrzeni a bez klasicke modre barvy odkazu.
   Zelena znamena mereni otevreneho ukolu; modra mereni jineho ukolu;

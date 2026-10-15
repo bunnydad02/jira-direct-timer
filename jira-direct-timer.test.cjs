@@ -9,20 +9,22 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     const posts = [];
     const nodes = {};
     let panel;
+    let now = 200000000;
+    let render;
     function element() {
         return {style: {}, dataset: {}, value: '', querySelector: s => nodes[s] ||= element(), appendChild() {}, insertBefore() {},
             after(child) { if ('cancel' in child.dataset) nodes['[data-cancel]'] = child; }};
     }
     const window = {addEventListener() {}};
     window.top = window;
-    class Clock extends Date { static now() { return 200000000; } }
+    class Clock extends Date { static now() { return now; } }
     let id = 0;
     const context = {
         window, document: {body: element(), createElement: tag => { const node = element(); if (tag === 'section') panel = node; return node; }, getElementById: () => null,
             querySelector: selector => selector === '#summary-val' ? {textContent: 'Full issue title <safe text>'} : {content: 'PMA-OLD'}},
         location: {pathname: '/browse/DEMO-101', search: ''}, URLSearchParams,
         localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }, removeItem: () => { state = null; }},
-        Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval() {},
+        Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval: callback => { render = callback; },
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
             if (path.endsWith('?fields=summary')) return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
@@ -38,7 +40,8 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     };
     vm.runInNewContext(source, context);
     nodes['[data-minutes]'].value = input;
-    return {nodes, panel, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick()};
+    return {nodes, panel, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick(),
+        advance: ms => { now += ms; }, render: () => render()};
 }
 const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended: null, phase: 'running'});
 (async () => {
@@ -127,8 +130,24 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(fresh.posts.length, 1);
     assert.equal(fresh.posts[0].body.timeSpentSeconds, 60);
     assert.equal(fresh.state().phase, 'saved');
+    assert.equal(fresh.state().completedAt, 200000000);
     assert.equal(fresh.confirmations(), 0);
     assert.equal(fresh.nodes['[data-save-row]'].hidden, true);
+    assert.equal(fresh.nodes['[data-status]'].textContent, 'Ulozeno do Jiry');
+    fresh.advance(4999);
+    fresh.render();
+    assert.equal(fresh.nodes['[data-issue]'].hidden, false);
+    assert.equal(fresh.nodes['[data-status]'].textContent, 'Ulozeno do Jiry');
+    fresh.advance(1);
+    fresh.render();
+    assert.equal(fresh.nodes['[data-issue]'].hidden, true);
+    assert.equal(fresh.nodes['[data-title]'].textContent, '');
+    assert.equal(fresh.nodes['[data-clock]'].textContent, '00:00:00');
+    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(fresh.panel.dataset.running, 'false');
+    assert.equal(fresh.state().phase, 'saved', 'keep saved marker for duplicate protection');
+    const oldSaved = setup({...fresh.state(), completedAt: 200000000 - 6000});
+    assert.equal(oldSaved.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
     const stopFailure = setup(running(), 1);
     await stopFailure.click('stop');
     assert.equal(stopFailure.state().phase, 'pending');
