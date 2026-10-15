@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.8
+// @version      1.9
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -14,12 +14,40 @@
     const KEY = 'jira-direct-timer-v1';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
-    panel.style.cssText = 'position:fixed;left:20px;bottom:20px;z-index:10000;background:white;color:#172b4d;border:2px solid #0052cc;border-radius:8px;padding:14px;width:310px;max-width:calc(100vw - 40px);box-sizing:border-box;box-shadow:0 3px 15px #0003;font:14px sans-serif';
-    panel.innerHTML = '<strong>Jira stopky (bez Clockify)</strong><div data-status style="margin:10px 0;white-space:pre-wrap"></div><button data-start>Start na tomto ukolu</button> <button data-stop>Zastavit a ulozit</button><div data-save-row style="margin-top:8px"><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert" style="color:#ae2a19;margin-top:8px;white-space:pre-wrap"></div>';
+    const styles = document.createElement('style');
+    styles.textContent = `
+        #jira-direct-timer {position:fixed;left:20px;bottom:20px;z-index:10000;width:240px;max-width:calc(100vw - 40px);box-sizing:border-box;padding:14px;border:1px solid #e4b9b9;border-radius:12px;background:#fff2f2;color:#253249;box-shadow:0 6px 24px #172b4d24;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+        #jira-direct-timer[data-running="true"] {background:#effaf2;border-color:#a6d8b4}
+        #jira-direct-timer strong {display:block;font-size:12px;font-weight:600;color:#526078;margin-bottom:10px}
+        #jira-direct-timer [data-clock] {display:block;font-size:34px;line-height:1.2;font-weight:750;letter-spacing:1px;font-variant-numeric:tabular-nums;color:#8d3030;margin:4px 0 8px}
+        #jira-direct-timer[data-running="true"] [data-clock] {color:#176538}
+        #jira-direct-timer [data-issue] {font-weight:700;font-size:13px}
+        #jira-direct-timer [data-title] {font-size:12px;margin-bottom:8px;overflow-wrap:anywhere}
+        #jira-direct-timer [data-status] {font-size:11px;color:#526078;white-space:pre-wrap;overflow-wrap:anywhere}
+        #jira-direct-timer [data-actions] {display:flex;gap:6px;margin-top:12px}
+        #jira-direct-timer button {appearance:none;margin:0;padding:7px 8px;border:1px solid #b9c4d2;border-radius:6px;background:#fff;color:#253249;font-family:inherit;font-size:11px;font-weight:600;line-height:1.3;cursor:pointer;white-space:normal;overflow-wrap:anywhere}
+        #jira-direct-timer [data-actions] button {flex:1;min-width:0}
+        #jira-direct-timer [data-start] {background:#176538;border-color:#176538;color:#fff}
+        #jira-direct-timer [data-stop] {background:#a73434;border-color:#a73434;color:#fff}
+        #jira-direct-timer button:disabled {opacity:.4;cursor:default}
+        #jira-direct-timer button:not(:disabled):hover {filter:brightness(.93)}
+        #jira-direct-timer button:focus-visible,#jira-direct-timer input:focus-visible {outline:2px solid #0052cc;outline-offset:2px}
+        #jira-direct-timer [hidden] {display:none!important}
+        #jira-direct-timer [data-save-row] {margin-top:8px}
+        #jira-direct-timer [data-save] {width:100%}
+        #jira-direct-timer [data-manual-row] {margin-top:12px;padding-top:10px;border-top:1px solid #172b4d20}
+        #jira-direct-timer label {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;font-weight:700;letter-spacing:.4px}
+        #jira-direct-timer input {box-sizing:border-box;width:70px;min-width:0;padding:6px;border:1px solid #b9c4d2;border-radius:6px;background:#fff;color:#253249;font-family:inherit;font-size:13px}
+        #jira-direct-timer [data-manual] {width:100%;margin-top:7px}
+        #jira-direct-timer [data-error] {color:#ae2a19;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
+        #jira-direct-timer [data-error]:not(:empty) {margin-top:8px}
+    `;
+    document.body.appendChild(styles);
+    panel.innerHTML = '<strong>Jira stopky (bez Clockify)</strong><div data-issue></div><time data-clock>00:00:00</time><div data-title></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
-    manualRow.style.cssText = 'margin-top:10px;margin-bottom:10px';
-    manualRow.innerHTML = '<label>ADD MINUTES <input data-minutes type="number" min="1" step="1" style="width:70px"></label> <button data-manual>Zapsat do tohoto ukolu</button>';
+    manualRow.dataset.manualRow = '';
+    manualRow.innerHTML = '<label>ADD MINUTES <input data-minutes type="number" min="1" step="1"></label><button data-manual>Zapsat do tohoto ukolu</button>';
     panel.appendChild(manualRow);
     const status = panel.querySelector('[data-status]');
     const error = panel.querySelector('[data-error]');
@@ -104,8 +132,11 @@
             const clock = [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
             const title = value ? titleFor(value) : '';
             const stateText = value ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[value.phase] : '';
-            status.style.overflowWrap = 'anywhere';
-            status.textContent = value ? `${value.issue} | ${clock}${title ? `\n${title}` : ''}${stateText ? `\n${stateText}` : ''}` : 'Pripraveno. Pred Start zastav jine stopky.';
+            panel.dataset.running = String(!!value && value.phase === 'running');
+            panel.querySelector('[data-issue]').textContent = value ? value.issue : '';
+            panel.querySelector('[data-clock]').textContent = clock;
+            panel.querySelector('[data-title]').textContent = title;
+            status.textContent = value ? stateText : 'Pripraveno. Pred Start zastav jine stopky.';
             if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             const switching = active && value.issue !== issue();
             start.disabled = busy || !issue() || !!queuedManual || (!!active && !switching);
@@ -122,6 +153,7 @@
             minutes.disabled = busy;
             error.textContent = notice;
         } catch (e) {
+            panel.dataset.running = 'false';
             start.disabled = stop.disabled = save.disabled = true;
             manual.disabled = true;
             cancel.hidden = true;

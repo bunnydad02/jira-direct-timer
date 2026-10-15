@@ -7,6 +7,11 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.9: Panel je siroky 240 px (drive 310 px, zuzeni o 22,6 %).
+  Bezici stopky maji jemne zelene pozadi; ostatni stavy jemne cervene.
+  Cas ma samostatny vyrazny radek s 34px tucnym cislicovym pismem.
+  Tlacitka jsou sjednocena, nazev ukolu se zalamuje bez zkraceni.
+  Zmeny vzhledu nemeni chovani zapisu.
 - Verze 1.8: Vyplnene navrhy z textoveho katalogu jsou zapracovane.
   Jednotne START take prepina na otevreny ukol a uklada predchozi.
   STOP uklada a ukoncuje mereni, CANCEL ho rusi bez ulozeni.

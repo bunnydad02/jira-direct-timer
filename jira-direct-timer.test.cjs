@@ -99,7 +99,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(switching.state().phase, 'running');
     assert.equal(switching.state().issue, 'DEMO-101');
     assert.equal(switching.state().title, 'Full issue title <safe text>');
-    assert.match(switching.nodes['[data-status]'].textContent, /Full issue title <safe text>/);
+    assert.match(switching.nodes['[data-title]'].textContent, /Full issue title <safe text>/);
     assert.ok(!switching.nodes['[data-status]'].textContent.includes('Bezi'));
     const short = running();
     short.started = 199991000;
@@ -147,10 +147,10 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await cancelPending.click('cancel');
     assert.equal(cancelPending.state().phase, 'pending');
     const titled = setup({...running(), title: 'Persisted full title'});
-    assert.match(titled.nodes['[data-status]'].textContent, /Persisted full title/);
+    assert.match(titled.nodes['[data-title]'].textContent, /Persisted full title/);
     const legacyTitle = setup(running());
     await new Promise(resolve => setImmediate(resolve));
-    assert.match(legacyTitle.nodes['[data-status]'].textContent, /Other issue full title/);
+    assert.match(legacyTitle.nodes['[data-title]'].textContent, /Other issue full title/);
     assert.equal(legacyTitle.posts.length, 0);
     console.log('PASS: manual 30 min, active timer save order, current issue, invalid input, two failure stages, crash recovery, deduplication, task switching, one-minute minimum');
 })().catch(e => { console.error(e); process.exitCode = 1; });
