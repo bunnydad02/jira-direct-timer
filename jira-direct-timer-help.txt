@@ -7,6 +7,14 @@ Instalace:
 4. Obnov stranku ukolu. Vpravo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.1: Pri prechodu na jiny ukol klikni "Prepnout na ...".
+  Predchozi stopky se automaticky zastavi a ulozi do Jiry bez dalsiho potvrzeni.
+  Nove stopky navazuji od okamziku zastaveni predchozich, bez cekani na API.
+  Pouhe otevreni jineho ukolu mereni neprepina.
+  Pokud predchozi mereni nema minutu, prepnuti se odmitne a puvodni bezi dal.
+  Pri chybe zapisu se nove stopky nespusti a predchozi zaznam zustane ulozeny.
+  Pri nejistem vysledku se POST neopakuje. Overeni nalezeneho worklogu
+  dokonci rozpracovane prepnuti; cilovy ukol je ulozen spolu s casem zastaveni.
 - Nejprve zastav jine stopky, vcetne Clockify. Tyto stopky Clockify neridi.
 - Na otevrenem ukolu klikni Start a potvrd spravny klic ukolu.
 - Po praci klikni Zastavit. To jeste nevytvori pracovni zaznam.

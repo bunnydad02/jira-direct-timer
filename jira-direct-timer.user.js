@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.0
+// @version      1.1
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -42,7 +42,7 @@
     }
     function issue() {
         const meta = document.querySelector('meta[name="ajs-issue-key"]');
-        const value = meta && meta.content || (location.pathname.match(/\/browse\/([A-Z][A-Z0-9_]*-\d+)/) || [])[1];
+        const value = (location.pathname.match(/\/browse\/([A-Z][A-Z0-9_]*-\d+)/) || [])[1] || meta && meta.content;
         return /^[A-Z][A-Z0-9_]*-\d+$/.test(value || '') ? value : null;
     }
     function duration(value) {
@@ -60,7 +60,9 @@
             const seconds = value ? (value.phase === 'saved' && Number.isFinite(value.recordedSeconds) ? value.recordedSeconds : duration(value)) : 0;
             const clock = [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
             status.textContent = value ? `${value.issue} | ${clock}\n${{running: 'Bezi', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[value.phase]}` : 'Pripraveno. Pred Start zastav jine stopky.';
-            start.disabled = busy || !!active || !issue();
+            const switching = active && value.issue !== issue();
+            start.disabled = busy || !issue() || (!!active && !switching);
+            start.textContent = switching ? `Prepnout na ${issue()} (ulozi ${value.issue})` : 'Start na tomto ukolu';
             stop.disabled = busy || !value || value.phase !== 'running';
             save.disabled = busy || !value || !['stopped', 'pending'].includes(value.phase);
             save.textContent = value && value.phase === 'pending' ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
@@ -117,7 +119,20 @@
     start.onclick = () => act(async () => {
         const old = read();
         const key = issue();
-        if (!key || (old && old.phase !== 'saved')) throw new Error('Nejprve dokoncit predchozi stopky.');
+        if (!key) throw new Error('Otevri konkretni ukol Jiry.');
+        if (old && old.phase !== 'saved') {
+            if (old.issue === key) throw new Error('Tento ukol uz ma rozpracovane stopky.');
+            if (old.phase === 'running') {
+                if (duration(old) < 60) throw new Error('Predchozi mereni je kratsi nez minuta. Jira ho neulozi; stopky pokracuji na puvodnim ukolu.');
+                old.ended = Date.now();
+                old.phase = 'stopped';
+            }
+            old.nextIssue = key;
+            write(old);
+            await saveEntry(old, false);
+            write({id: crypto.randomUUID(), issue: key, started: old.ended, ended: null, phase: 'running'});
+            return;
+        }
         if (!confirm(`Spustit stopky pro ${key}? Nejprve zastav ostatni stopky (vcetne Clockify), aby nevznikl prekryv.`)) return;
         write({id: crypto.randomUUID(), issue: key, started: Date.now(), ended: null, phase: 'running'});
     });
@@ -128,8 +143,7 @@
         value.phase = 'stopped';
         write(value);
     });
-    save.onclick = () => act(async () => {
-        const value = read();
+    async function saveEntry(value, askConfirmation) {
         if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('Neni co ulozit.');
         if (value.phase === 'stopped' && duration(value) < 60) {
             throw new Error('Tato Jira neprijima zaznam pod 1 minutu. Cas nenavysuji; pouzij standardni Log work pro skutecnou praci.');
@@ -144,7 +158,7 @@
         }
         if (value.phase === 'pending') throw new Error('Zapis zatim nebyl nalezen. Automaticky ho neopakuji; over Work log v Jire.');
         const seconds = Math.floor(duration(value) / 60) * 60;
-        if (!confirm(`Zapsat ${seconds / 60} celych minut do ${value.issue}? Jira uklada cas po minutach; zbyvajici sekundy se nezapisi. Nevytvarej stejny zaznam pres Clockify. Odhad zbyvajici prace se nezmeni.`)) return;
+        if (askConfirmation && !confirm(`Zapsat ${seconds / 60} celych minut do ${value.issue}? Jira uklada cas po minutach; zbyvajici sekundy se nezapisi. Nevytvarej stejny zaznam pres Clockify. Odhad zbyvajici prace se nezmeni.`)) return;
         value.phase = 'pending';
         write(value);
         const body = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?adjustEstimate=leave`, {
@@ -156,6 +170,13 @@
         value.worklogId = body.id;
         value.recordedSeconds = body.timeSpentSeconds;
         write(value);
+    }
+    save.onclick = () => act(async () => {
+        const value = read();
+        await saveEntry(value, true);
+        if (value.phase === 'saved' && value.nextIssue) {
+            write({id: crypto.randomUUID(), issue: value.nextIssue, started: value.ended, ended: null, phase: 'running'});
+        }
     });
     window.addEventListener('storage', event => { if (event.key === KEY) render(); });
     setInterval(render, 1000);
