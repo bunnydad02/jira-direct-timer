@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.4
+// @version      1.5
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -171,7 +171,6 @@
         }
         const old = read();
         if (old && (old.phase === 'pending' || old.manualNext)) throw new Error('Nejprve over predchozi zapis.');
-        if (!confirm(`Zapsat rucne ${count} minut do ${key}, se zacatkem pred ${count} minutami? Rozpracovane stopky se nejprve ulozi a zastavi. Rucni interval se s nimi muze prekryvat; neuvad stejny cas dvakrat. Zadny casovac pak nepobezi.`)) return;
         const end = Date.now();
         const entry = {id: crypto.randomUUID(), issue: key, started: end - count * 60000, ended: end, phase: 'stopped', manual: true};
         if (old && old.phase !== 'saved') {

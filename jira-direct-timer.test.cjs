@@ -42,6 +42,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     for (const initial of [null, running()]) {
         const h = setup(initial);
         await h.click('manual');
+        assert.equal(h.confirmations(), 0, 'manual entry must save without a dialog');
         assert.equal(h.posts.length, initial ? 2 : 1);
         const last = h.posts.at(-1);
         assert.match(last.path, /DEMO-101/);
