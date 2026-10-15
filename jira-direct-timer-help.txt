@@ -7,6 +7,11 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.7: "Zrusit" je viditelne pouze pri bezicich stopkach.
+  Na jinem ukolu obsahuje take klic beziciho ukolu (napr. "Zrusit DEMO-103").
+  Bez potvrzeni zrusi rozpracovane mereni v prohlizeci, nic nezapise do Jiry
+  a zadne dalsi stopky nespusti. Drive ulozene worklogy zustanou nedotcene.
+  U cekajiciho nebo nejisteho zapisu neni zruseni dostupne.
 - Verze 1.6: Tlacitko ukonceni uvadi konkretni ukol:
   "Ukoncit a ulozit DEMO-103 (nic dalsiho nespoustet)".
   Ulozi pouze bezici ukol, nespusti stopky na prave otevrenem ukolu.

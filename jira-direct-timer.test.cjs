@@ -9,7 +9,8 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     const posts = [];
     const nodes = {};
     function element() {
-        return {style: {}, value: '', querySelector: s => nodes[s] ||= element(), appendChild() {}, insertBefore() {}};
+        return {style: {}, dataset: {}, value: '', querySelector: s => nodes[s] ||= element(), appendChild() {}, insertBefore() {},
+            after(child) { if ('cancel' in child.dataset) nodes['[data-cancel]'] = child; }};
     }
     const window = {addEventListener() {}};
     window.top = window;
@@ -19,7 +20,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
         window, document: {body: element(), createElement: element, getElementById: () => null,
             querySelector: () => ({content: 'PMA-OLD'})},
         location: {pathname: '/browse/DEMO-101'},
-        localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }},
+        localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }, removeItem: () => { state = null; }},
         Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval() {},
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
@@ -117,6 +118,29 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await stopFailure.click('save');
     assert.equal(stopFailure.posts.length, 1);
     assert.equal(stopFailure.confirmations(), 0);
+    const cancelOther = setup(running());
+    assert.equal(cancelOther.nodes['[data-cancel]'].hidden, false);
+    assert.equal(cancelOther.nodes['[data-cancel]'].textContent, 'Zrusit DEMO-102');
+    await cancelOther.click('cancel');
+    assert.equal(cancelOther.state(), null);
+    assert.equal(cancelOther.posts.length, 0);
+    assert.equal(cancelOther.confirmations(), 0);
+    assert.equal(cancelOther.nodes['[data-cancel]'].hidden, true);
+    const sameIssue = {...running(), issue: 'DEMO-101'};
+    const cancelSame = setup(sameIssue);
+    assert.equal(cancelSame.nodes['[data-cancel]'].textContent, 'Zrusit');
+    await cancelSame.click('cancel');
+    assert.equal(cancelSame.state(), null);
+    const saved = {...running(), ended: 200000000, phase: 'saved', worklogId: 'untouched'};
+    const cancelSaved = setup(saved);
+    assert.equal(cancelSaved.nodes['[data-cancel]'].hidden, true);
+    await cancelSaved.click('cancel');
+    assert.equal(cancelSaved.state().worklogId, 'untouched');
+    assert.equal(cancelSaved.posts.length, 0);
+    const cancelPending = setup({...running(), ended: 200000000, phase: 'pending'});
+    assert.equal(cancelPending.nodes['[data-cancel]'].hidden, true);
+    await cancelPending.click('cancel');
+    assert.equal(cancelPending.state().phase, 'pending');
     console.log('PASS: manual 30 min, active timer save order, current issue, invalid input, two failure stages, crash recovery, deduplication, task switching, one-minute minimum');
 })().catch(e => { console.error(e); process.exitCode = 1; });
 

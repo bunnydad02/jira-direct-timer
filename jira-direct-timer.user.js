@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.6
+// @version      1.7
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -25,6 +25,10 @@
     const error = panel.querySelector('[data-error]');
     const start = panel.querySelector('[data-start]');
     const stop = panel.querySelector('[data-stop]');
+    const cancel = document.createElement('button');
+    cancel.dataset.cancel = '';
+    cancel.hidden = true;
+    stop.after(cancel);
     const save = panel.querySelector('[data-save]');
     const minutes = panel.querySelector('[data-minutes]');
     const manual = panel.querySelector('[data-manual]');
@@ -73,6 +77,9 @@
             start.textContent = switching ? `Prepnout na ${issue()} (ulozi ${value.issue})` : 'Start na tomto ukolu';
             stop.disabled = busy || !value || value.phase !== 'running';
             stop.textContent = value ? `Ukoncit a ulozit ${value.issue} (nic dalsiho nespoustet)` : 'Ukoncit a ulozit (nic dalsiho nespoustet)';
+            cancel.hidden = !value || value.phase !== 'running';
+            cancel.disabled = busy || cancel.hidden;
+            cancel.textContent = value && value.issue !== issue() ? `Zrusit ${value.issue}` : 'Zrusit';
             save.disabled = busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual));
             panel.querySelector('[data-save-row]').hidden = !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual);
             save.textContent = value && value.phase === 'pending' ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
@@ -82,6 +89,8 @@
         } catch (e) {
             start.disabled = stop.disabled = save.disabled = true;
             manual.disabled = true;
+            cancel.hidden = true;
+            cancel.disabled = true;
             error.textContent = e.message;
         }
     }
@@ -155,6 +164,11 @@
         value.phase = 'stopped';
         write(value);
         await saveEntry(value);
+    });
+    cancel.onclick = () => act(async () => {
+        const value = read();
+        if (!value || value.phase !== 'running') throw new Error('Stopky uz nebezi.');
+        localStorage.removeItem(KEY);
     });
     async function finishManual(value) {
         if (value.phase !== 'saved' || !value.manualNext) return;
