@@ -1,0 +1,102 @@
+const fs = require('node:fs');
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const source = fs.readFileSync(`${__dirname}\\jira-direct-timer.user.js`, 'utf8');
+
+function setup(initial, failureAt = 0, input = '30', existing = false) {
+    let state = initial;
+    const posts = [];
+    const nodes = {};
+    function element() {
+        return {style: {}, value: '', querySelector: s => nodes[s] ||= element(), appendChild() {}, insertBefore() {}};
+    }
+    const window = {addEventListener() {}};
+    window.top = window;
+    class Clock extends Date { static now() { return 200000000; } }
+    let id = 0;
+    const context = {
+        window, document: {body: element(), createElement: element, getElementById: () => null,
+            querySelector: () => ({content: 'PMA-OLD'})},
+        location: {pathname: '/browse/DEMO-101'},
+        localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }},
+        Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => true, setInterval() {},
+        navigator: {locks: {request: async (k, o, f) => f({})}},
+        fetch: async (path, options) => {
+            if (options.method === 'POST') {
+                const body = JSON.parse(options.body);
+                posts.push({path, body});
+                if (posts.length === failureAt) throw new Error('Network failure');
+                return {ok: true, json: async () => ({id: `log-${posts.length}`, timeSpentSeconds: body.timeSpentSeconds})};
+            }
+            return {ok: true, json: async () => ({total: existing ? 1 : 0, worklogs: existing ?
+                [{id: 'existing', timeSpentSeconds: 120, comment: `[jira-direct-timer:${state.id}]`}] : []})};
+        }
+    };
+    vm.runInNewContext(source, context);
+    nodes['[data-minutes]'].value = input;
+    return {nodes, posts, state: () => state, click: name => nodes[`[data-${name}]`].onclick()};
+}
+const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended: null, phase: 'running'});
+(async () => {
+    for (const initial of [null, running()]) {
+        const h = setup(initial);
+        await h.click('manual');
+        assert.equal(h.posts.length, initial ? 2 : 1);
+        const last = h.posts.at(-1);
+        assert.match(last.path, /DEMO-101/);
+        assert.equal(last.body.timeSpentSeconds, 1800);
+        assert.equal(last.body.started, new Date(200000000 - 1800000).toISOString().replace('Z', '+0000'));
+        assert.match(last.body.comment, /Rucni vykaz/);
+        assert.equal(h.state().phase, 'saved');
+        if (initial) assert.match(h.posts[0].path, /DEMO-102/);
+    }
+    for (const input of ['', '0', '-1', '1.5', 'NaN', '9999999999999999999']) {
+        const h = setup(running(), 0, input);
+        await h.click('manual');
+        assert.equal(h.posts.length, 0);
+        assert.equal(h.state().phase, 'running');
+        assert.match(h.nodes['[data-error]'].textContent, /kladny/);
+    }
+    const h = setup(running(), 1);
+    await h.click('manual');
+    assert.equal(h.state().phase, 'pending');
+    assert.equal(h.state().manualNext.issue, 'DEMO-101');
+    await h.click('save');
+    assert.equal(h.posts.length, 1, 'uncertain writes must not be repeated');
+    const secondFailure = setup(running(), 2);
+    await secondFailure.click('manual');
+    assert.equal(secondFailure.state().phase, 'pending');
+    assert.equal(secondFailure.state().issue, 'DEMO-101');
+    assert.equal(secondFailure.posts.length, 2);
+    const old = running();
+    old.phase = 'saved';
+    old.ended = 200000000;
+    old.manualNext = {id: 'queued', issue: 'DEMO-101', started: 198200000, ended: 200000000, phase: 'stopped', manual: true};
+    const recovery = setup(old);
+    assert.equal(recovery.nodes['[data-start]'].disabled, true);
+    await recovery.click('save');
+    assert.equal(recovery.posts.length, 1);
+    assert.equal(recovery.state().issue, 'DEMO-101');
+    assert.equal(recovery.state().phase, 'saved');
+    const pending = running();
+    pending.phase = 'pending';
+    pending.ended = 200000000;
+    pending.manualNext = old.manualNext;
+    const verified = setup(pending, 0, '30', true);
+    await verified.click('save');
+    assert.equal(verified.posts.length, 0, 'existing markers must not create duplicates');
+    assert.equal(verified.state().issue, 'DEMO-101');
+    assert.equal(verified.state().phase, 'saved');
+    const switching = setup(running());
+    await switching.click('start');
+    assert.equal(switching.posts.length, 1);
+    assert.equal(switching.state().phase, 'running');
+    assert.equal(switching.state().issue, 'DEMO-101');
+    const short = running();
+    short.started = 199991000;
+    const minimum = setup(short);
+    await minimum.click('start');
+    assert.equal(minimum.posts[0].body.timeSpentSeconds, 60);
+    console.log('PASS: manual 30 min, active timer save order, current issue, invalid input, two failure stages, crash recovery, deduplication, task switching, one-minute minimum');
+})().catch(e => { console.error(e); process.exitCode = 1; });
+

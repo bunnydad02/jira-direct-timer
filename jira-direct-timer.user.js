@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.2
+// @version      1.3
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -17,11 +17,17 @@
     panel.style.cssText = 'position:fixed;right:20px;bottom:20px;z-index:10000;background:white;color:#172b4d;border:2px solid #0052cc;border-radius:8px;padding:14px;width:310px;box-shadow:0 3px 15px #0003;font:14px sans-serif';
     panel.innerHTML = '<strong>Jira stopky (bez Clockify)</strong><div data-status style="margin:10px 0;white-space:pre-wrap"></div><button data-start>Start na tomto ukolu</button> <button data-stop>Zastavit</button><div data-save-row style="margin-top:8px"><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert" style="color:#ae2a19;margin-top:8px;white-space:pre-wrap"></div><small>Bez synchronizace do Clockify. Minimum zapisu: 1 minuta (i pri kratsim mereni). Pouzivej jen jedny stopky.</small>';
     document.body.appendChild(panel);
+    const manualRow = document.createElement('div');
+    manualRow.style.cssText = 'margin-top:10px;margin-bottom:10px';
+    manualRow.innerHTML = '<label>Rucne minut: <input data-minutes type="number" min="1" step="1" placeholder="30" style="width:70px"></label> <button data-manual>Zapsat do tohoto ukolu</button>';
+    panel.insertBefore(manualRow, panel.querySelector('small'));
     const status = panel.querySelector('[data-status]');
     const error = panel.querySelector('[data-error]');
     const start = panel.querySelector('[data-start]');
     const stop = panel.querySelector('[data-stop]');
     const save = panel.querySelector('[data-save]');
+    const minutes = panel.querySelector('[data-minutes]');
+    const manual = panel.querySelector('[data-manual]');
     let busy = false;
     let notice = '';
 
@@ -56,19 +62,24 @@
     function render() {
         try {
             const value = read();
-            const active = value && value.phase !== 'saved';
+            const queuedManual = value && value.manualNext;
+            const active = value && (value.phase !== 'saved' || queuedManual);
             const seconds = value ? (value.phase === 'saved' && Number.isFinite(value.recordedSeconds) ? value.recordedSeconds : duration(value)) : 0;
             const clock = [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
             status.textContent = value ? `${value.issue} | ${clock}\n${{running: 'Bezi', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[value.phase]}` : 'Pripraveno. Pred Start zastav jine stopky.';
+            if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             const switching = active && value.issue !== issue();
-            start.disabled = busy || !issue() || (!!active && !switching);
+            start.disabled = busy || !issue() || !!queuedManual || (!!active && !switching);
             start.textContent = switching ? `Prepnout na ${issue()} (ulozi ${value.issue})` : 'Start na tomto ukolu';
             stop.disabled = busy || !value || value.phase !== 'running';
-            save.disabled = busy || !value || !['stopped', 'pending'].includes(value.phase);
+            save.disabled = busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual));
             save.textContent = value && value.phase === 'pending' ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
+            manual.disabled = busy || !issue() || !!queuedManual || !!(value && value.phase === 'pending');
+            minutes.disabled = busy;
             error.textContent = notice;
         } catch (e) {
             start.disabled = stop.disabled = save.disabled = true;
+            manual.disabled = true;
             error.textContent = e.message;
         }
     }
@@ -120,6 +131,7 @@
         const old = read();
         const key = issue();
         if (!key) throw new Error('Otevri konkretni ukol Jiry.');
+        if (old && old.manualNext) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit.');
         if (old && old.phase !== 'saved') {
             if (old.issue === key) throw new Error('Tento ukol uz ma rozpracovane stopky.');
             if (old.phase === 'running') {
@@ -142,6 +154,41 @@
         value.phase = 'stopped';
         write(value);
     });
+    async function finishManual(value) {
+        if (value.phase !== 'saved' || !value.manualNext) return;
+        const entry = value.manualNext;
+        write(entry);
+        await saveEntry(entry, false);
+    }
+    manual.onclick = () => act(async () => {
+        const key = issue();
+        const count = Number(minutes.value);
+        if (!key) throw new Error('Otevri konkretni ukol Jiry.');
+        if (!/^\d+$/.test(minutes.value) || !Number.isSafeInteger(count) || count < 1 ||
+            !Number.isSafeInteger(count * 60000) || !Number.isFinite(new Date(Date.now() - count * 60000).getTime())) {
+            throw new Error('Zadej kladny cely pocet minut.');
+        }
+        const old = read();
+        if (old && (old.phase === 'pending' || old.manualNext)) throw new Error('Nejprve over predchozi zapis.');
+        if (!confirm(`Zapsat rucne ${count} minut do ${key}, se zacatkem pred ${count} minutami? Rozpracovane stopky se nejprve ulozi a zastavi. Rucni interval se s nimi muze prekryvat; neuvad stejny cas dvakrat. Zadny casovac pak nepobezi.`)) return;
+        const end = Date.now();
+        const entry = {id: crypto.randomUUID(), issue: key, started: end - count * 60000, ended: end, phase: 'stopped', manual: true};
+        if (old && old.phase !== 'saved') {
+            if (old.phase === 'running') {
+                old.ended = end;
+                old.phase = 'stopped';
+            }
+            delete old.nextIssue;
+            old.manualNext = entry;
+            write(old);
+            await saveEntry(old, false);
+            await finishManual(old);
+        } else {
+            write(entry);
+            await saveEntry(entry, false);
+        }
+        minutes.value = '';
+    });
     async function saveEntry(value, askConfirmation) {
         if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('Neni co ulozit.');
         const existing = await findSaved(value);
@@ -160,7 +207,7 @@
         write(value);
         const body = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?adjustEstimate=leave`, {
             method: 'POST',
-            body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `Prace na ukolu (Jira stopky)${measuredSeconds < 60 ? `\nMereno ${measuredSeconds} s; ulozeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
+            body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.manual ? 'Rucni vykaz (Jira stopky)' : 'Prace na ukolu (Jira stopky)'}${measuredSeconds < 60 ? `\nMereno ${measuredSeconds} s; ulozeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
         });
         if (!body.id) throw new Error('Jira nevratila ID noveho worklogu. Over predchozi zapis.');
         value.phase = 'saved';
@@ -170,7 +217,8 @@
     }
     save.onclick = () => act(async () => {
         const value = read();
-        await saveEntry(value, true);
+        if (!(value && value.phase === 'saved' && value.manualNext)) await saveEntry(value, true);
+        await finishManual(value);
         if (value.phase === 'saved' && value.nextIssue) {
             write({id: crypto.randomUUID(), issue: value.nextIssue, started: value.ended, ended: null, phase: 'running'});
         }

@@ -7,6 +7,16 @@ Instalace:
 4. Obnov stranku ukolu. Vpravo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.3: Pole "Rucne minut" prijima kladne cele minuty (napr. 30).
+  Otevri cilovy ukol a klikni "Zapsat do tohoto ukolu". Potvrzeni uvadi klic ukolu.
+  Rucni interval konci okamzikem potvrzeni a zacina o zadane minuty drive.
+  Rozpracovane stopky se nejprve zastavi a ulozi (take na jinem ukolu).
+  Potom se ulozi rucni interval; zadne nove stopky se nespusti.
+  Rucni interval se muze casove prekryvat s predchozim merenim.
+  Uvad pouze praci, kterou jsi nevykazal jinym zaznamem.
+  Pri chybe zustava rucni pozadavek nebo cekajici zapis zachovany v prohlizeci.
+  Tlacitkem Ulozit / Overit dokoncis rozpracovanou operaci bez opakovani
+  nejisteho POST. Pozadavek na rucni zapis nevytvarej znovu.
 - Verze 1.2: Pri prechodu na jiny ukol klikni "Prepnout na ...".
   Predchozi stopky se automaticky zastavi a ulozi do Jiry bez dalsiho potvrzeni.
   Nove stopky navazuji od okamziku zastaveni predchozich, bez cekani na API.
