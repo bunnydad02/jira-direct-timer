@@ -92,12 +92,16 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(verified.state().issue, 'DEMO-101');
     assert.equal(verified.state().phase, 'saved');
     const switching = setup(running());
+    assert.equal(switching.nodes['[data-link]'].href, 'https://jira.alza.cz/browse/DEMO-102');
+    assert.equal(switching.nodes['[data-link]'].textContent, 'https://jira.alza.cz/browse/DEMO-102');
+    assert.equal(switching.nodes['[data-link-row]'].hidden, false);
     assert.equal(switching.nodes['[data-stop]'].textContent, 'STOP');
     assert.equal(switching.nodes['[data-start]'].textContent, 'START');
     await switching.click('start');
     assert.equal(switching.posts.length, 1);
     assert.equal(switching.state().phase, 'running');
     assert.equal(switching.state().issue, 'DEMO-101');
+    assert.equal(switching.nodes['[data-link]'].href, 'https://jira.alza.cz/browse/DEMO-101');
     assert.equal(switching.state().title, 'Full issue title <safe text>');
     assert.match(switching.nodes['[data-title]'].textContent, /Full issue title <safe text>/);
     assert.ok(!switching.nodes['[data-status]'].textContent.includes('Bezi'));
@@ -107,6 +111,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await minimum.click('start');
     assert.equal(minimum.posts[0].body.timeSpentSeconds, 60);
     const fresh = setup(null);
+    assert.equal(fresh.nodes['[data-link-row]'].hidden, true);
     await fresh.click('start');
     assert.equal(fresh.state().phase, 'running');
     assert.equal(fresh.confirmations(), 0);
@@ -131,6 +136,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(cancelOther.posts.length, 0);
     assert.equal(cancelOther.confirmations(), 0);
     assert.equal(cancelOther.nodes['[data-cancel]'].hidden, true);
+    assert.equal(cancelOther.nodes['[data-link-row]'].hidden, true);
     const sameIssue = {...running(), issue: 'DEMO-101'};
     const cancelSame = setup(sameIssue);
     assert.equal(cancelSame.nodes['[data-cancel]'].textContent, 'CANCEL');

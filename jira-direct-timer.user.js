@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.9
+// @version      1.10
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -43,7 +43,7 @@
         #jira-direct-timer [data-error]:not(:empty) {margin-top:8px}
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<strong>Jira stopky (bez Clockify)</strong><div data-issue></div><time data-clock>00:00:00</time><div data-title></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<strong>Jira stopky (bez Clockify)</strong><div data-issue></div><time data-clock>00:00:00</time><div data-title></div><div data-link-row style="overflow-wrap:anywhere"><a data-link></a></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
     manualRow.dataset.manualRow = '';
@@ -136,6 +136,10 @@
             panel.querySelector('[data-issue]').textContent = value ? value.issue : '';
             panel.querySelector('[data-clock]').textContent = clock;
             panel.querySelector('[data-title]').textContent = title;
+            const link = panel.querySelector('[data-link]');
+            panel.querySelector('[data-link-row]').hidden = !value;
+            link.href = value ? `https://jira.alza.cz/browse/${encodeURIComponent(value.issue)}` : '';
+            link.textContent = value ? link.href : '';
             status.textContent = value ? stateText : 'Pripraveno. Pred Start zastav jine stopky.';
             if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             const switching = active && value.issue !== issue();

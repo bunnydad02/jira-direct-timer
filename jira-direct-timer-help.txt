@@ -7,6 +7,9 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
 
 Pouziti:
+- Verze 1.10: Pod nazvem mereneho ukolu je jeho klikaci URL.
+  Odkaz smeruje na mereny zaznam, nikoli na prave otevreny ukol.
+  Bez zaznamu je skryty. Dosavadni styly a barevne stavy zustaly stejne.
 - Verze 1.9: Panel je siroky 240 px (drive 310 px, zuzeni o 22,6 %).
   Bezici stopky maji jemne zelene pozadi; ostatni stavy jemne cervene.
   Cas ma samostatny vyrazny radek s 34px tucnym cislicovym pismem.
