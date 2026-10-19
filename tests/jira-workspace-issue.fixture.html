@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Jira Local Workspace - synthetic browser fixture</title>
+    <style>
+        * {box-sizing:border-box} body {margin:0;background:#fff;color:#172b4d;font:14px/1.5 Arial,sans-serif}
+        a {color:#0052cc} button {cursor:pointer} .aui-header {padding:12px 24px;background:#0747a6}
+        .aui-nav {display:flex;gap:20px;list-style:none;padding:0;margin:0}.aui-header a {color:white;text-decoration:none}
+        #main {margin:0 auto;max-width:1500px} #issue-content {padding:25px}
+        .issue-header {margin-bottom:20px} .breadcrumbs {font-size:12px} h1 {font-size:26px;margin:10px 0}
+        .aui-button {display:inline-block;padding:6px 10px;background:#f4f5f7;border:1px solid #c1c7d0;border-radius:3px;color:#172b4d}
+        .aui-button-primary {background:#0052cc;color:white}.issue-body-content {display:flex;gap:25px}
+        .issue-main-column {flex:1;min-width:0}.issue-side-column {width:280px}
+        .module {margin:0 0 20px}.mod-header {border-bottom:1px solid #ddd} h2 {font-size:16px;margin:10px 0}
+        .mod-content {padding:12px 0}.property-list {list-style:none;margin:0;padding:0}
+        .property-list li {display:flex;gap:15px;padding:5px 0}.name {width:110px;flex-shrink:0;color:#6b778c}
+        .aui-lozenge {background:#e3fcef;color:#006644;padding:2px 7px;border:1px solid #abf5d1;font-size:11px;font-weight:bold}
+        .attachment-drop-zone {padding:20px;border:1px dashed #ccc}.tabs-menu {display:flex;gap:15px;list-style:none;margin:0;padding:0}
+        .issue-data-block {padding:15px 0}.action-head {font-size:12px;color:#6b778c}.action-body {margin-top:8px}
+        textarea {display:block;max-width:100%;width:100%;min-height:80px;margin:12px 0;padding:10px;font:inherit}
+        dialog {max-width:90vw;width:500px;border:1px solid #c1c7d0;border-radius:8px;padding:25px}
+        #fixture-note {margin:12px 28px;color:#596980;font-size:12px}
+    </style>
+</head>
+<body>
+    <header id="header"><div class="aui-header"><ul class="aui-nav">
+        <li><a href="#home">Jira</a></li><li><a href="#projects">Projects</a></li><li><a href="#issues">Issues</a></li>
+        <li><a href="#boards">Boards</a></li><li><a href="#create">Create</a></li>
+    </ul></div></header>
+    <main id="main">
+        <p id="fixture-note">Synthetic local fixture. No Jira data, credentials or worklog writes. Native actions below are test doubles.</p>
+        <div id="issue-content">
+            <div class="issue-header">
+                <div class="breadcrumbs"><a href="#project">Workspace demo</a> / <a href="#issue">DEMO-42</a></div>
+                <h1 id="summary-val">A calmer workspace for your next big idea</h1>
+                <span class="aui-lozenge aui-lozenge-current">IN PROGRESS</span>
+                <div class="command-bar">
+                    <button id="edit-issue" class="aui-button aui-button-primary">Edit</button>
+                    <button id="assign-issue" class="aui-button">Assign</button>
+                    <button id="workflow-transition" class="aui-button">Move to review</button>
+                    <button id="add-comment" class="aui-button">Add comment</button>
+                    <button class="aui-button" aria-haspopup="true">More</button>
+                </div>
+            </div>
+            <div class="issue-body-content">
+                <div class="issue-main-column">
+                    <section id="details-module" class="module">
+                        <div class="mod-header"><h2>Details</h2></div>
+                        <div class="mod-content"><ul class="property-list">
+                            <li><span class="name">Type</span><span class="value">Task</span></li>
+                            <li><span class="name">Priority</span><span class="value">Medium</span></li>
+                            <li><span class="name">Resolution</span><span class="value">Unresolved</span></li>
+                            <li><span class="name">Labels</span><span class="value"><a href="#label">local-workspace</a></span></li>
+                        </ul></div>
+                    </section>
+                    <section id="descriptionmodule" class="module">
+                        <div class="mod-header"><h2>Description</h2></div>
+                        <div class="mod-content"><div id="description-val" class="wiki-content">
+                            <p>Keep the context. Lose the visual noise.</p>
+                            <p>A focused place for the work that matters, with familiar Jira actions exactly where you need them.</p>
+                            <ul><li>Native editing and workflow</li><li>Clear sections and readable activity</li><li>Your timer, always within reach</li></ul>
+                        </div></div>
+                    </section>
+                    <section id="attachmentmodule" class="module">
+                        <div class="mod-header"><h2>Attachments</h2></div>
+                        <div class="mod-content"><div class="attachment-drop-zone">Drop files here, or <a href="#browse">browse</a></div></div>
+                    </section>
+                    <section id="linkingmodule" class="module">
+                        <div class="mod-header"><h2>Issue links</h2></div>
+                        <div class="mod-content">relates to <a href="#related">DEMO-41</a> &mdash; Plan the next release</div>
+                    </section>
+                    <section id="activitymodule" class="module">
+                        <div class="mod-header"><h2>Activity</h2></div>
+                        <div class="mod-content">
+                            <ul class="tabs-menu"><li><a href="#comments">Comments</a></li><li><a href="#history">History</a></li><li><a href="#worklog">Work log</a></li></ul>
+                            <div id="comments"><div class="issue-data-block"><div class="action-head">Demo user &middot; a moment ago</div><div class="action-body">Everything you need, with room to think.</div></div></div>
+                            <label for="comment">Add a comment</label><textarea id="comment" placeholder="Write a comment..."></textarea>
+                            <button id="submit-comment" class="aui-button">Add</button>
+                        </div>
+                    </section>
+                </div>
+                <aside class="issue-side-column" id="viewissuesidebar">
+                    <section id="peoplemodule" class="module"><div class="mod-header"><h2>People</h2></div>
+                        <div class="mod-content"><ul class="property-list"><li><span class="name">Assignee</span><span class="value" id="assignee">Demo user</span></li><li><span class="name">Reporter</span><span class="value">Product team</span></li></ul></div>
+                    </section>
+                    <section id="datesmodule" class="module"><div class="mod-header"><h2>Dates</h2></div>
+                        <div class="mod-content"><ul class="property-list"><li><span class="name">Created</span><span class="value">Today, 09:00</span></li><li><span class="name">Updated</span><span class="value">A moment ago</span></li></ul></div>
+                    </section>
+                    <section id="timetrackingmodule" class="module"><div class="mod-header"><h2>Time tracking</h2></div>
+                        <div class="mod-content"><ul class="property-list"><li><span class="name">Estimated</span><span class="value">4h</span></li><li><span class="name">Remaining</span><span class="value">2h</span></li></ul></div>
+                    </section>
+                    <section id="timer-sidebar" class="module"><div class="mod-header"><h2>Legacy Clockify</h2></div><div class="mod-content">Legacy plugin placeholder</div></section>
+                </aside>
+            </div>
+        </div>
+    </main>
+    <dialog id="edit-dialog"><form method="dialog"><h2>Edit issue</h2><label for="edit-summary">Summary</label><textarea id="edit-summary"></textarea><button id="save-edit" class="aui-button">Save</button></form></dialog>
+    <script>
+        history.replaceState(null, '', location.protocol === 'file:' ? '?selectedIssue=DEMO-42' : '/browse/DEMO-42');
+        document.getElementById('edit-issue').onclick = () => {
+            document.getElementById('edit-summary').value = document.getElementById('summary-val').textContent;
+            document.getElementById('edit-dialog').showModal();
+        };
+        document.getElementById('save-edit').onclick = () => {
+            document.getElementById('summary-val').textContent = document.getElementById('edit-summary').value;
+        };
+        document.getElementById('workflow-transition').onclick = () => {
+            document.querySelector('.aui-lozenge').textContent = 'IN REVIEW';
+        };
+        document.getElementById('assign-issue').onclick = () => {
+            document.getElementById('assignee').textContent = 'Current user';
+        };
+        document.getElementById('add-comment').onclick = () => document.getElementById('comment').focus();
+        document.getElementById('submit-comment').onclick = () => {
+            const node = document.createElement('div');
+            node.className = 'issue-data-block action-body';
+            node.textContent = document.getElementById('comment').value;
+            document.getElementById('comments').appendChild(node);
+            document.getElementById('comment').value = '';
+        };
+    </script>
+    <script src="../jira-workspace-issue.user.js"></script>
+    <script src="../jira-workspace-timer.user.js"></script>
+</body>
+</html>

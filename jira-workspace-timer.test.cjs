@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const source = fs.readFileSync(`${__dirname}\\jira-direct-timer.user.js`, 'utf8');
+const source = fs.readFileSync(`${__dirname}\\jira-workspace-timer.user.js`, 'utf8');
 
 function setup(initial, failureAt = 0, input = '30', existing = false, latency = 0) {
     let state = initial;

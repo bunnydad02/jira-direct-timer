@@ -1,19 +1,60 @@
-# Jira direct timer: maintenance handoff
+# Jira Local Workspace: maintenance handoff
 
 Prepared on 2026-10-19 from the source, tests, repository history and development
 conversation. This document preserves project context for future maintainers.
 
-## Current baseline and scope
+## Current project and scope
 
-- Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
+- Project name: **Jira Local Workspace**. The existing local checkout remains
+  `C:\REPO\jira-direct-timer` so the open editor/workspace stays valid.
+  No Git remote is configured; there is no hosted repository to rename.
+- Work on `feat/jira-local-workspace` for the redesign, not on `master`.
+- Independent scripts: `jira-workspace-issue.user.js` (local issue redesign)
+  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.1).
+- Start with [README.md](./README.md) and
+  [jira-workspace-help.txt](./jira-workspace-help.txt) for installation.
+- The timer rename is metadata/file naming only. Keep `alza.jira-direct-timer`,
+  `jira-direct-timer-v1`, `jira-direct-timer` and `[jira-direct-timer:<id>]`
+  unchanged: these are compatibility identifiers, not stale branding.
+- Replace the existing installed timer, rather than creating another copy.
+- The redesign never writes Jira data or calls Jira APIs. It styles native
+  elements without cloning, reparenting or replacing their event handlers.
+  A separate toolbar provides section links, density and a native-view toggle.
+- Recognize issue pages by URL (`/browse/KEY` or `selectedIssue`) and a
+  populated `#summary-val` inside `#issue-content` or `#issue-view`.
+  Other pages are intentionally left alone.
+- Preferences use only `jira-local-workspace-ui-v1`. Storage errors appear
+  in the toolbar and console; malformed data is not silently overwritten.
+  The timer storage is never accessed by the redesign.
+- MutationObserver tracks content replacements, with updates coalesced through
+  requestAnimationFrame. It ignores toolbar/timer mutations and updates links
+  only when targets or headings change, avoiding observer loops and timer churn.
+- CSS is scoped to the recognized issue view. Only known native two-column
+  structures become a responsive grid; unknown layouts retain their structure.
+  Preserve semantic status colors and native editor/dialog/menu/workflow behavior.
+- The new design is independent of the timer; disabling it restores the native
+  view, but does not undo the timer's existing Clockify-hiding rule.
+- Visual direction: Asana-inspired compact dark mode by default. Use flat
+  sections and thin dividers, not spacious white cards, gradients or shadows.
+  Compact density defaults to true; supported direct metadata lists use two
+  columns on desktop. Keep native field handlers and status color categories.
+- The redesign also darkens native form surfaces/dialogs and the optional
+  standalone timer/toasts, without changing timer width, behavior or storage.
+  Removing the theme restores the timer's original light state colors.
+- No current authenticated Jira HTML is stored in the repository. Verify the
+  actual installed copy before assuming all Jira/plugin variants are styled.
+
+## Historical timer baseline
+
+- Original repository name: `jira-direct-timer`; originally developed on `master`.
 - Baseline before v1.14: `ad89abe`; working tree clean.
 - Userscript version: **1.16.0**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
-- Files: `jira-direct-timer.user.js` (implementation),
-  `jira-direct-timer.test.cjs` (Node regression tests),
-  `jira-direct-timer-help.txt` (installation, usage and release notes).
+- Current timer files: `jira-workspace-timer.user.js` (implementation),
+  `jira-workspace-timer.test.cjs` (Node regression tests),
+  `jira-workspace-help.txt` (installation and usage).
 - The user requested only files useful for maintenance or development remain.
   Do not restore discarded diagnostic files just for completeness.
 
@@ -151,6 +192,37 @@ scripts/network requests. Do not store the supplied full Jira HTML or its tokens
 
 ## Validation and deployment
 
+The Jira Local Workspace v1.0.0 redesign and renamed v1.16.1 timer passed both
+Node regression suites and both userscript syntax checks. The timer body is
+unchanged; only its file name, display name and patch version changed.
+The redesign tests cover scope detection, native-view/density preferences,
+safe section labels, storage failures, cross-tab preference events, root
+replacement, late loading, stable navigation links and observer coalescing.
+
+The synthetic [browser fixture](./tests/jira-workspace-issue.fixture.html) was
+checked locally at widths 1440, 1024, 768, 390 and 320px. No horizontal page
+overflow occurred; the sidebar stacked below the main column at <=1100px.
+At 1440px, the final default compact dark fixture was 1002px tall instead of
+1765px for the initial spacious light design (43% shorter with the same content).
+The description section was about 162px, details 85px and toolbar 44px tall.
+Sections have no card radius, shadow or header gradient. The sidebar is 260px.
+Native-view toggling and preference survival after reload passed. Fixture
+handlers for edit dialog/save, assignment, workflow and comments still worked.
+Replacing the issue root remounted exactly one toolbar; an unknown plugin
+remained visible and clickable. Leaving the issue removed the theme and
+toolbar; `selectedIssue` navigation restored them.
+The toolbar had zero mutations during a 350ms idle interval despite the timer's
+100ms refresh. The independent timer remained 240px wide with computed
+dark green/blue/red backgrounds for current-issue/other-issue/idle states.
+The native-view toggle restored the original light timer colors without
+changing the running record. Native fixture dialog surfaces were dark. The old
+Clockify module remained hidden by the timer. Direct `file:` fixture opening
+also activated the redesign via a synthetic `selectedIssue` query parameter.
+
+These are synthetic DOM checks, not authenticated Jira/plugin validation.
+No real Jira requests or worklogs were made. The actual installed Tampermonkey
+copy and all server-specific/plugin markup have not been verified.
+
 The v1.16.0 Clockify hiding rule passed syntax and Node regression checks.
 An isolated local browser fixture verified computed `display:none`, zero layout
 space for the whole module, heading and iframe, unchanged neighboring modules,
@@ -169,8 +241,10 @@ saves (including queued work), checking stable status, controls and colors.
 From the repository directory on Windows:
 
 ```powershell
-node --check .\jira-direct-timer.user.js
-node .\jira-direct-timer.test.cjs
+node --check .\jira-workspace-timer.user.js
+node .\jira-workspace-timer.test.cjs
+node --check .\jira-workspace-issue.user.js
+node .\jira-workspace-issue.test.cjs
 ```
 
 Tests use Node built-ins (`fs`, `vm`, `assert`) and simulate DOM, storage,
@@ -231,8 +305,9 @@ already installed userscript. Preserve browser state during updates.
 - `5f8c0c3`: removed old Clockify workaround, support-email draft and completed
   v1.7 text-editing worksheet. They remain retrievable in Git history.
 - Use new commits; do not rewrite reconstructed history or amend by default.
-  Existing convention: `feat:` and `chore:` subjects. Remain on `master` unless
-  the user changes that instruction; do not push without a request.
+  Existing convention: `feat:`, `fix:`, `refactor:` and `chore:` subjects.
+  The current redesign belongs on `feat/jira-local-workspace`;
+  do not push without a request.
 - The help file describes current behavior only; use Git history for old labels,
   release notes and superseded UI variants.
 - v1.13 implements the subsequent request for Enter submission, ADD MINUTES

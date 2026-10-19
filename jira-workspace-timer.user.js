@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Jira direct worklog timer
+// @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.16.0
+// @version      1.16.1
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle

@@ -1,15 +1,51 @@
-JIRA STOPKY - verze 1.16.0
+JIRA LOCAL WORKSPACE - prirucka
+
+Projekt lokalne modernizuje Jiru pomoci dvou nezavislych Tampermonkey skriptu.
+Prehled projektu a navrat zpet: README.md.
+
+MODERNI DETAIL UKOLU - verze 1.0.0
+
+Instalace:
+1. V Tampermonkey vytvor NOVY skript.
+2. Vloz cely jira-workspace-issue.user.js a uloz Ctrl+S.
+3. Povol pristup k https://jira.alza.cz a obnov detail ukolu.
+4. Nad detailem se objevi lista Jira Local Workspace.
+
+Pouziti:
+- Detail je tmavy a kompaktni ve stylu Asany: ploche sekce, jemne oddelovace,
+  mala hlavicka a husta metadata. Zadna velka karta, gradienty ani velke mezery.
+- Popis, komentare, prilohy, odkazy, lide, datumy a worklog zustavaji v Jire.
+  Skript nekopiruje obsah ani nepresouva puvodni formulare.
+- Odkazy v liste preskoci na existujici sekce detailu.
+- Kompaktni je zapnute ve vychozim stavu; tlacitko prepina hustotu.
+  Puvodni vzhled vrati nativni zobrazeni.
+  Lista zustane dostupna pro opetovne zapnuti pres Novy vzhled.
+- Volby jsou spolecne pro karty tohoto profilu na stejnem webu.
+- Na uzke obrazovce se podporovane dvousloupcove detaily slozi pod sebe.
+- Pri dynamickem prechodu mezi ukoly se upravy pripoji znovu.
+- Mimo rozpoznany detail ukolu se vzhled Jiry nemeni.
+- Upravy jsou pouze lokalni; nevyzaduji serverovy plugin ani API.
+- Dark mode barevne sladi take stopky, jejich potvrzeni, formulare a Jira dialogy.
+  Stavy mereni zustavaji zelene/modre/cervene. Mereni a ukladani se nemeni.
+- Pro uplne odstraneni vypni tento skript v Tampermonkey a obnov stranku.
+  Nemaz data webu, protoze v nich mohou zustavat rozpracovane stopky.
+- Pokud Jira pouzije jine HTML, nektere casti mohou zustat puvodni.
+  Prepinac Puvodni vzhled umoznuje okamzity navrat bez obnoveni stranky.
+
+JIRA STOPKY - verze 1.16.1
 
 Pro budouci udrzbu a AI agenty:
 - Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
   architektura, bezpecne obnoveni zapisu, testovani a historie.
-- Vychozi pracovni vetev je master, dokud uzivatel nerekne jinak.
+- Redesign se vyviji ve vetvi feat/jira-local-workspace, nikoli na master.
 - Historicke verze a zmeny jsou v historii Gitu. Tento navod popisuje
   aktualni chovani, nikoli drivejsi popisky a opustene varianty.
 
 Instalace a aktualizace:
-1. V Tampermonkey vytvor novy skript nebo otevri existujici Jira stopky.
-2. Nahrad cely obsah souborem jira-direct-timer.user.js a uloz Ctrl+S.
+1. V Tampermonkey otevri EXISTUJICI Jira stopky (pri prvni instalaci novy skript).
+2. Nahrad cely obsah souborem jira-workspace-timer.user.js a uloz Ctrl+S.
+   Projekt i skript maji novy nazev; neinstaluj druhou kopii stopek.
+   Interni namespace, ulozena data, zamek a worklog znacky zustavaji stejne.
 3. Povol rozsireni pristup k https://jira.alza.cz a pouzivani uzivatelskych skriptu.
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
 5. Pri aktualizaci nemaz data webu; rozpracovane mereni zustane zachovane.
@@ -79,8 +115,10 @@ Trvalost, chyby a obnoveni:
   a nevykazuj stejny cas jinym zpusobem bez kontroly.
 
 Overeni:
-- Lokalni regrese: node --check .\jira-direct-timer.user.js
-  a node .\jira-direct-timer.test.cjs (bez pripojeni k Jire).
+- Lokalni regrese: node --check .\jira-workspace-timer.user.js
+  a node .\jira-workspace-timer.test.cjs (bez pripojeni k Jire).
+- Redesign: node --check .\jira-workspace-issue.user.js
+  a node .\jira-workspace-issue.test.cjs.
 - Historicke zive overeni z 15. 10. 2026 a podrobnosti simulovanych
   prohlizecovych kontrol jsou v HANDOFF.md; nejde o aktualni overeni
   nainstalovane kopie. Testy nevytvareji skutecne worklogy.
