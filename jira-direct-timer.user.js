@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.14.2
+// @version      1.14.3
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -14,7 +14,6 @@
     const KEY = 'jira-direct-timer-v1';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
-    panel.style.cssText = 'position:fixed;left:20px;bottom:20px;z-index:10000;width:240px;max-width:calc(100vw - 40px);box-sizing:border-box;padding:14px;border:1px solid #e4b9b9;border-radius:12px;background:#fff2f2;color:#253249;box-shadow:0 6px 24px #172b4d24;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
     const styles = document.createElement('style');
     styles.textContent = `
         #jira-direct-timer {position:fixed;left:20px;bottom:20px;z-index:10000;width:240px;max-width:calc(100vw - 40px);box-sizing:border-box;padding:14px;border:1px solid #e4b9b9;border-radius:12px;background:#fff2f2;color:#253249;box-shadow:0 6px 24px #172b4d24;font:13px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}

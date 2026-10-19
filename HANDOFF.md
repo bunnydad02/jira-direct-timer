@@ -7,7 +7,7 @@ conversation. This document preserves project context for future maintainers.
 
 - Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
 - Baseline before v1.14: `ad89abe`; working tree clean.
-- Userscript version: **1.14.2**, standalone fixed panel at the bottom left.
+- Userscript version: **1.14.3**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
@@ -78,8 +78,9 @@ These are historical findings, not proof of Clockify's current service status.
   prefers-reduced-motion by disabling animation, keeping the 5-second lifetime.
 - Toasts have no scroll container or height cap: use visible overflow so
   animations and shadows are not clipped. Multiple cards stack above the panel.
-- The current source also sets panel styles inline. Node mocks do not verify
-  actual CSS precedence or rendered colors; check browser styling when changing it.
+- Panel styles are defined only in the stylesheet. Do not duplicate them inline:
+  inline background/border styles previously overrode running/other state colors.
+  Node mocks do not verify CSS precedence; check computed colors in a browser.
 
 ## Explicitly abandoned experiment
 
@@ -162,8 +163,11 @@ Browser animation samples verified opacity 0/0.5/1 during entry, a fully visible
 to 280px in a 320px viewport, and reduced-motion mode disabled animation while
 preserving expiry.
 No real Jira worklogs were created. This does not validate the installed copy.
-The existing inline panel background still overrides its state-based CSS;
-this pre-existing styling issue was observed, not changed in this release.
+The inline panel background overriding state-based CSS was observed in v1.14;
+v1.14.3 removes the duplicate inline styles to restore state colors.
+An isolated browser comparison reproduced red backgrounds/borders in the old
+running states and verified the fix: green on the open issue, blue on another,
+red when idle/stopped/pending/saved, including clock colors and 240px width.
 
 For UI changes, verify in an authenticated browser with care: start/stop/manual
 entry can write real worklogs. Obtain authorization for new diagnostic entries.

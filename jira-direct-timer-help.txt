@@ -12,6 +12,9 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
 
 Pouziti:
+- Verze 1.14.3: Opravena prednost pevneho cerveneho pozadi panelu.
+  Pozadi, ramecek a cislice odpovidaji stavu: zelena pri mereni otevreneho
+  ukolu, modra pri mereni jineho ukolu, cervena kdyz nic nebezi.
 - Verze 1.14.2: Toasty uz nemaji rolovaci kontejner ani vyskovy limit.
   Karty, stiny a animace se neorezavaji; vice zprav se sklada nad panel.
   Sirka presne odpovida vnejsim okrajum stopek (bezne 240 px),
