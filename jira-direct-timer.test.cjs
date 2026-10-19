@@ -12,6 +12,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let now = 200000000;
     let render;
     let interval;
+    let onFetch = () => {};
     function element() {
         return {dataset: {}, value: '', children: [], attributes: {},
             get innerHTML() { return this.html; },
@@ -40,6 +41,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
             if (path.endsWith('?fields=summary')) return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
+            await onFetch(path, options);
             now += latency;
             if (options.method === 'POST') {
                 const body = JSON.parse(options.body);
@@ -56,6 +58,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     return {nodes, panel, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick(),
         toasts: () => panel.children.find(child => 'toasts' in child.dataset).children,
         advance: ms => { now += ms; }, render: () => render(), interval: () => interval,
+        onFetch: callback => { onFetch = callback; },
         keydown: async (key = 'Enter') => {
             let prevented = false;
             await nodes['[data-minutes]'].onkeydown({key, preventDefault: () => { prevented = true; }});
@@ -64,6 +67,43 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
 }
 const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended: null, phase: 'running'});
 (async () => {
+    for (const [initial, action] of [
+        [running(), 'stop'], [running(), 'start'], [running(), 'manual'],
+        [null, 'manual'], [{...running(), ended: 200000000, phase: 'stopped'}, 'manual']
+    ]) {
+        const stable = setup(initial);
+        const before = {
+            running: stable.panel.dataset.running,
+            other: stable.panel.dataset.other,
+            saveHidden: stable.nodes['[data-save-row]'].hidden,
+            cancelHidden: stable.nodes['[data-cancel]'].hidden,
+            status: stable.nodes['[data-status]'].textContent
+        };
+        let requests = 0;
+        stable.onFetch(() => {
+            requests++;
+            stable.advance(500);
+            stable.render();
+            assert.deepEqual({
+                running: stable.panel.dataset.running,
+                other: stable.panel.dataset.other,
+                saveHidden: stable.nodes['[data-save-row]'].hidden,
+                cancelHidden: stable.nodes['[data-cancel]'].hidden,
+                status: stable.nodes['[data-status]'].textContent
+            }, before, `${action}: intermediate storage phases must not change panel layout or status`);
+            assert.equal(stable.nodes['[data-start]'].disabled, true);
+            assert.equal(stable.nodes['[data-stop]'].disabled, true);
+            assert.equal(stable.nodes['[data-manual]'].disabled, true);
+            if (initial?.phase === 'running') {
+                assert.equal(stable.nodes['[data-clock]'].textContent, `00:02:${String(5 + Math.floor(requests / 2)).padStart(2, '0')}`);
+            }
+        });
+        await stable.click(action);
+        assert.ok(requests >= 2);
+        assert.equal(stable.nodes['[data-error]'].textContent, '');
+        assert.equal(stable.nodes['[data-save-row]'].hidden, true);
+        assert.ok(stable.toasts().length >= 1);
+    }
     for (const initial of [null, running(), {...running(), issue: 'DEMO-101'}]) {
         const h = setup(initial);
         assert.match(h.panel.innerHTML, /^<strong>Jira stopky<\/strong>/);

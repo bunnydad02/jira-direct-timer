@@ -7,7 +7,7 @@ conversation. This document preserves project context for future maintainers.
 
 - Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
 - Baseline before v1.14: `ad89abe`; working tree clean.
-- Userscript version: **1.15.1**, standalone fixed panel at the bottom left.
+- Userscript version: **1.15.2**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
@@ -109,6 +109,12 @@ without a new user request; it is not pending work to finish automatically.
   old records.
 - Phases: `running`, `stopped`, `pending`, `saved`. Mark and persist `pending`
   before issuing the worklog POST. A lost response leaves an uncertain result.
+- While a local action is busy, render a separate pre-action storage snapshot
+  with controls disabled, not intermediate persisted save phases. This prevents
+  recovery controls/status and panel colors from flashing on routine saves.
+  Running time still advances (including independent manual entries).
+  On completion/error, render actual persisted state immediately; recovery
+  remains visible after failures and reloads. Never delay pending persistence.
 - Before saving, `findSaved` pages through issue worklogs looking for
   `[jira-direct-timer:<id>]` in the comment. Never remove/change that marker.
 - If a pending record is found remotely, recover it as saved. If it is absent,
@@ -136,6 +142,14 @@ without a new user request; it is not pending work to finish automatically.
   Do not clear site data, change profiles, or "repair" data by silently resetting.
 
 ## Validation and deployment
+
+The v1.15.2 save-transition fix was checked with a paused mock POST in a browser.
+Before the fix, the pending render exposed recovery controls and grew the panel
+from 276px to 368px. After the fix, height stayed at 276px and a MutationObserver
+saw no recovery controls through successful completion. Simulated connection
+loss still exposed the error and enabled recovery with pending state retained.
+Regression tests force render during every GET/POST for STOP, switch and manual
+saves (including queued work), checking stable status, controls and colors.
 
 From the repository directory on Windows:
 

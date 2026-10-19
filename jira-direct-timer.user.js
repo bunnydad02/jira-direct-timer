@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.15.1
+// @version      1.15.2
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -96,6 +96,7 @@
     const minutes = panel.querySelector('[data-minutes]');
     const manual = panel.querySelector('[data-manual]');
     let busy = false;
+    let actionDisplay = null;
     let notice = '';
     const titles = new Map();
     const titleRequests = new Set();
@@ -204,7 +205,7 @@
     function render() {
         try {
             renderToasts();
-            const value = read();
+            const value = busy ? actionDisplay : read();
             const currentIssue = issue();
             const independentManual = value && value.manualEntry;
             const queuedManual = value && value.manualNext;
@@ -279,8 +280,9 @@
         if (busy) return;
         busy = true;
         notice = '';
-        render();
         try {
+            actionDisplay = read();
+            render();
             if (!navigator.locks) throw new Error('Prohlizec nepodporuje zamykani mezi kartami. Pouzij standardni Jira Log work.');
             await navigator.locks.request(KEY, {ifAvailable: true}, async lock => {
                 if (!lock) throw new Error('Stopky prave meni jina karta. Zkus pozdeji.');
@@ -290,6 +292,7 @@
             notice = `${e.message}\nCas zustava ulozeny v tomto prohlizeci. Neopakuj zapis jinym zpusobem bez kontroly duplicit.`;
         } finally {
             busy = false;
+            actionDisplay = null;
             render();
         }
     }

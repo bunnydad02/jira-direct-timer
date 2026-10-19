@@ -1,4 +1,4 @@
-JIRA STOPKY - verze 1.15.1
+JIRA STOPKY - verze 1.15.2
 
 Pro budouci udrzbu a AI agenty:
 - Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
@@ -40,6 +40,9 @@ Vykazovany cas:
   Rychle prepinani proto muze vykazat vice casu, nez skutecne uplynulo.
 
 Panel a potvrzeni:
+- Behem ukladani zustava panel ve vychozim stavu s docasne vypnutymi
+  ovladacimi prvky. Interni mezistavy ani tlacitko Overit neproblikavaji.
+  Po uspechu prejde primo do vysledneho stavu; pri chybe nabidne obnoveni.
 - Panel ma sirku 240 px (na uzke obrazovce se prizpusobi). Zelena znamena
   mereni otevreneho ukolu, modra mereni jineho ukolu, cervena ze nic nebezi.
 - Klic a cely nazev odkazuji na mereny ukol. Na jinem ukolu panel ukazuje
