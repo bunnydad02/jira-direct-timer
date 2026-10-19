@@ -3,7 +3,7 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(`${__dirname}\\jira-direct-timer.user.js`, 'utf8');
 
-function setup(initial, failureAt = 0, input = '30', existing = false) {
+function setup(initial, failureAt = 0, input = '30', existing = false, latency = 0) {
     let state = initial;
     let confirmations = 0;
     const posts = [];
@@ -11,6 +11,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
     let panel;
     let now = 200000000;
     let render;
+    let interval;
     function element() {
         return {style: {}, dataset: {}, value: '', querySelector: s => nodes[s] ||= element(), appendChild() {}, insertBefore() {},
             after(child) { if ('cancel' in child.dataset) nodes['[data-cancel]'] = child; }};
@@ -24,10 +25,11 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
             querySelector: selector => selector === '#summary-val' ? {textContent: 'Full issue title <safe text>'} : {content: 'PMA-OLD'}},
         location: {pathname: '/browse/DEMO-101', search: ''}, URLSearchParams,
         localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }, removeItem: () => { state = null; }},
-        Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval: callback => { render = callback; },
+        Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval: (callback, ms) => { render = callback; interval = ms; },
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
             if (path.endsWith('?fields=summary')) return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
+            now += latency;
             if (options.method === 'POST') {
                 const body = JSON.parse(options.body);
                 posts.push({path, body});
@@ -35,28 +37,36 @@ function setup(initial, failureAt = 0, input = '30', existing = false) {
                 return {ok: true, json: async () => ({id: `log-${posts.length}`, timeSpentSeconds: body.timeSpentSeconds})};
             }
             return {ok: true, json: async () => ({total: existing ? 1 : 0, worklogs: existing ?
-                [{id: 'existing', timeSpentSeconds: 120, comment: `[jira-direct-timer:${state.id}]`}] : []})};
+                [{id: 'existing', timeSpentSeconds: 120, comment: `[jira-direct-timer:${state.manualEntry?.id || state.id}]`}] : []})};
         }
     };
     vm.runInNewContext(source, context);
     nodes['[data-minutes]'].value = input;
     return {nodes, panel, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick(),
-        advance: ms => { now += ms; }, render: () => render()};
+        advance: ms => { now += ms; }, render: () => render(), interval: () => interval,
+        keydown: async (key = 'Enter') => {
+            let prevented = false;
+            await nodes['[data-minutes]'].onkeydown({key, preventDefault: () => { prevented = true; }});
+            return prevented;
+        }};
 }
 const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended: null, phase: 'running'});
 (async () => {
-    for (const initial of [null, running()]) {
+    for (const initial of [null, running(), {...running(), issue: 'DEMO-101'}]) {
         const h = setup(initial);
+        assert.match(h.panel.innerHTML, /^<strong>Jira stopky<\/strong>/);
         await h.click('manual');
         assert.equal(h.confirmations(), 0, 'manual entry must save without a dialog');
-        assert.equal(h.posts.length, initial ? 2 : 1);
+        assert.equal(h.posts.length, 1);
         const last = h.posts.at(-1);
         assert.match(last.path, /DEMO-101/);
         assert.equal(last.body.timeSpentSeconds, 1800);
         assert.equal(last.body.started, new Date(200000000 - 1800000).toISOString().replace('Z', '+0000'));
         assert.match(last.body.comment, /Rucni vykaz/);
-        assert.equal(h.state().phase, 'saved');
-        if (initial) assert.match(h.posts[0].path, /DEMO-102/);
+        assert.equal(h.nodes['[data-minutes]'].value, '');
+        if (initial) {
+            assert.deepEqual(h.state(), initial, 'manual entry must preserve the exact running timer');
+        } else assert.equal(h.state().phase, 'saved');
     }
     for (const input of ['', '0', '-1', '1.5', 'NaN', '9999999999999999999']) {
         const h = setup(running(), 0, input);
@@ -67,11 +77,39 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     }
     const h = setup(running(), 1);
     await h.click('manual');
-    assert.equal(h.state().phase, 'pending');
-    assert.equal(h.state().manualNext.issue, 'DEMO-101');
+    assert.equal(h.state().phase, 'running');
+    assert.equal(h.state().manualEntry.phase, 'pending');
+    assert.equal(h.state().manualEntry.issue, 'DEMO-101');
+    assert.equal(h.state().started, running().started);
+    assert.equal(h.nodes['[data-save-row]'].hidden, false);
+    assert.equal(h.nodes['[data-manual]'].disabled, true);
+    assert.equal(h.nodes['[data-stop]'].disabled, true);
+    assert.equal(h.nodes['[data-start]'].disabled, true);
+    assert.equal(h.nodes['[data-cancel]'].disabled, true);
+    const unresolved = h.state();
+    for (const action of ['stop', 'cancel', 'start']) {
+        await h.click(action);
+        assert.deepEqual(h.state(), unresolved, `${action} must not overwrite an unresolved manual entry`);
+    }
+    h.advance(3000);
+    h.render();
+    assert.equal(h.nodes['[data-clock]'].textContent, '00:02:08');
+    const uncertain = h.state();
     await h.click('save');
     assert.equal(h.posts.length, 1, 'uncertain writes must not be repeated');
-    const secondFailure = setup(running(), 2);
+    assert.match(h.nodes['[data-error]'].textContent, /neopakuji/);
+    const reloaded = setup(uncertain, 0, '20', true);
+    await reloaded.click('save');
+    assert.equal(reloaded.posts.length, 0, 'recovery must find the manual marker, not the timer marker');
+    assert.deepEqual(reloaded.state(), running());
+    assert.equal(reloaded.nodes['[data-stop]'].disabled, false);
+    assert.equal(reloaded.nodes['[data-manual]'].disabled, false);
+    assert.equal(reloaded.nodes['[data-save-row]'].hidden, true);
+    const completedManual = setup({...running(), manualEntry: {...uncertain.manualEntry, phase: 'saved'}});
+    await completedManual.click('save');
+    assert.equal(completedManual.posts.length, 0);
+    assert.deepEqual(completedManual.state(), running());
+    const secondFailure = setup({...running(), ended: 200000000, phase: 'stopped'}, 2);
     await secondFailure.click('manual');
     assert.equal(secondFailure.state().phase, 'pending');
     assert.equal(secondFailure.state().issue, 'DEMO-101');
@@ -125,12 +163,22 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(fresh.nodes['[data-issue]'].hidden, true);
     await fresh.click('start');
     assert.equal(fresh.state().phase, 'running');
+    assert.equal(fresh.interval(), 100, 'display should update within 100 ms of second boundaries');
+    assert.equal(fresh.nodes['[data-clock]'].textContent, '00:00:00');
+    for (let second = 0; second < 4; second++) {
+        fresh.advance(999);
+        fresh.render();
+        assert.equal(fresh.nodes['[data-clock]'].textContent, `00:00:0${second}`);
+        fresh.advance(1);
+        fresh.render();
+        assert.equal(fresh.nodes['[data-clock]'].textContent, `00:00:0${second + 1}`);
+    }
     assert.equal(fresh.confirmations(), 0);
     await fresh.click('stop');
     assert.equal(fresh.posts.length, 1);
     assert.equal(fresh.posts[0].body.timeSpentSeconds, 60);
     assert.equal(fresh.state().phase, 'saved');
-    assert.equal(fresh.state().completedAt, 200000000);
+    assert.equal(fresh.state().completedAt, 200004000);
     assert.equal(fresh.confirmations(), 0);
     assert.equal(fresh.nodes['[data-save-row]'].hidden, true);
     assert.equal(fresh.nodes['[data-status]'].textContent, 'Ulozeno do Jiry');
@@ -185,5 +233,31 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await new Promise(resolve => setImmediate(resolve));
     assert.match(legacyTitle.nodes['[data-title]'].textContent, /Other issue full title/);
     assert.equal(legacyTitle.posts.length, 0);
-    console.log('PASS: manual 30 min, active timer save order, current issue, invalid input, two failure stages, crash recovery, deduplication, task switching, one-minute minimum');
+    for (const initial of [null, running()]) {
+        const enter = setup(initial, 0, '20', false, 1500);
+        assert.equal(await enter.keydown('Escape'), false);
+        assert.equal(enter.posts.length, 0);
+        assert.equal(await enter.keydown(), true);
+        assert.equal(enter.posts.length, 1);
+        assert.equal(enter.posts[0].body.timeSpentSeconds, 1200);
+        assert.equal(enter.nodes['[data-minutes]'].value, '');
+        if (initial) {
+            assert.deepEqual(enter.state(), initial, 'slow API must not pause or restart the timer');
+            assert.equal(enter.nodes['[data-clock]'].textContent, '00:02:08');
+            await enter.click('stop');
+            assert.match(enter.posts[1].path, /DEMO-102/);
+            assert.equal(enter.posts[1].body.timeSpentSeconds, 120);
+        }
+        await enter.keydown();
+        assert.equal(enter.posts.length, initial ? 2 : 1, 'empty Enter must not add another worklog');
+        assert.match(enter.nodes['[data-error]'].textContent, /kladny/);
+    }
+    const blockedEnter = setup(uncertain);
+    await blockedEnter.keydown();
+    assert.equal(blockedEnter.posts.length, 0);
+    const instantStop = setup(null);
+    await instantStop.click('start');
+    await instantStop.click('stop');
+    assert.equal(instantStop.posts[0].body.timeSpentSeconds, 60);
+    console.log('PASS: Enter/manual minutes, uninterrupted timer, second boundaries, slow API, failures, legacy recovery, deduplication, switching, cancellation, minimum duration, titles and saved display');
 })().catch(e => { console.error(e); process.exitCode = 1; });

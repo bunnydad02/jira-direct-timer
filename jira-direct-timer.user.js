@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.12
+// @version      1.13
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -50,11 +50,11 @@
         #jira-direct-timer [data-error]:not(:empty) {margin-top:8px}
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<strong>Jira stopky (bez Clockify)</strong><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<strong>Jira stopky</strong><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
     manualRow.dataset.manualRow = '';
-    manualRow.innerHTML = '<label>ADD MINUTES <input data-minutes type="number" min="1" step="1"></label><button data-manual>Zapsat do tohoto ukolu</button>';
+    manualRow.innerHTML = '<label>ADD MINUTES <input data-minutes type="number" min="1" step="1"></label><button data-manual>ADD MINUTES</button>';
     panel.appendChild(manualRow);
     const status = panel.querySelector('[data-status]');
     const error = panel.querySelector('[data-error]');
@@ -124,7 +124,7 @@
         return /^[A-Z][A-Z0-9_]*-\d+$/.test(value || '') ? value : null;
     }
     function duration(value) {
-        return Math.max(1, Math.floor(((value.ended === null ? Date.now() : value.ended) - value.started) / 1000));
+        return Math.max(0, Math.floor(((value.ended === null ? Date.now() : value.ended) - value.started) / 1000));
     }
     function stamp(ms) {
         const date = new Date(ms);
@@ -134,6 +134,7 @@
     function render() {
         try {
             const value = read();
+            const independentManual = value && value.manualEntry;
             const queuedManual = value && value.manualNext;
             const active = value && (value.phase !== 'saved' || queuedManual);
             const recentCompletion = value && value.phase === 'saved' && Number.isFinite(value.completedAt) &&
@@ -158,18 +159,19 @@
             }
             status.textContent = displayValue ? stateText : 'Nyn\u00ed se nic nem\u011b\u0159\u00ed.';
             if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
+            if (independentManual) status.textContent += `\nCeka rucni zapis do ${independentManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             const switching = active && value.issue !== issue();
-            start.disabled = busy || !issue() || !!queuedManual || (!!active && !switching);
+            start.disabled = busy || !issue() || !!queuedManual || !!independentManual || (!!active && !switching);
             start.textContent = 'START';
-            stop.disabled = busy || !value || value.phase !== 'running';
+            stop.disabled = busy || !!independentManual || !value || value.phase !== 'running';
             stop.textContent = 'STOP';
             cancel.hidden = !value || value.phase !== 'running';
-            cancel.disabled = busy || cancel.hidden;
+            cancel.disabled = busy || !!independentManual || cancel.hidden;
             cancel.textContent = 'CANCEL';
-            save.disabled = busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual));
-            panel.querySelector('[data-save-row]').hidden = !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual);
-            save.textContent = value && value.phase === 'pending' ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
-            manual.disabled = busy || !issue() || !!queuedManual || !!(value && value.phase === 'pending');
+            save.disabled = busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual) && !independentManual);
+            panel.querySelector('[data-save-row]').hidden = !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual && !independentManual);
+            save.textContent = value && (value.phase === 'pending' || independentManual?.phase === 'pending') ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
+            manual.disabled = busy || !issue() || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending');
             minutes.disabled = busy;
             error.textContent = notice;
         } catch (e) {
@@ -230,6 +232,7 @@
         const old = read();
         const key = issue();
         if (!key) throw new Error('Otevri konkretni ukol Jiry.');
+        if (old && old.manualEntry) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.');
         if (old && old.manualNext) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit.');
         if (old && old.phase !== 'saved') {
             if (old.issue === key) throw new Error('Tento ukol uz ma rozpracovane stopky.');
@@ -248,6 +251,7 @@
     stop.onclick = () => act(async () => {
         const value = read();
         if (!value || value.phase !== 'running') throw new Error('Stopky uz nebezi.');
+        if (value.manualEntry) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.');
         value.ended = Date.now();
         value.phase = 'stopped';
         write(value);
@@ -256,6 +260,7 @@
     cancel.onclick = () => act(async () => {
         const value = read();
         if (!value || value.phase !== 'running') throw new Error('Stopky uz nebezi.');
+        if (value.manualEntry) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.');
         localStorage.removeItem(KEY);
     });
     async function finishManual(value) {
@@ -263,6 +268,13 @@
         const entry = value.manualNext;
         write(entry);
         await saveEntry(entry);
+    }
+    async function finishIndependentManual(value) {
+        const entry = value.manualEntry;
+        if (entry.phase !== 'saved') await saveEntry(entry, () => write(value));
+        delete value.manualEntry;
+        write(value);
+        minutes.value = '';
     }
     manual.onclick = () => act(async () => {
         const key = issue();
@@ -273,14 +285,14 @@
             throw new Error('Zadej kladny cely pocet minut.');
         }
         const old = read();
-        if (old && (old.phase === 'pending' || old.manualNext)) throw new Error('Nejprve over predchozi zapis.');
+        if (old && (old.phase === 'pending' || old.manualNext || old.manualEntry)) throw new Error('Nejprve over predchozi zapis.');
         const end = Date.now();
         const entry = {...newTimer(key, end - count * 60000), ended: end, phase: 'stopped', manual: true};
-        if (old && old.phase !== 'saved') {
-            if (old.phase === 'running') {
-                old.ended = end;
-                old.phase = 'stopped';
-            }
+        if (old && old.phase === 'running') {
+            old.manualEntry = entry;
+            write(old);
+            await finishIndependentManual(old);
+        } else if (old && old.phase !== 'saved') {
             delete old.nextIssue;
             old.manualNext = entry;
             write(old);
@@ -292,7 +304,13 @@
         }
         minutes.value = '';
     });
-    async function saveEntry(value) {
+    minutes.onkeydown = event => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            if (!manual.disabled) return manual.onclick();
+        }
+    };
+    async function saveEntry(value, persist = write) {
         if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('Neni co ulozit.');
         const existing = await findSaved(value);
         if (existing) {
@@ -300,14 +318,14 @@
             value.worklogId = existing.id;
             value.recordedSeconds = existing.timeSpentSeconds;
             value.completedAt = Date.now();
-            write(value);
+            persist(value);
             return;
         }
         if (value.phase === 'pending') throw new Error('Zapis zatim nebyl nalezen. Automaticky ho neopakuji; over Work log v Jire.');
-        const measuredSeconds = duration(value);
+        const measuredSeconds = Math.max(1, duration(value));
         const seconds = Math.max(60, Math.floor(measuredSeconds / 60) * 60);
         value.phase = 'pending';
-        write(value);
+        persist(value);
         const body = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?adjustEstimate=leave`, {
             method: 'POST',
             body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.manual ? 'Rucni vykaz (Jira stopky)' : 'Prace na ukolu (Jira stopky)'}${measuredSeconds < 60 ? `\nMereno ${measuredSeconds} s; ulozeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
@@ -317,10 +335,14 @@
         value.worklogId = body.id;
         value.recordedSeconds = body.timeSpentSeconds;
         value.completedAt = Date.now();
-        write(value);
+        persist(value);
     }
     save.onclick = () => act(async () => {
         const value = read();
+        if (value && value.manualEntry) {
+            await finishIndependentManual(value);
+            return;
+        }
         if (!(value && value.phase === 'saved' && value.manualNext)) await saveEntry(value);
         await finishManual(value);
         if (value.phase === 'saved' && value.nextIssue) {
@@ -328,6 +350,6 @@
         }
     });
     window.addEventListener('storage', event => { if (event.key === KEY) render(); });
-    setInterval(render, 1000);
+    setInterval(render, 100);
     render();
 })();

@@ -6,8 +6,8 @@ conversation. This document preserves project context for future maintainers.
 ## Current baseline and scope
 
 - Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
-- Latest inspected commit: `5f8c0c3` (obsolete artifact cleanup); working tree clean.
-- Userscript version: **1.12**, standalone fixed panel at the bottom left.
+- Baseline before v1.13: `14a43d9` (maintenance handoff); working tree clean.
+- Userscript version: **1.13**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
@@ -46,8 +46,13 @@ These are historical findings, not proof of Clockify's current service status.
   a worklog POST, and does not modify already saved Jira worklogs.
 - Actions intentionally have no confirmation dialogs.
 - `ADD MINUTES` has no default example. Positive whole minutes are recorded
-  against the open issue, ending at click time. An existing unsaved timer is
-  saved first; no new timer starts afterwards. Those intervals may overlap.
+  against the open issue, ending at submission time, by button or Enter in the
+  input. Clear the input on success. An existing running timer keeps its ID,
+  start and running state, even when adding minutes to a different issue.
+  These independent intervals may overlap; no timer worklog is posted.
+- Display elapsed time from zero using wall-clock timestamps, refreshed every
+  100ms to avoid a visibly prolonged first second. Keep the one-minute worklog
+  minimum separate from the displayed elapsed duration.
 - Minimum recorded duration is 60 seconds even for a shorter measurement.
   Longer measurements are rounded down to complete minutes. Rapid switching
   can consequently record more time than the wall-clock interval.
@@ -78,7 +83,8 @@ without a new user request; it is not pending work to finish automatically.
   not across devices/profiles. Do not change keys or erase state casually.
 - Base record: `id`, `issue`, `started` (epoch ms), `ended` (ms or null),
   `phase`; optional `title`, `nextIssue`, `manualNext`, `manual`, `worklogId`,
-  `recordedSeconds`, `completedAt`. Preserve compatibility with old records.
+  `recordedSeconds`, `completedAt`, `manualEntry`. Preserve compatibility with
+  old records.
 - Phases: `running`, `stopped`, `pending`, `saved`. Mark and persist `pending`
   before issuing the worklog POST. A lost response leaves an uncertain result.
 - Before saving, `findSaved` pages through issue worklogs looking for
@@ -89,6 +95,13 @@ without a new user request; it is not pending work to finish automatically.
 - `nextIssue` preserves switch intent; the new timer starts at the old end time
   after saving succeeds. `manualNext` preserves queued manual work across failures.
   Do not throw away either intent during recovery or start competing work.
+- `manualEntry` nests an independent manual record inside the running timer.
+  Persist every manual save phase through the parent, keeping the timer running.
+  Remove this child only after a confirmed save. Ulozit / Overit recovers this
+  child without stopping the timer or repeating an uncertain POST, including
+  after reload. While unresolved, block stop/cancel/switch/new manual entry so
+  no action can overwrite it. Legacy `manualNext` recovery remains supported for
+  old stopped/saved records; already stopped timers are still saved first.
 - `navigator.locks.request` serializes mutations across tabs, with `ifAvailable`.
   Unsupported/busy locks produce visible errors instead of unsafe writes.
 - REST requests use the existing Jira session (`credentials: same-origin`).
@@ -111,10 +124,17 @@ node .\jira-direct-timer.test.cjs
 
 Tests use Node built-ins (`fs`, `vm`, `assert`) and simulate DOM, storage,
 time, locks and fetch. They do not contact Jira or create real worklogs.
-They cover switching, minimum duration, manual input validation/save ordering,
-both network-failure stages, uncertain-write non-retry, marker recovery,
-queued work recovery, cancellation, titles/links and the 4999/5000ms boundary.
+They cover switching, minimum duration, manual input validation, Enter, an
+uninterrupted timer on the same/other issue, simulated slow API, first-second
+boundaries, both legacy network-failure stages, uncertain-write non-retry,
+independent manual marker/reload recovery, queued work recovery, cancellation,
+titles/links and the 4999/5000ms boundary.
 They are not browser layout, real multi-tab contention or live API tests.
+
+The v1.13 UI was also checked in an isolated localhost browser with mocked Jira
+responses: an Enter keydown saved 20 minutes, the input cleared, and a subsequent
+manual save preserved the running timer's ID/start/phase. No Jira worklogs were
+created by this check. This does not validate the installed Tampermonkey copy.
 
 For UI changes, verify in an authenticated browser with care: start/stop/manual
 entry can write real worklogs. Obtain authorization for new diagnostic entries.
@@ -141,8 +161,9 @@ already installed userscript. Preserve browser state during updates.
 - The help file mixes historical labels with present-day usage (for example
   old "Prepnout" / "Zastavit a ulozit" vs current `START` / `STOP`). Treat the
   implementation and tests as current behavior; clarify the guide when editing it.
-- No further feature implementation was approved at handoff. Preserve the
-  stable behavior and investigate new requests rather than reviving old experiments.
+- v1.13 implements the subsequent request for Enter submission, ADD MINUTES
+  button text, uninterrupted timers during manual entries and accurate initial
+  seconds. It does not revive the abandoned Clockify/sidebar experiment.
 - Credentials/JWTs were shared in the original troubleshooting chat. Do not
   copy raw chat, Jira HTML, browser storage, tokens or API keys into Git.
   Previously shared Clockify credentials should be rotated by their owner;

@@ -1,4 +1,4 @@
-JIRA STOPKY BEZ CLOCKIFY
+JIRA STOPKY
 
 Pro budouci udrzbu a AI agenty:
 - Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
@@ -9,9 +9,18 @@ Instalace:
 1. V Tampermonkey vytvor novy skript.
 2. Nahrad cely obsah souborem jira-direct-timer.user.js a uloz Ctrl+S.
 3. Povol rozsireni pristup k https://jira.alza.cz a pouzivani uzivatelskych skriptu.
-4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky (bez Clockify)".
+4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
 
 Pouziti:
+- Verze 1.13: Rucni minuty ulozis tlacitkem ADD MINUTES nebo klavesou Enter
+  primo v poli minut. Po uspesnem zapisu se pole vyprazdni.
+  Bezici casovac zustane beze zmeny, i kdyz zapisujes minuty na jiny ukol.
+  Rucni interval konci okamzikem odeslani a muze se prekryvat s merenim.
+  Pri chybe rucniho zapisu casovac stale bezi; zapis dokoncis pres
+  Ulozit / Overit, take po obnoveni stranky. Do vyreseni nelze stopky
+  zastavit, zrusit ani prepnout, aby se cekajici zapis neztratil.
+  Stopky zacinaji od 00:00:00 a zobrazuji skutecne uplynule sekundy
+  s obnovou po 100 ms. Minimum pro zapis do Jiry zustava 1 minuta.
 - Verze 1.12: Po uspesnem ulozeni se posledni zaznam zobrazuje 5 sekund.
   Pak panel zobrazi "Nyni se nic nemeri." a vynuluje viditelne stopky.
   Ulozeny stav zustava v localStorage kvuli ochrane pred duplicitami,
@@ -51,7 +60,8 @@ Pouziti:
   Minimum je stale 1 minuta i pri okamzitem zastaveni.
   Tlacitko Ulozit / Overit je viditelne jen pri nedokoncenem zapisu.
   Verze 1.5 odstranuje take potvrzeni rucniho zadani minut.
-- Verze 1.3: Pole "Rucne minut" prijima kladne cele minuty (napr. 30).
+- Historicke chovani verze 1.3 (nahrazeno ve verzi 1.13):
+  Pole "Rucne minut" prijima kladne cele minuty (napr. 30).
   Otevri cilovy ukol a klikni "Zapsat do tohoto ukolu". Zapis zacne rovnou bez dialogu.
   Rucni interval konci okamzikem kliknuti a zacina o zadane minuty drive.
   Rozpracovane stopky se nejprve zastavi a ulozi (take na jinem ukolu).
@@ -72,8 +82,8 @@ Pouziti:
   Pri nejistem vysledku se POST neopakuje. Overeni nalezeneho worklogu
   dokonci rozpracovane prepnuti; cilovy ukol je ulozen spolu s casem zastaveni.
 - Nejprve zastav jine stopky, vcetne Clockify. Tyto stopky Clockify neridi.
-- Na otevrenem ukolu klikni Start.
-- Po praci klikni Zastavit a ulozit. Zapis probehne automaticky.
+- Na otevrenem ukolu klikni START.
+- Po praci klikni STOP. Zapis probehne automaticky.
 - Odhad zbyvajici prace zustane nezmeneny.
 - Na overene instanci Jira byl 9sekundovy zapis odmitnut.
   Skript proto odesila nejmene jednu minutu, vcetne kratsich mereni.
