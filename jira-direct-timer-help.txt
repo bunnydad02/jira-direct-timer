@@ -1,4 +1,4 @@
-JIRA STOPKY - verze 1.15.2
+JIRA STOPKY - verze 1.16.0
 
 Pro budouci udrzbu a AI agenty:
 - Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
@@ -40,6 +40,10 @@ Vykazovany cas:
   Rychle prepinani proto muze vykazat vice casu, nez skutecne uplynulo.
 
 Panel a potvrzeni:
+- Cela puvodni sekce Clockify v detailu ukolu je skryta, vcetne nadpisu
+  a stareho casovace, bez prazdneho mista. Plati i po prekresleni detailu.
+  Jira stopky zustavaji samostatne vlevo dole. Skryti neodinstaluje plugin
+  na serveru ani nezastavuje pripadne bezici mereni v Clockify.
 - Behem ukladani zustava panel ve vychozim stavu s docasne vypnutymi
   ovladacimi prvky. Interni mezistavy ani tlacitko Overit neproblikavaji.
   Po uspechu prejde primo do vysledneho stavu; pri chybe nabidne obnoveni.

@@ -7,7 +7,7 @@ conversation. This document preserves project context for future maintainers.
 
 - Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
 - Baseline before v1.14: `ad89abe`; working tree clean.
-- Userscript version: **1.15.2**, standalone fixed panel at the bottom left.
+- Userscript version: **1.16.0**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
@@ -96,6 +96,14 @@ The user explicitly stopped this work and requested the stable standalone
 panel. Mount/restore/observer code was removed. Do not resume this integration
 without a new user request; it is not pending work to finish automatically.
 
+The subsequent v1.16.0 request explicitly hides the entire old Clockify section.
+The stylesheet targets `#timer-sidebar` with `display:none!important`, including
+its heading and iframe, without leaving layout space. It also covers dynamically
+inserted/replaced modules without an observer. Our timer remains standalone:
+do not mount it inside the hidden module. This is local presentation only;
+it does not uninstall the server plugin, stop Clockify timers, or disable its
+scripts/network requests. Do not store the supplied full Jira HTML or its tokens.
+
 ## Architecture and data safety
 
 - Single top-level-page IIFE, `document-idle`, no userscript grants; prevents
@@ -142,6 +150,13 @@ without a new user request; it is not pending work to finish automatically.
   Do not clear site data, change profiles, or "repair" data by silently resetting.
 
 ## Validation and deployment
+
+The v1.16.0 Clockify hiding rule passed syntax and Node regression checks.
+An isolated local browser fixture verified computed `display:none`, zero layout
+space for the whole module, heading and iframe, unchanged neighboring modules,
+and the visible standalone timer. The checks also passed after module replacement
+and late insertion. No real Jira page, credentials or worklogs were used.
+This does not validate an already installed Tampermonkey copy.
 
 The v1.15.2 save-transition fix was checked with a paused mock POST in a browser.
 Before the fix, the pending render exposed recovery controls and grew the panel

@@ -55,7 +55,8 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     };
     vm.runInNewContext(source, context);
     nodes['[data-minutes]'].value = input;
-    return {nodes, panel, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick(),
+    return {nodes, panel, posts, styles: context.document.body.children[0].textContent,
+        state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick(),
         toasts: () => panel.children.find(child => 'toasts' in child.dataset).children,
         advance: ms => { now += ms; }, render: () => render(), interval: () => interval,
         onFetch: callback => { onFetch = callback; },
@@ -67,6 +68,10 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
 }
 const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended: null, phase: 'running'});
 (async () => {
+    const legacyPanel = setup(null);
+    assert.match(legacyPanel.styles, /#timer-sidebar\s*\{\s*display:\s*none\s*!important\s*\}/,
+        'hide the entire legacy Clockify module, including its heading, without reserving space');
+    assert.equal(legacyPanel.panel.id, 'jira-direct-timer', 'keep our timer separate from the hidden module');
     for (const [initial, action] of [
         [running(), 'stop'], [running(), 'start'], [running(), 'manual'],
         [null, 'manual'], [{...running(), ended: 200000000, phase: 'stopped'}, 'manual']
