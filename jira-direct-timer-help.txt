@@ -12,6 +12,13 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
 
 Pouziti:
+- Verze 1.15: Klidnejsi vzhled toastu: bila karta s jemnym rameckem a stinem,
+  maly stavovy nadpis s barevnou teckou misto velke cervene/zelene plochy.
+  Zaznamenano je zelene, Zahozeno tlumene hnede (nejde o chybu).
+  Cas a klic ukolu maji samostatna pole; odpadlo "do/z tasku" a velka pismena.
+  Nazev ma mensi sede pismo a zalamuje se cely, nic se nezkracuje.
+  Sirka zustava stejna jako stopky, vyska podle obsahu, bez rolovani.
+  Jemnejsi posun animace, casovani 0,5 + 4 + 0,5 sekundy zustava.
 - Verze 1.14.3: Opravena prednost pevneho cerveneho pozadi panelu.
   Pozadi, ramecek a cislice odpovidaji stavu: zelena pri mereni otevreneho
   ukolu, modra pri mereni jineho ukolu, cervena kdyz nic nebezi.
@@ -22,7 +29,8 @@ Pouziti:
 - Historicke chovani verze 1.14.1 (nahrazeno ve verzi 1.14.2):
   Posuvnik toastu je skryty i behem animace.
   Pri vice zpravach nebo dlouhem nazvu lze obsah stale posouvat.
-- Verze 1.14: Uspesne ulozeni potvrdi vyrazny zeleny toast ZAZNAMENANO
+- Verze 1.14 (vzhled nahrazen ve verzi 1.15):
+  Uspesne ulozeni potvrdi vyrazny zeleny toast ZAZNAMENANO
   nad panelem. Vetsi karta ma tucny nadpis a cas, bile pismo a stin.
   CANCEL potvrdi cerveny toast ZAHOZENO; maze pouze neulozene mereni,
   nikoli existujici worklog v Jire. Toast obsahuje cas HH:MM:SS, klic

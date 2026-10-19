@@ -7,7 +7,7 @@ conversation. This document preserves project context for future maintainers.
 
 - Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
 - Baseline before v1.14: `ad89abe`; working tree clean.
-- Userscript version: **1.14.3**, standalone fixed panel at the bottom left.
+- Userscript version: **1.15**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
@@ -71,9 +71,14 @@ These are historical findings, not proof of Clockify's current service status.
   Keep separate toasts for successive saves, including queued recovery.
   Show success only after a confirmed/persisted save (also marker recovery),
   never on an uncertain result. Cancellation does not delete Jira worklogs.
-- Toasts are prominent cards matching the panel's outer width (normally 240px),
-  with content-driven height, wrapping text and solid green/red
-  backgrounds, white text and larger headings/durations. Fade/slide in for
+- Toasts are calm white cards matching the panel's outer width (normally 240px),
+  with content-driven height, subtle borders/shadows and full wrapping titles.
+  Small sentence-case status headings/dots are green for saved, muted brown for
+  discarded (not an error). Duration and issue key are separate flex items;
+  wrap between them when necessary rather than breaking ordinary issue keys.
+  The detail link has a spoken label retaining the save/discard relationship.
+  Avoid saturated backgrounds, uppercase headings and competing bold text.
+  Fade/slide in for
   0.5 seconds, hold for 4 seconds, fade/slide out for 0.5 seconds. Respect
   prefers-reduced-motion by disabling animation, keeping the 5-second lifetime.
 - Toasts have no scroll container or height cap: use visible overflow so
@@ -168,6 +173,12 @@ v1.14.3 removes the duplicate inline styles to restore state colors.
 An isolated browser comparison reproduced red backgrounds/borders in the old
 running states and verified the fix: green on the open issue, blue on another,
 red when idle/stopped/pending/saved, including clock colors and 240px width.
+
+The v1.15 calmer toast was visually checked with the user's example title.
+Mocked-browser assertions verified matching 240px/220px panel/toast widths,
+unbroken ordinary issue keys, wrapping full titles, white surfaces, unchanged
+animation timings, reduced motion, expiry and independent manual entry preserving
+the running timer exactly. No real Jira worklogs were created.
 
 For UI changes, verify in an authenticated browser with care: start/stop/manual
 entry can write real worklogs. Obtain authorization for new diagnostic entries.

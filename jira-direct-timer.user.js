@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.14.3
+// @version      1.15
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -48,15 +48,19 @@
         #jira-direct-timer [data-error] {color:#ae2a19;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
         #jira-direct-timer [data-error]:not(:empty) {margin-top:8px}
         #jira-direct-timer [data-toasts] {position:absolute;left:-1px;right:-1px;bottom:calc(100% + 12px);display:flex;flex-direction:column;gap:10px;overflow:visible}
-        #jira-direct-timer [data-toast] {padding:18px;border:2px solid #12532d;border-radius:12px;background:#176538;color:#fff;box-shadow:0 8px 28px #172b4d50;font-size:14px;line-height:1.5;overflow-wrap:anywhere;animation:jira-direct-timer-toast 5s ease-in-out both}
-        #jira-direct-timer [data-toast="discarded"] {border-color:#872929;background:#a73434}
-        #jira-direct-timer [data-toast] strong {margin-bottom:8px;color:inherit;font-size:18px;font-weight:800;letter-spacing:1px}
+        #jira-direct-timer [data-toast] {padding:14px;border:1px solid #dfe3e8;border-radius:10px;background:#fff;color:#253249;box-shadow:0 4px 16px #172b4d18;font-size:12px;line-height:1.5;overflow-wrap:anywhere;animation:jira-direct-timer-toast 5s ease-in-out both}
+        #jira-direct-timer [data-toast] strong {display:flex;align-items:center;gap:7px;margin-bottom:8px;color:#23734a;font-size:12px;font-weight:600;letter-spacing:0}
+        #jira-direct-timer [data-toast] strong::before {content:'';width:7px;height:7px;flex-shrink:0;border-radius:50%;background:currentColor}
+        #jira-direct-timer [data-toast="discarded"] strong {color:#8a6150}
         #jira-direct-timer [data-toast] a {display:block;color:inherit;text-decoration:none}
-        #jira-direct-timer [data-toast] strong + a {margin-bottom:4px;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+        #jira-direct-timer [data-toast] strong + a {display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-bottom:5px;font-variant-numeric:tabular-nums}
+        #jira-direct-timer [data-toast-duration] {font-size:20px;font-weight:600;line-height:1.3;letter-spacing:-.4px;white-space:nowrap}
+        #jira-direct-timer [data-toast-issue] {font-size:12px;font-weight:600;color:#526078}
+        #jira-direct-timer [data-toast] a:last-child {color:#667085;font-size:12px;font-weight:400;line-height:1.5}
         @keyframes jira-direct-timer-toast {
-            0% {opacity:0;transform:translateY(10px)}
+            0% {opacity:0;transform:translateY(5px)}
             10%,90% {opacity:1;transform:translateY(0)}
-            100% {opacity:0;transform:translateY(-6px)}
+            100% {opacity:0;transform:translateY(-3px)}
         }
         @media (prefers-reduced-motion:reduce) {
             #jira-direct-timer [data-toast] {animation:none}
@@ -98,11 +102,19 @@
         const node = document.createElement('div');
         node.dataset.toast = discarded ? 'discarded' : 'saved';
         const heading = document.createElement('strong');
-        heading.textContent = discarded ? 'ZAHOZENO' : 'ZAZNAMEN\u00c1NO';
+        heading.textContent = discarded ? 'Zahozeno' : 'Zaznamen\u00e1no';
         const details = document.createElement('a');
         details.href = `https://jira.alza.cz/browse/${encodeURIComponent(value.issue)}`;
         const seconds = discarded ? duration(value) : value.recordedSeconds;
-        details.textContent = `${formatDuration(seconds)} ${discarded ? 'z' : 'do'} tasku ${value.issue}`;
+        details.setAttribute('aria-label', `${formatDuration(seconds)} ${discarded ? 'z' : 'do'} tasku ${value.issue}`);
+        const elapsed = document.createElement('span');
+        elapsed.dataset.toastDuration = '';
+        elapsed.textContent = formatDuration(seconds);
+        const key = document.createElement('span');
+        key.dataset.toastIssue = '';
+        key.textContent = value.issue;
+        details.appendChild(elapsed);
+        details.appendChild(key);
         const title = document.createElement('a');
         title.href = details.href;
         title.textContent = titleFor(value);
