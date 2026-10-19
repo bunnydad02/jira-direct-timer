@@ -12,7 +12,12 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
 
 Pouziti:
-- Verze 1.14.1: Posuvnik toastu je skryty i behem animace.
+- Verze 1.14.2: Toasty uz nemaji rolovaci kontejner ani vyskovy limit.
+  Karty, stiny a animace se neorezavaji; vice zprav se sklada nad panel.
+  Sirka presne odpovida vnejsim okrajum stopek (bezne 240 px),
+  vyska se prizpusobi obsahu a delsi text se zalamuje.
+- Historicke chovani verze 1.14.1 (nahrazeno ve verzi 1.14.2):
+  Posuvnik toastu je skryty i behem animace.
   Pri vice zpravach nebo dlouhem nazvu lze obsah stale posouvat.
 - Verze 1.14: Uspesne ulozeni potvrdi vyrazny zeleny toast ZAZNAMENANO
   nad panelem. Vetsi karta ma tucny nadpis a cas, bile pismo a stin.
