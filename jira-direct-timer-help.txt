@@ -1,151 +1,79 @@
-JIRA STOPKY
+JIRA STOPKY - verze 1.15.1
 
 Pro budouci udrzbu a AI agenty:
 - Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
   architektura, bezpecne obnoveni zapisu, testovani a historie.
 - Vychozi pracovni vetev je master, dokud uzivatel nerekne jinak.
+- Historicke verze a zmeny jsou v historii Gitu. Tento navod popisuje
+  aktualni chovani, nikoli drivejsi popisky a opustene varianty.
 
-Instalace:
-1. V Tampermonkey vytvor novy skript.
+Instalace a aktualizace:
+1. V Tampermonkey vytvor novy skript nebo otevri existujici Jira stopky.
 2. Nahrad cely obsah souborem jira-direct-timer.user.js a uloz Ctrl+S.
 3. Povol rozsireni pristup k https://jira.alza.cz a pouzivani uzivatelskych skriptu.
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
+5. Pri aktualizaci nemaz data webu; rozpracovane mereni zustane zachovane.
+   Samotna zmena souboru v Gitu neaktualizuje nainstalovany skript.
 
 Pouziti:
-- Verze 1.15: Klidnejsi vzhled toastu: bila karta s jemnym rameckem a stinem,
-  maly stavovy nadpis s barevnou teckou misto velke cervene/zelene plochy.
-  Zaznamenano je zelene, Zahozeno tlumene hnede (nejde o chybu).
-  Cas a klic ukolu maji samostatna pole; odpadlo "do/z tasku" a velka pismena.
-  Nazev ma mensi sede pismo a zalamuje se cely, nic se nezkracuje.
-  Sirka zustava stejna jako stopky, vyska podle obsahu, bez rolovani.
-  Jemnejsi posun animace, casovani 0,5 + 4 + 0,5 sekundy zustava.
-- Verze 1.14.3: Opravena prednost pevneho cerveneho pozadi panelu.
-  Pozadi, ramecek a cislice odpovidaji stavu: zelena pri mereni otevreneho
-  ukolu, modra pri mereni jineho ukolu, cervena kdyz nic nebezi.
-- Verze 1.14.2: Toasty uz nemaji rolovaci kontejner ani vyskovy limit.
-  Karty, stiny a animace se neorezavaji; vice zprav se sklada nad panel.
-  Sirka presne odpovida vnejsim okrajum stopek (bezne 240 px),
-  vyska se prizpusobi obsahu a delsi text se zalamuje.
-- Historicke chovani verze 1.14.1 (nahrazeno ve verzi 1.14.2):
-  Posuvnik toastu je skryty i behem animace.
-  Pri vice zpravach nebo dlouhem nazvu lze obsah stale posouvat.
-- Verze 1.14 (vzhled nahrazen ve verzi 1.15):
-  Uspesne ulozeni potvrdi vyrazny zeleny toast ZAZNAMENANO
-  nad panelem. Vetsi karta ma tucny nadpis a cas, bile pismo a stin.
-  CANCEL potvrdi cerveny toast ZAHOZENO; maze pouze neulozene mereni,
-  nikoli existujici worklog v Jire. Toast obsahuje cas HH:MM:SS, klic
-  a cely nazev ukolu. Klic i nazev odkazuji na prislusny ukol.
-  U ulozeni ukazuje skutecne vykazanou dobu (minimum 1 minuta, cele minuty),
-  u zahozeni skutecne namerenou dobu. Toast se 0,5 sekundy plynule objevuje,
-  4 sekundy je plne viditelny a 0,5 sekundy mizi (celkem 5 sekund).
-  Respektuje systemove omezeni animaci: pak zustane 5 sekund bez pohybu.
-  Rychle navazujici akce maji samostatne toasty, ktere se neprepisuji.
-  Panel ihned po ulozeni nebo zahozeni zobrazi "Nyni se nic nemeri."
-  Pri prepnuti ukazuje nove bezici stopky; pri rucnim zapisu do jineho
-  ukolu bezi puvodni stopky dal. Chyba nebo nejisty zapis zustava v panelu
-  bez potvrzeni uspechu. Overeni nalezeneho zapisu take zobrazi toast.
-  Po obnoveni stranky se stare toasty neopakuji, ulozeny stav se nemaze.
-- Verze 1.13: Rucni minuty ulozis tlacitkem ADD MINUTES nebo klavesou Enter
-  primo v poli minut. Po uspesnem zapisu se pole vyprazdni.
-  Bezici casovac zustane beze zmeny, i kdyz zapisujes minuty na jiny ukol.
-  Rucni interval konci okamzikem odeslani a muze se prekryvat s merenim.
-  Pri chybe rucniho zapisu casovac stale bezi; zapis dokoncis pres
-  Ulozit / Overit, take po obnoveni stranky. Do vyreseni nelze stopky
-  zastavit, zrusit ani prepnout, aby se cekajici zapis neztratil.
-  Stopky zacinaji od 00:00:00 a zobrazuji skutecne uplynule sekundy
-  s obnovou po 100 ms. Minimum pro zapis do Jiry zustava 1 minuta.
-- Historicke chovani verze 1.12 (nahrazeno ve verzi 1.14):
-  Po uspesnem ulozeni se posledni zaznam zobrazuje 5 sekund.
-  Pak panel zobrazi "Nyni se nic nemeri." a vynuluje viditelne stopky.
-  Ulozeny stav zustava v localStorage kvuli ochrane pred duplicitami,
-  ale stary ukol a jeho cas uz se v panelu nezobrazuji.
-- Verze 1.11: Vypsana URL byla odstranena. Cislo i cely nazev ukolu
-  jsou klikaci, bez podtrzeni a bez klasicke modre barvy odkazu.
-  Zelena znamena mereni otevreneho ukolu; modra mereni jineho ukolu;
-  cervena znamena, ze nic nebezi. Na jinem ukolu je vyrazny nadpis
-  "Nyni se meri: QA-xxxx" a pod nim nazev mereneho ukolu.
-  Odkazy vzdy vedou na mereny ukol. Podporuje take parametr selectedIssue.
-- Verze 1.10: Pod nazvem mereneho ukolu je jeho klikaci URL.
-  Odkaz smeruje na mereny zaznam, nikoli na prave otevreny ukol.
-  Bez zaznamu je skryty. Dosavadni styly a barevne stavy zustaly stejne.
-- Verze 1.9: Panel je siroky 240 px (drive 310 px, zuzeni o 22,6 %).
-  Bezici stopky maji jemne zelene pozadi; ostatni stavy jemne cervene.
-  Cas ma samostatny vyrazny radek s 34px tucnym cislicovym pismem.
-  Tlacitka jsou sjednocena, nazev ukolu se zalamuje bez zkraceni.
-  Zmeny vzhledu nemeni chovani zapisu.
-- Verze 1.8: Vyplnene navrhy z textoveho katalogu jsou zapracovane.
-  Jednotne START take prepina na otevreny ukol a uklada predchozi.
-  STOP uklada a ukoncuje mereni, CANCEL ho rusi bez ulozeni.
-  Pole ADD MINUTES je bez vychoziho prikladu.
-  Stav zobrazuje take cely nazev mereneho ukolu, vcetne po prechodu jinam.
-  Nazev se cte ze stranky; pro starsi zaznamy na jinem ukolu z Jira API.
-  Samostatny text "Bezi" se nezobrazuje.
-  Nevyplnene polozky katalogu zustaly beze zmeny.
-- Verze 1.7: "Zrusit" je viditelne pouze pri bezicich stopkach.
-  Na jinem ukolu obsahuje take klic beziciho ukolu (napr. "Zrusit DEMO-103").
-  Bez potvrzeni zrusi rozpracovane mereni v prohlizeci, nic nezapise do Jiry
-  a zadne dalsi stopky nespusti. Drive ulozene worklogy zustanou nedotcene.
-  U cekajiciho nebo nejisteho zapisu neni zruseni dostupne.
-- Verze 1.6: Tlacitko ukonceni uvadi konkretni ukol:
-  "Ukoncit a ulozit DEMO-103 (nic dalsiho nespoustet)".
-  Ulozi pouze bezici ukol, nespusti stopky na prave otevrenem ukolu.
-- Verze 1.4: Start je bez potvrzovaciho dialogu.
-  "Zastavit a ulozit" zastavi mereni a rovnou zapise worklog bez dialogu.
-  Minimum je stale 1 minuta i pri okamzitem zastaveni.
-  Tlacitko Ulozit / Overit je viditelne jen pri nedokoncenem zapisu.
-  Verze 1.5 odstranuje take potvrzeni rucniho zadani minut.
-- Historicke chovani verze 1.3 (nahrazeno ve verzi 1.13):
-  Pole "Rucne minut" prijima kladne cele minuty (napr. 30).
-  Otevri cilovy ukol a klikni "Zapsat do tohoto ukolu". Zapis zacne rovnou bez dialogu.
-  Rucni interval konci okamzikem kliknuti a zacina o zadane minuty drive.
-  Rozpracovane stopky se nejprve zastavi a ulozi (take na jinem ukolu).
-  Potom se ulozi rucni interval; zadne nove stopky se nespusti.
-  Rucni interval se muze casove prekryvat s predchozim merenim.
-  Uvad pouze praci, kterou jsi nevykazal jinym zaznamem.
-  Pri chybe zustava rucni pozadavek nebo cekajici zapis zachovany v prohlizeci.
-  Tlacitkem Ulozit / Overit dokoncis rozpracovanou operaci bez opakovani
-  nejisteho POST. Pozadavek na rucni zapis nevytvarej znovu.
-- Verze 1.2: Pri prechodu na jiny ukol klikni "Prepnout na ...".
-  Predchozi stopky se automaticky zastavi a ulozi do Jiry bez dalsiho potvrzeni.
-  Nove stopky navazuji od okamziku zastaveni predchozich, bez cekani na API.
-  Pouhe otevreni jineho ukolu mereni neprepina.
-  Mereni kratsi nez minuta se na prani uzivatele ulozi jako 1 minuta.
-  Komentar worklogu uvadi skutecne merenou delku a navyseni na minimum.
-  Pri rychlem prepinani muze soucet vykazaneho casu presahnout realny cas.
-  Pri chybe zapisu se nove stopky nespusti a predchozi zaznam zustane ulozeny.
-  Pri nejistem vysledku se POST neopakuje. Overeni nalezeneho worklogu
-  dokonci rozpracovane prepnuti; cilovy ukol je ulozen spolu s casem zastaveni.
 - Nejprve zastav jine stopky, vcetne Clockify. Tyto stopky Clockify neridi.
-- Na otevrenem ukolu klikni START.
-- Po praci klikni STOP. Zapis probehne automaticky.
+- Na otevrenem ukolu klikni START. Stopky zacinaji od 00:00:00,
+  zobrazuji skutecne uplynule sekundy a obnovuji se po 100 ms.
+- Otevreni jineho ukolu samo mereni neprepina. START na jinem ukolu ulozi
+  predchozi mereni a spusti nove od okamziku zastaveni, bez mezery kvuli API.
+- STOP zastavi a automaticky ulozi pouze mereny ukol; nic dalsiho nespousti.
+- CANCEL je viditelne jen pri mereni. Zrusi neulozene stopky bez zapisu
+  do Jiry. Drive ulozene worklogy nemeni. Akce nemaji potvrzovaci dialogy.
+- ADD MINUTES prijima kladne cele minuty bez predvyplneneho prikladu.
+  Zapis do otevreneho ukolu odesles tlacitkem ADD MINUTES nebo klavesou Enter.
+  Interval konci okamzikem odeslani; po uspechu se pole vyprazdni.
+- Rucni zapis nemeni bezici casovac, ani pri zapisu na jiny ukol.
+  Intervaly se mohou prekryvat; uvadej jen cas, ktery uz neni vykazany.
+  Drive zastavene neulozene stopky se pred rucnim zapisem nejprve ulozi.
+
+Vykazovany cas:
+- Zaznamy se ukladaji primo do Jiry, NE do Clockify. Nevykazuj stejny cas dvakrat.
 - Odhad zbyvajici prace zustane nezmeneny.
-- Na overene instanci Jira byl 9sekundovy zapis odmitnut.
-  Skript proto odesila nejmene jednu minutu, vcetne kratsich mereni.
-- Overeny zapis 61 sekund Jira ulozila jako 60 sekund.
-  U delsich mereni se ukladaji cele minuty; zbyvajici sekundy se nezapisi.
-- Zaznamy se ukladaji primo do Jiry, NE do Clockify.
-  Nezapisuj pak stejny cas znovu pres Clockify.
+- Minimum zapisu je 1 minuta, i pri okamzitem zastaveni. U kratsiho mereni
+  komentar uvadi skutecnou delku a navyseni na minimum.
+- U delsich mereni se ukladaji cele minuty; zbyvajici sekundy se nezapisi.
+  Rychle prepinani proto muze vykazat vice casu, nez skutecne uplynulo.
 
-Trvalost a omezeni:
-- Start, konec a stav zapisu zustavaji v localStorage tohoto prohlizece
+Panel a potvrzeni:
+- Panel ma sirku 240 px (na uzke obrazovce se prizpusobi). Zelena znamena
+  mereni otevreneho ukolu, modra mereni jineho ukolu, cervena ze nic nebezi.
+- Klic a cely nazev odkazuji na mereny ukol. Na jinem ukolu panel ukazuje
+  "Nyni se meri: ...". Vyber ukolu podporuje take parametr selectedIssue.
+- Uspesny zapis potvrdi bila karta Zaznamenano se zelenou teckou,
+  zahozeni karta Zahozeno s tlumene hnedou teckou (nejde o chybu).
+  Obsahuje HH:MM:SS, klic a cely zalomeny nazev; odkazy vedou na prislusny ukol.
+- Ulozeni ukazuje skutecne vykazanou dobu, zahozeni skutecne namerenou.
+  Kazda akce ma samostatne potvrzeni nad panelem, bez rolovani a orezavani.
+- Karta se 0,5 sekundy objevuje, 4 sekundy zustava a 0,5 sekundy mizi.
+  Pri systemovem omezeni animaci zustane 5 sekund bez pohybu.
+- Panel se ihned vrati do stavu "Nyni se nic nemeri.", pokud nebezi dalsi
+  mereni nebo nezbyva nedokonceny zapis. Stare toasty se po obnoveni neopakuji.
+
+Trvalost, chyby a obnoveni:
+- Start, konec a stav zapisu zustavaji v localStorage tohoto profilu
   pro jira.alza.cz. Obnoveni stranky nebo zavreni karty cas neztrati.
-- Pri prechodu na jiny ukol zustavaji stopky spojene s puvodnim ukolem.
-- Pouzivej stale stejny profil prohlizece. Nemaz data webu behem mereni.
-- Je podporovan jeden rozpracovany casovac na tento profil a web.
-- Behem rozpracovaneho zaznamu nemen prihlaseneho uzivatele Jiry.
-- Zamykani mezi kartami vyzaduje prohlizec s Web Locks API.
-- Po nejasnem vysledku odeslani se zapis automaticky neopakuje.
-  Tlacitko Overit predchozi zapis pouze vyhleda unikatni znacku ve worklogu.
-  Nenajde-li ji, je nutna kontrola v Jire; skript nevytvori druhy zapis.
-- Chyby API se zobrazuji v panelu. Zadny API klic neni potreba.
+- Je podporovan jeden casovac sdileny kartami stejneho profilu a webu,
+  nikoli mezi ruznymi profily nebo zarizenimi. Zamykani vyzaduje Web Locks API.
+- Nemaz data webu a behem rozpracovaneho zaznamu nemen prihlaseneho uzivatele.
+- Chyby API se zobrazuji v panelu. Zadny API klic ani ucet Clockify neni potreba.
+- Pri chybe prepnuti zustava puvodni zaznam i cilovy ukol zachovany.
+  Tlacitko Ulozit / Overit dokonci rozpracovanou operaci, take po obnoveni.
+- Pri chybe nezavisleho rucniho zapisu casovac stale bezi. Do vyreseni nelze
+  stopky zastavit, zrusit ani prepnout nebo pridat dalsi rucni zapis.
+- Po nejasnem vysledku odeslani se POST automaticky neopakuje.
+  Overit predchozi zapis pouze vyhleda unikatni znacku ve worklogu.
+  Nalezeny zapis potvrdi a dokonci navazujici operaci bez duplicity.
+  Nenajde-li jej, je nutna kontrola Work log v Jire. Pozadavek nezadavej znovu
+  a nevykazuj stejny cas jinym zpusobem bez kontroly.
 
-Clockify:
-Pri diagnostice jeho API vratilo HTTP 429 s vysvetlenim:
-"You have reached the limit of 30 requests per hour allowed on a Free plan.
-To increase the rate limit please upgrade your workspace or wait for one hour."
-Tyto Jira stopky omezeni Clockify neobchazeji; pouzivaji nezavislou evidenci Jiry.
-
-Overeni 15. 10. 2026:
-- Start, stop a preziti obnoveni stranky: overeno v prihlasene Jire.
-- Ochrana pred duplicitou: overena se simulovanou odpovedi, bez druheho POST.
-- Identifikatory skutecneho diagnostickeho zapisu jsou zamerne vynechany.
+Overeni:
+- Lokalni regrese: node --check .\jira-direct-timer.user.js
+  a node .\jira-direct-timer.test.cjs (bez pripojeni k Jire).
+- Historicke zive overeni z 15. 10. 2026 a podrobnosti simulovanych
+  prohlizecovych kontrol jsou v HANDOFF.md; nejde o aktualni overeni
+  nainstalovane kopie. Testy nevytvareji skutecne worklogy.

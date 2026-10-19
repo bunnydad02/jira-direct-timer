@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.15
+// @version      1.15.1
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -80,10 +80,16 @@
     panel.appendChild(toasts);
     const status = panel.querySelector('[data-status]');
     const error = panel.querySelector('[data-error]');
+    const measuring = panel.querySelector('[data-measuring]');
+    const issueLink = panel.querySelector('[data-issue]');
+    const titleLink = panel.querySelector('[data-title]');
+    const clock = panel.querySelector('[data-clock]');
+    const saveRow = panel.querySelector('[data-save-row]');
     const start = panel.querySelector('[data-start]');
     const stop = panel.querySelector('[data-stop]');
     const cancel = document.createElement('button');
     cancel.dataset.cancel = '';
+    cancel.textContent = 'CANCEL';
     cancel.hidden = true;
     stop.after(cancel);
     const save = panel.querySelector('[data-save]');
@@ -199,42 +205,38 @@
         try {
             renderToasts();
             const value = read();
+            const currentIssue = issue();
             const independentManual = value && value.manualEntry;
             const queuedManual = value && value.manualNext;
             const active = value && (value.phase !== 'saved' || queuedManual);
             const displayValue = value && value.phase !== 'saved' ? value : null;
             const seconds = displayValue ? duration(displayValue) : 0;
-            const clock = formatDuration(seconds);
             const title = displayValue ? titleFor(displayValue) : '';
             const stateText = displayValue ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.'}[displayValue.phase] : '';
             panel.dataset.running = String(!!value && value.phase === 'running');
-            const other = !!value && value.phase === 'running' && value.issue !== issue();
+            const other = !!value && value.phase === 'running' && value.issue !== currentIssue;
             panel.dataset.other = String(other);
-            const measuring = panel.querySelector('[data-measuring]');
             measuring.hidden = !other;
             measuring.textContent = other ? `Nyn\u00ed se m\u011b\u0159\u00ed: ${value.issue}` : '';
-            panel.querySelector('[data-issue]').textContent = displayValue ? displayValue.issue : '';
-            panel.querySelector('[data-issue]').hidden = other || !displayValue;
-            panel.querySelector('[data-clock]').textContent = clock;
-            panel.querySelector('[data-title]').textContent = title;
-            for (const selector of ['[data-issue]', '[data-title]', '[data-measuring]']) {
-                panel.querySelector(selector).href = displayValue ? `https://jira.alza.cz/browse/${encodeURIComponent(displayValue.issue)}` : '';
+            issueLink.textContent = displayValue ? displayValue.issue : '';
+            issueLink.hidden = other || !displayValue;
+            clock.textContent = formatDuration(seconds);
+            titleLink.textContent = title;
+            for (const link of [issueLink, titleLink, measuring]) {
+                link.href = displayValue ? `https://jira.alza.cz/browse/${encodeURIComponent(displayValue.issue)}` : '';
             }
             status.textContent = displayValue ? stateText : 'Nyn\u00ed se nic nem\u011b\u0159\u00ed.';
             if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             if (independentManual) status.textContent += `\nCeka rucni zapis do ${independentManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
-            const switching = active && value.issue !== issue();
-            start.disabled = busy || !issue() || !!queuedManual || !!independentManual || (!!active && !switching);
-            start.textContent = 'START';
+            const switching = active && value.issue !== currentIssue;
+            start.disabled = busy || !currentIssue || !!queuedManual || !!independentManual || (!!active && !switching);
             stop.disabled = busy || !!independentManual || !value || value.phase !== 'running';
-            stop.textContent = 'STOP';
             cancel.hidden = !value || value.phase !== 'running';
             cancel.disabled = busy || !!independentManual || cancel.hidden;
-            cancel.textContent = 'CANCEL';
             save.disabled = busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual) && !independentManual);
-            panel.querySelector('[data-save-row]').hidden = !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual && !independentManual);
+            saveRow.hidden = !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual && !independentManual);
             save.textContent = value && (value.phase === 'pending' || independentManual?.phase === 'pending') ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
-            manual.disabled = busy || !issue() || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending');
+            manual.disabled = busy || !currentIssue || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending');
             minutes.disabled = busy;
             error.textContent = notice;
         } catch (e) {
@@ -376,29 +378,22 @@
     };
     async function saveEntry(value, persist = write) {
         if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('Neni co ulozit.');
-        const existing = await findSaved(value);
-        if (existing) {
-            value.phase = 'saved';
-            value.worklogId = existing.id;
-            value.recordedSeconds = existing.timeSpentSeconds;
-            value.completedAt = Date.now();
+        let worklog = await findSaved(value);
+        if (!worklog) {
+            if (value.phase === 'pending') throw new Error('Zapis zatim nebyl nalezen. Automaticky ho neopakuji; over Work log v Jire.');
+            const measuredSeconds = Math.max(1, duration(value));
+            const seconds = Math.max(60, Math.floor(measuredSeconds / 60) * 60);
+            value.phase = 'pending';
             persist(value);
-            showToast(value);
-            return;
+            worklog = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?adjustEstimate=leave`, {
+                method: 'POST',
+                body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.manual ? 'Rucni vykaz (Jira stopky)' : 'Prace na ukolu (Jira stopky)'}${measuredSeconds < 60 ? `\nMereno ${measuredSeconds} s; ulozeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
+            });
+            if (!worklog.id) throw new Error('Jira nevratila ID noveho worklogu. Over predchozi zapis.');
         }
-        if (value.phase === 'pending') throw new Error('Zapis zatim nebyl nalezen. Automaticky ho neopakuji; over Work log v Jire.');
-        const measuredSeconds = Math.max(1, duration(value));
-        const seconds = Math.max(60, Math.floor(measuredSeconds / 60) * 60);
-        value.phase = 'pending';
-        persist(value);
-        const body = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?adjustEstimate=leave`, {
-            method: 'POST',
-            body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.manual ? 'Rucni vykaz (Jira stopky)' : 'Prace na ukolu (Jira stopky)'}${measuredSeconds < 60 ? `\nMereno ${measuredSeconds} s; ulozeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
-        });
-        if (!body.id) throw new Error('Jira nevratila ID noveho worklogu. Over predchozi zapis.');
         value.phase = 'saved';
-        value.worklogId = body.id;
-        value.recordedSeconds = body.timeSpentSeconds;
+        value.worklogId = worklog.id;
+        value.recordedSeconds = worklog.timeSpentSeconds;
         value.completedAt = Date.now();
         persist(value);
         showToast(value);

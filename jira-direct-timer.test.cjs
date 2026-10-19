@@ -13,12 +13,18 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let render;
     let interval;
     function element() {
-        return {style: {}, dataset: {}, value: '', children: [], attributes: {},
+        return {dataset: {}, value: '', children: [], attributes: {},
+            get innerHTML() { return this.html; },
+            set innerHTML(html) {
+                this.html = html;
+                for (const [, attribute, text] of html.matchAll(/<button (data-[a-z-]+)>([^<]*)<\/button>/g)) {
+                    this.querySelector(`[${attribute}]`).textContent = text;
+                }
+            },
             querySelector: s => nodes[s] ||= element(),
             appendChild(child) { this.children.push(child); child.parent = this; },
             setAttribute(name, value) { this.attributes[name] = value; },
             remove() { this.parent.children.splice(this.parent.children.indexOf(this), 1); },
-            insertBefore() {},
             after(child) { if ('cancel' in child.dataset) nodes['[data-cancel]'] = child; }};
     }
     const window = {addEventListener() {}};
@@ -152,6 +158,9 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(recovery.posts.length, 1);
     assert.equal(recovery.state().issue, 'DEMO-101');
     assert.equal(recovery.state().phase, 'saved');
+    assert.equal(recovery.state().worklogId, 'log-1');
+    assert.equal(recovery.state().recordedSeconds, 1800);
+    assert.equal(recovery.state().completedAt, 200000000);
     const pending = running();
     pending.phase = 'pending';
     pending.ended = 200000000;
@@ -161,7 +170,38 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(verified.posts.length, 0, 'existing markers must not create duplicates');
     assert.equal(verified.state().issue, 'DEMO-101');
     assert.equal(verified.state().phase, 'saved');
+    assert.equal(verified.state().worklogId, 'existing');
+    assert.equal(verified.state().recordedSeconds, 120);
+    assert.equal(verified.state().completedAt, 200000000);
     assert.equal(verified.toasts().length, 2, 'queued saves must each keep their own notification');
+    const firstFailure = setup({...running(), ended: 200000000, phase: 'stopped'}, 1);
+    await firstFailure.click('manual');
+    assert.equal(firstFailure.posts.length, 1);
+    assert.equal(firstFailure.state().phase, 'pending');
+    assert.equal(firstFailure.state().manualNext.issue, 'DEMO-101');
+    assert.equal(firstFailure.toasts().length, 0);
+    const resumedManual = setup(firstFailure.state(), 0, '30', true);
+    await resumedManual.click('save');
+    assert.equal(resumedManual.posts.length, 0);
+    assert.equal(resumedManual.state().phase, 'saved');
+    assert.equal(resumedManual.state().issue, 'DEMO-101');
+    assert.equal(resumedManual.toasts().length, 2);
+    const failedSwitch = setup(running(), 1);
+    await failedSwitch.click('start');
+    assert.equal(failedSwitch.state().phase, 'pending');
+    assert.equal(failedSwitch.state().nextIssue, 'DEMO-101');
+    assert.equal(failedSwitch.toasts().length, 0);
+    await failedSwitch.click('save');
+    assert.equal(failedSwitch.posts.length, 1, 'an uncertain switch must not repeat the POST');
+    assert.equal(failedSwitch.state().nextIssue, 'DEMO-101');
+    const resumedSwitch = setup(failedSwitch.state(), 0, '30', true);
+    await resumedSwitch.click('save');
+    assert.equal(resumedSwitch.posts.length, 0);
+    assert.equal(resumedSwitch.state().phase, 'running');
+    assert.equal(resumedSwitch.state().issue, 'DEMO-101');
+    assert.equal(resumedSwitch.state().started, 200000000);
+    assert.equal(resumedSwitch.toasts().length, 1);
+    assert.equal(resumedSwitch.toasts()[0].children[1].children[0].textContent, '00:02:00');
     const switching = setup(running());
     assert.equal(switching.panel.dataset.other, 'true');
     assert.equal(switching.panel.dataset.running, 'true');

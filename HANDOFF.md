@@ -7,7 +7,7 @@ conversation. This document preserves project context for future maintainers.
 
 - Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
 - Baseline before v1.14: `ad89abe`; working tree clean.
-- Userscript version: **1.15**, standalone fixed panel at the bottom left.
+- Userscript version: **1.15.1**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
@@ -149,7 +149,9 @@ time, locks and fetch. They do not contact Jira or create real worklogs.
 They cover switching, minimum duration, manual input validation, Enter, an
 uninterrupted timer on the same/other issue, simulated slow API, first-second
 boundaries, both legacy network-failure stages, uncertain-write non-retry,
-independent manual marker/reload recovery, queued work recovery, cancellation,
+independent manual marker/reload recovery, both queued manual failure stages,
+pending switch recovery with its original end time, saved worklog metadata,
+cancellation,
 titles/links, immediate idle after completion, independent save/discard toasts,
 their recorded vs measured durations, and the 4999/5000ms expiry boundary.
 They are not browser layout, real multi-tab contention or live API tests.
@@ -195,21 +197,25 @@ already installed userscript. Preserve browser state during updates.
   release completion; commit timestamps reflect reconstruction. Do not describe
   these as commits that already existed during initial development.
 - `4e3834a`: original recovered v1.12 release snapshot.
-- `cf72b0f`: current standalone rollback/import plus historical support artifacts;
-  includes the inline panel-style assignment retained in the present source.
+- `cf72b0f`: historical standalone rollback/import plus support artifacts;
+  included an inline panel-style assignment later removed in v1.14.3.
 - `5f8c0c3`: removed old Clockify workaround, support-email draft and completed
   v1.7 text-editing worksheet. They remain retrievable in Git history.
 - Use new commits; do not rewrite reconstructed history or amend by default.
   Existing convention: `feat:` and `chore:` subjects. Remain on `master` unless
   the user changes that instruction; do not push without a request.
-- The help file mixes historical labels with present-day usage (for example
-  old "Prepnout" / "Zastavit a ulozit" vs current `START` / `STOP`). Treat the
-  implementation and tests as current behavior; clarify the guide when editing it.
+- The help file describes current behavior only; use Git history for old labels,
+  release notes and superseded UI variants.
 - v1.13 implements the subsequent request for Enter submission, ADD MINUTES
   button text, uninterrupted timers during manual entries and accurate initial
   seconds. It does not revive the abandoned Clockify/sidebar experiment.
 - v1.14 replaces the in-panel completion display with save/discard toasts,
   preserving ongoing measurements, recovery and stored duplicate protection.
+- v1.15.1 unifies persisted save completion for POST and marker recovery,
+  caches fixed panel nodes and reuses the selected issue across panel state checks.
+  Static button labels no longer need rewriting every 100ms. The guide now
+  describes current behavior instead of mixing usage with historical releases.
+  Stored fields and legacy recovery paths are intentionally retained.
 - Credentials/JWTs were shared in the original troubleshooting chat. Do not
   copy raw chat, Jira HTML, browser storage, tokens or API keys into Git.
   Previously shared Clockify credentials should be rotated by their owner;
