@@ -12,6 +12,21 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
 
 Pouziti:
+- Verze 1.14: Uspesne ulozeni potvrdi vyrazny zeleny toast ZAZNAMENANO
+  nad panelem. Vetsi karta ma tucny nadpis a cas, bile pismo a stin.
+  CANCEL potvrdi cerveny toast ZAHOZENO; maze pouze neulozene mereni,
+  nikoli existujici worklog v Jire. Toast obsahuje cas HH:MM:SS, klic
+  a cely nazev ukolu. Klic i nazev odkazuji na prislusny ukol.
+  U ulozeni ukazuje skutecne vykazanou dobu (minimum 1 minuta, cele minuty),
+  u zahozeni skutecne namerenou dobu. Toast se 0,5 sekundy plynule objevuje,
+  4 sekundy je plne viditelny a 0,5 sekundy mizi (celkem 5 sekund).
+  Respektuje systemove omezeni animaci: pak zustane 5 sekund bez pohybu.
+  Rychle navazujici akce maji samostatne toasty, ktere se neprepisuji.
+  Panel ihned po ulozeni nebo zahozeni zobrazi "Nyni se nic nemeri."
+  Pri prepnuti ukazuje nove bezici stopky; pri rucnim zapisu do jineho
+  ukolu bezi puvodni stopky dal. Chyba nebo nejisty zapis zustava v panelu
+  bez potvrzeni uspechu. Overeni nalezeneho zapisu take zobrazi toast.
+  Po obnoveni stranky se stare toasty neopakuji, ulozeny stav se nemaze.
 - Verze 1.13: Rucni minuty ulozis tlacitkem ADD MINUTES nebo klavesou Enter
   primo v poli minut. Po uspesnem zapisu se pole vyprazdni.
   Bezici casovac zustane beze zmeny, i kdyz zapisujes minuty na jiny ukol.
@@ -21,7 +36,8 @@ Pouziti:
   zastavit, zrusit ani prepnout, aby se cekajici zapis neztratil.
   Stopky zacinaji od 00:00:00 a zobrazuji skutecne uplynule sekundy
   s obnovou po 100 ms. Minimum pro zapis do Jiry zustava 1 minuta.
-- Verze 1.12: Po uspesnem ulozeni se posledni zaznam zobrazuje 5 sekund.
+- Historicke chovani verze 1.12 (nahrazeno ve verzi 1.14):
+  Po uspesnem ulozeni se posledni zaznam zobrazuje 5 sekund.
   Pak panel zobrazi "Nyni se nic nemeri." a vynuluje viditelne stopky.
   Ulozeny stav zustava v localStorage kvuli ochrane pred duplicitami,
   ale stary ukol a jeho cas uz se v panelu nezobrazuji.

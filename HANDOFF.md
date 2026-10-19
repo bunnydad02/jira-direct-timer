@@ -6,8 +6,8 @@ conversation. This document preserves project context for future maintainers.
 ## Current baseline and scope
 
 - Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
-- Baseline before v1.13: `14a43d9` (maintenance handoff); working tree clean.
-- Userscript version: **1.13**, standalone fixed panel at the bottom left.
+- Baseline before v1.14: `ad89abe`; working tree clean.
+- Userscript version: **1.14**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
@@ -60,8 +60,21 @@ These are historical findings, not proof of Clockify's current service status.
   for the open tracked issue, blue for a different tracked issue, red otherwise.
   Issue identifiers and complete titles link to the tracked issue without
   ordinary blue, underlined link styling or a separate printed URL.
-- Successful save confirmation is visible for 5 seconds, then the display
-  resets to idle. Do not delete saved storage merely to reset the display.
+- Successful saves and cancellation show separate toasts above the panel for
+  5 seconds each, with HH:MM:SS, issue key and full title (linked as text).
+  Saved toasts use recorded duration, discarded toasts use measured duration.
+  The panel immediately resets to idle unless a timer is still running or
+  unresolved work remains. Independent manual entry confirms its own issue
+  without changing the running timer; switching confirms the old issue while
+  showing the new timer. Do not delete saved storage to reset the display.
+- Toasts are transient in the acting tab, not replayed from storage on reload.
+  Keep separate toasts for successive saves, including queued recovery.
+  Show success only after a confirmed/persisted save (also marker recovery),
+  never on an uncertain result. Cancellation does not delete Jira worklogs.
+- Toasts are prominent 340px cards (viewport-constrained), with solid green/red
+  backgrounds, white text and larger headings/durations. Fade/slide in for
+  0.5 seconds, hold for 4 seconds, fade/slide out for 0.5 seconds. Respect
+  prefers-reduced-motion by disabling animation, keeping the 5-second lifetime.
 - The current source also sets panel styles inline. Node mocks do not verify
   actual CSS precedence or rendered colors; check browser styling when changing it.
 
@@ -128,13 +141,26 @@ They cover switching, minimum duration, manual input validation, Enter, an
 uninterrupted timer on the same/other issue, simulated slow API, first-second
 boundaries, both legacy network-failure stages, uncertain-write non-retry,
 independent manual marker/reload recovery, queued work recovery, cancellation,
-titles/links and the 4999/5000ms boundary.
+titles/links, immediate idle after completion, independent save/discard toasts,
+their recorded vs measured durations, and the 4999/5000ms expiry boundary.
 They are not browser layout, real multi-tab contention or live API tests.
 
 The v1.13 UI was also checked in an isolated localhost browser with mocked Jira
 responses: an Enter keydown saved 20 minutes, the input cleared, and a subsequent
 manual save preserved the running timer's ID/start/phase. No Jira worklogs were
 created by this check. This does not validate the installed Tampermonkey copy.
+
+The v1.14 toast UI was checked in an isolated localhost browser with mocked
+Jira responses: manual 20 minutes on B preserved A's timer ID/start/phase,
+the toast was positioned above the panel, save/discard colors and linked safe
+text were checked, STOP/CANCEL reset the panel immediately, and toasts expired.
+Browser animation samples verified opacity 0/0.5/1 during entry, a fully visible
+4-second hold, and opacity 0.5/near-zero during exit. The 340px card constrained
+to 280px in a 320px viewport, and reduced-motion mode disabled animation while
+preserving expiry.
+No real Jira worklogs were created. This does not validate the installed copy.
+The existing inline panel background still overrides its state-based CSS;
+this pre-existing styling issue was observed, not changed in this release.
 
 For UI changes, verify in an authenticated browser with care: start/stop/manual
 entry can write real worklogs. Obtain authorization for new diagnostic entries.
@@ -164,6 +190,8 @@ already installed userscript. Preserve browser state during updates.
 - v1.13 implements the subsequent request for Enter submission, ADD MINUTES
   button text, uninterrupted timers during manual entries and accurate initial
   seconds. It does not revive the abandoned Clockify/sidebar experiment.
+- v1.14 replaces the in-panel completion display with save/discard toasts,
+  preserving ongoing measurements, recovery and stored duplicate protection.
 - Credentials/JWTs were shared in the original troubleshooting chat. Do not
   copy raw chat, Jira HTML, browser storage, tokens or API keys into Git.
   Previously shared Clockify credentials should be rotated by their owner;

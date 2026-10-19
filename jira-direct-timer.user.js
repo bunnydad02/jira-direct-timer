@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.13
+// @version      1.14
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -48,6 +48,20 @@
         #jira-direct-timer [data-manual] {width:100%;margin-top:7px}
         #jira-direct-timer [data-error] {color:#ae2a19;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
         #jira-direct-timer [data-error]:not(:empty) {margin-top:8px}
+        #jira-direct-timer [data-toasts] {position:absolute;left:0;bottom:calc(100% + 12px);width:340px;max-width:calc(100vw - 40px);display:flex;flex-direction:column;gap:10px;max-height:45vh;overflow:auto}
+        #jira-direct-timer [data-toast] {padding:18px;border:2px solid #12532d;border-radius:12px;background:#176538;color:#fff;box-shadow:0 8px 28px #172b4d50;font-size:14px;line-height:1.5;overflow-wrap:anywhere;animation:jira-direct-timer-toast 5s ease-in-out both}
+        #jira-direct-timer [data-toast="discarded"] {border-color:#872929;background:#a73434}
+        #jira-direct-timer [data-toast] strong {margin-bottom:8px;color:inherit;font-size:18px;font-weight:800;letter-spacing:1px}
+        #jira-direct-timer [data-toast] a {display:block;color:inherit;text-decoration:none}
+        #jira-direct-timer [data-toast] strong + a {margin-bottom:4px;font-size:18px;font-weight:700;font-variant-numeric:tabular-nums}
+        @keyframes jira-direct-timer-toast {
+            0% {opacity:0;transform:translateY(10px)}
+            10%,90% {opacity:1;transform:translateY(0)}
+            100% {opacity:0;transform:translateY(-6px)}
+        }
+        @media (prefers-reduced-motion:reduce) {
+            #jira-direct-timer [data-toast] {animation:none}
+        }
     `;
     document.body.appendChild(styles);
     panel.innerHTML = '<strong>Jira stopky</strong><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
@@ -56,6 +70,11 @@
     manualRow.dataset.manualRow = '';
     manualRow.innerHTML = '<label>ADD MINUTES <input data-minutes type="number" min="1" step="1"></label><button data-manual>ADD MINUTES</button>';
     panel.appendChild(manualRow);
+    const toasts = document.createElement('div');
+    toasts.dataset.toasts = '';
+    toasts.setAttribute('role', 'status');
+    toasts.setAttribute('aria-live', 'polite');
+    panel.appendChild(toasts);
     const status = panel.querySelector('[data-status]');
     const error = panel.querySelector('[data-error]');
     const start = panel.querySelector('[data-start]');
@@ -71,6 +90,40 @@
     let notice = '';
     const titles = new Map();
     const titleRequests = new Set();
+    let notifications = [];
+
+    function formatDuration(seconds) {
+        return [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
+    }
+    function showToast(value, discarded = false) {
+        const node = document.createElement('div');
+        node.dataset.toast = discarded ? 'discarded' : 'saved';
+        const heading = document.createElement('strong');
+        heading.textContent = discarded ? 'ZAHOZENO' : 'ZAZNAMEN\u00c1NO';
+        const details = document.createElement('a');
+        details.href = `https://jira.alza.cz/browse/${encodeURIComponent(value.issue)}`;
+        const seconds = discarded ? duration(value) : value.recordedSeconds;
+        details.textContent = `${formatDuration(seconds)} ${discarded ? 'z' : 'do'} tasku ${value.issue}`;
+        const title = document.createElement('a');
+        title.href = details.href;
+        title.textContent = titleFor(value);
+        node.appendChild(heading);
+        node.appendChild(details);
+        node.appendChild(title);
+        toasts.appendChild(node);
+        notifications.push({node, title, value, expiresAt: Date.now() + 5000});
+    }
+    function renderToasts() {
+        notifications = notifications.filter(notification => {
+            if (Date.now() >= notification.expiresAt) {
+                notification.node.remove();
+                return false;
+            }
+            const title = titleFor(notification.value);
+            if (notification.title.textContent !== title) notification.title.textContent = title;
+            return true;
+        });
+    }
 
     function titleFor(value) {
         if (value.title) return value.title;
@@ -133,17 +186,16 @@
     }
     function render() {
         try {
+            renderToasts();
             const value = read();
             const independentManual = value && value.manualEntry;
             const queuedManual = value && value.manualNext;
             const active = value && (value.phase !== 'saved' || queuedManual);
-            const recentCompletion = value && value.phase === 'saved' && Number.isFinite(value.completedAt) &&
-                Date.now() - value.completedAt >= 0 && Date.now() - value.completedAt < 5000;
-            const displayValue = value && (value.phase !== 'saved' || queuedManual || recentCompletion) ? value : null;
-            const seconds = displayValue ? (displayValue.phase === 'saved' && Number.isFinite(displayValue.recordedSeconds) ? displayValue.recordedSeconds : duration(displayValue)) : 0;
-            const clock = [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
+            const displayValue = value && value.phase !== 'saved' ? value : null;
+            const seconds = displayValue ? duration(displayValue) : 0;
+            const clock = formatDuration(seconds);
             const title = displayValue ? titleFor(displayValue) : '';
-            const stateText = displayValue ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.', saved: 'Ulozeno do Jiry'}[displayValue.phase] : '';
+            const stateText = displayValue ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.'}[displayValue.phase] : '';
             panel.dataset.running = String(!!value && value.phase === 'running');
             const other = !!value && value.phase === 'running' && value.issue !== issue();
             panel.dataset.other = String(other);
@@ -262,6 +314,7 @@
         if (!value || value.phase !== 'running') throw new Error('Stopky uz nebezi.');
         if (value.manualEntry) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.');
         localStorage.removeItem(KEY);
+        showToast(value, true);
     });
     async function finishManual(value) {
         if (value.phase !== 'saved' || !value.manualNext) return;
@@ -319,6 +372,7 @@
             value.recordedSeconds = existing.timeSpentSeconds;
             value.completedAt = Date.now();
             persist(value);
+            showToast(value);
             return;
         }
         if (value.phase === 'pending') throw new Error('Zapis zatim nebyl nalezen. Automaticky ho neopakuji; over Work log v Jire.');
@@ -336,6 +390,7 @@
         value.recordedSeconds = body.timeSpentSeconds;
         value.completedAt = Date.now();
         persist(value);
+        showToast(value);
     }
     save.onclick = () => act(async () => {
         const value = read();

@@ -13,7 +13,12 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let render;
     let interval;
     function element() {
-        return {style: {}, dataset: {}, value: '', querySelector: s => nodes[s] ||= element(), appendChild() {}, insertBefore() {},
+        return {style: {}, dataset: {}, value: '', children: [], attributes: {},
+            querySelector: s => nodes[s] ||= element(),
+            appendChild(child) { this.children.push(child); child.parent = this; },
+            setAttribute(name, value) { this.attributes[name] = value; },
+            remove() { this.parent.children.splice(this.parent.children.indexOf(this), 1); },
+            insertBefore() {},
             after(child) { if ('cancel' in child.dataset) nodes['[data-cancel]'] = child; }};
     }
     const window = {addEventListener() {}};
@@ -43,6 +48,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     vm.runInNewContext(source, context);
     nodes['[data-minutes]'].value = input;
     return {nodes, panel, posts, state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick(),
+        toasts: () => panel.children.find(child => 'toasts' in child.dataset).children,
         advance: ms => { now += ms; }, render: () => render(), interval: () => interval,
         keydown: async (key = 'Enter') => {
             let prevented = false;
@@ -64,14 +70,29 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         assert.equal(last.body.started, new Date(200000000 - 1800000).toISOString().replace('Z', '+0000'));
         assert.match(last.body.comment, /Rucni vykaz/);
         assert.equal(h.nodes['[data-minutes]'].value, '');
+        assert.equal(h.toasts().length, 1);
+        assert.equal(h.toasts()[0].children[0].textContent, 'ZAZNAMENÁNO');
+        assert.equal(h.toasts()[0].children[1].textContent, '00:30:00 do tasku DEMO-101');
+        assert.equal(h.toasts()[0].children[2].textContent, 'Full issue title <safe text>');
+        assert.equal(h.toasts()[0].children[2].href, 'https://jira.alza.cz/browse/DEMO-101');
         if (initial) {
             assert.deepEqual(h.state(), initial, 'manual entry must preserve the exact running timer');
-        } else assert.equal(h.state().phase, 'saved');
+            assert.equal(h.panel.dataset.running, 'true');
+            assert.equal(h.nodes['[data-clock]'].textContent, '00:02:05');
+            h.advance(5000);
+            h.render();
+            assert.equal(h.toasts().length, 0);
+            assert.equal(h.nodes['[data-clock]'].textContent, '00:02:10');
+        } else {
+            assert.equal(h.state().phase, 'saved');
+            assert.equal(h.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+        }
     }
     for (const input of ['', '0', '-1', '1.5', 'NaN', '9999999999999999999']) {
         const h = setup(running(), 0, input);
         await h.click('manual');
         assert.equal(h.posts.length, 0);
+        assert.equal(h.toasts().length, 0);
         assert.equal(h.state().phase, 'running');
         assert.match(h.nodes['[data-error]'].textContent, /kladny/);
     }
@@ -79,6 +100,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await h.click('manual');
     assert.equal(h.state().phase, 'running');
     assert.equal(h.state().manualEntry.phase, 'pending');
+    assert.equal(h.toasts().length, 0, 'uncertain writes must not show success');
     assert.equal(h.state().manualEntry.issue, 'DEMO-101');
     assert.equal(h.state().started, running().started);
     assert.equal(h.nodes['[data-save-row]'].hidden, false);
@@ -105,15 +127,18 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(reloaded.nodes['[data-stop]'].disabled, false);
     assert.equal(reloaded.nodes['[data-manual]'].disabled, false);
     assert.equal(reloaded.nodes['[data-save-row]'].hidden, true);
+    assert.equal(reloaded.toasts()[0].children[1].textContent, '00:02:00 do tasku DEMO-101');
     const completedManual = setup({...running(), manualEntry: {...uncertain.manualEntry, phase: 'saved'}});
     await completedManual.click('save');
     assert.equal(completedManual.posts.length, 0);
+    assert.equal(completedManual.toasts().length, 0, 'already completed entries must not replay a toast');
     assert.deepEqual(completedManual.state(), running());
     const secondFailure = setup({...running(), ended: 200000000, phase: 'stopped'}, 2);
     await secondFailure.click('manual');
     assert.equal(secondFailure.state().phase, 'pending');
     assert.equal(secondFailure.state().issue, 'DEMO-101');
     assert.equal(secondFailure.posts.length, 2);
+    assert.equal(secondFailure.toasts().length, 1, 'only the successful first save should be confirmed');
     const old = running();
     old.phase = 'saved';
     old.ended = 200000000;
@@ -133,6 +158,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(verified.posts.length, 0, 'existing markers must not create duplicates');
     assert.equal(verified.state().issue, 'DEMO-101');
     assert.equal(verified.state().phase, 'saved');
+    assert.equal(verified.toasts().length, 2, 'queued saves must each keep their own notification');
     const switching = setup(running());
     assert.equal(switching.panel.dataset.other, 'true');
     assert.equal(switching.panel.dataset.running, 'true');
@@ -146,6 +172,8 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(switching.posts.length, 1);
     assert.equal(switching.state().phase, 'running');
     assert.equal(switching.state().issue, 'DEMO-101');
+    assert.equal(switching.toasts()[0].children[1].textContent, '00:02:00 do tasku DEMO-102');
+    assert.equal(switching.toasts()[0].children[2].textContent, 'Other issue full title');
     assert.equal(switching.panel.dataset.other, 'false');
     assert.equal(switching.nodes['[data-issue]'].href, 'https://jira.alza.cz/browse/DEMO-101');
     assert.equal(switching.nodes['[data-measuring]'].hidden, true);
@@ -181,13 +209,18 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(fresh.state().completedAt, 200004000);
     assert.equal(fresh.confirmations(), 0);
     assert.equal(fresh.nodes['[data-save-row]'].hidden, true);
-    assert.equal(fresh.nodes['[data-status]'].textContent, 'Ulozeno do Jiry');
+    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(fresh.nodes['[data-issue]'].hidden, true);
+    assert.equal(fresh.nodes['[data-clock]'].textContent, '00:00:00');
+    assert.equal(fresh.toasts().length, 1);
+    assert.equal(fresh.toasts()[0].children[1].textContent, '00:01:00 do tasku DEMO-101');
     fresh.advance(4999);
     fresh.render();
-    assert.equal(fresh.nodes['[data-issue]'].hidden, false);
-    assert.equal(fresh.nodes['[data-status]'].textContent, 'Ulozeno do Jiry');
+    assert.equal(fresh.toasts().length, 1);
+    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
     fresh.advance(1);
     fresh.render();
+    assert.equal(fresh.toasts().length, 0);
     assert.equal(fresh.nodes['[data-issue]'].hidden, true);
     assert.equal(fresh.nodes['[data-title]'].textContent, '');
     assert.equal(fresh.nodes['[data-clock]'].textContent, '00:00:00');
@@ -196,13 +229,19 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(fresh.state().phase, 'saved', 'keep saved marker for duplicate protection');
     const oldSaved = setup({...fresh.state(), completedAt: 200000000 - 6000});
     assert.equal(oldSaved.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(oldSaved.toasts().length, 0);
+    const recentSaved = setup({...fresh.state(), completedAt: 200000000});
+    assert.equal(recentSaved.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(recentSaved.toasts().length, 0, 'reload must not replay completed notifications');
     const stopFailure = setup(running(), 1);
     await stopFailure.click('stop');
     assert.equal(stopFailure.state().phase, 'pending');
+    assert.equal(stopFailure.toasts().length, 0);
     assert.equal(stopFailure.nodes['[data-save-row]'].hidden, false);
     await stopFailure.click('save');
     assert.equal(stopFailure.posts.length, 1);
     assert.equal(stopFailure.confirmations(), 0);
+    assert.equal(stopFailure.toasts().length, 0);
     const cancelOther = setup(running());
     assert.equal(cancelOther.nodes['[data-cancel]'].hidden, false);
     assert.equal(cancelOther.nodes['[data-cancel]'].textContent, 'CANCEL');
@@ -212,6 +251,14 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(cancelOther.confirmations(), 0);
     assert.equal(cancelOther.nodes['[data-cancel]'].hidden, true);
     assert.equal(cancelOther.nodes['[data-issue]'].hidden, true);
+    assert.equal(cancelOther.toasts()[0].dataset.toast, 'discarded');
+    assert.equal(cancelOther.toasts()[0].children[0].textContent, 'ZAHOZENO');
+    assert.equal(cancelOther.toasts()[0].children[1].textContent, '00:02:05 z tasku DEMO-102');
+    assert.equal(cancelOther.toasts()[0].children[2].textContent, 'Other issue full title');
+    assert.equal(cancelOther.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    cancelOther.advance(5000);
+    cancelOther.render();
+    assert.equal(cancelOther.toasts().length, 0);
     const sameIssue = {...running(), issue: 'DEMO-101'};
     const cancelSame = setup(sameIssue);
     assert.equal(cancelSame.nodes['[data-cancel]'].textContent, 'CANCEL');
@@ -223,10 +270,12 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await cancelSaved.click('cancel');
     assert.equal(cancelSaved.state().worklogId, 'untouched');
     assert.equal(cancelSaved.posts.length, 0);
+    assert.equal(cancelSaved.toasts().length, 0);
     const cancelPending = setup({...running(), ended: 200000000, phase: 'pending'});
     assert.equal(cancelPending.nodes['[data-cancel]'].hidden, true);
     await cancelPending.click('cancel');
     assert.equal(cancelPending.state().phase, 'pending');
+    assert.equal(cancelPending.toasts().length, 0);
     const titled = setup({...running(), title: 'Persisted full title'});
     assert.match(titled.nodes['[data-title]'].textContent, /Persisted full title/);
     const legacyTitle = setup(running());
@@ -259,5 +308,22 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await instantStop.click('start');
     await instantStop.click('stop');
     assert.equal(instantStop.posts[0].body.timeSpentSeconds, 60);
-    console.log('PASS: Enter/manual minutes, uninterrupted timer, second boundaries, slow API, failures, legacy recovery, deduplication, switching, cancellation, minimum duration, titles and saved display');
+    const rapid = setup(null);
+    await rapid.click('start');
+    rapid.advance(43000);
+    await rapid.click('cancel');
+    rapid.advance(1000);
+    await rapid.click('start');
+    await rapid.click('stop');
+    assert.equal(rapid.toasts().length, 2);
+    assert.equal(rapid.toasts()[0].children[1].textContent, '00:00:43 z tasku DEMO-101');
+    assert.equal(rapid.toasts()[1].children[1].textContent, '00:01:00 do tasku DEMO-101');
+    rapid.advance(4000);
+    rapid.render();
+    assert.equal(rapid.toasts().length, 1, 'each toast must expire independently');
+    rapid.advance(1000);
+    rapid.render();
+    assert.equal(rapid.toasts().length, 0);
+    assert.equal(rapid.panel.children.find(child => 'toasts' in child.dataset).attributes['aria-live'], 'polite');
+    console.log('PASS: Enter/manual minutes, uninterrupted timer, second boundaries, slow API, failures, legacy recovery, deduplication, switching, cancellation, minimum duration, titles, immediate idle and save/discard toasts');
 })().catch(e => { console.error(e); process.exitCode = 1; });
