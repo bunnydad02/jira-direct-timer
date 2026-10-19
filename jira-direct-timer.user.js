@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira direct worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.14
+// @version      1.14.1
 // @description  Persistent stopwatch that saves directly to Jira, without Clockify.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -48,7 +48,8 @@
         #jira-direct-timer [data-manual] {width:100%;margin-top:7px}
         #jira-direct-timer [data-error] {color:#ae2a19;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
         #jira-direct-timer [data-error]:not(:empty) {margin-top:8px}
-        #jira-direct-timer [data-toasts] {position:absolute;left:0;bottom:calc(100% + 12px);width:340px;max-width:calc(100vw - 40px);display:flex;flex-direction:column;gap:10px;max-height:45vh;overflow:auto}
+        #jira-direct-timer [data-toasts] {position:absolute;left:0;bottom:calc(100% + 12px);width:340px;max-width:calc(100vw - 40px);display:flex;flex-direction:column;gap:10px;max-height:45vh;overflow:auto;scrollbar-width:none}
+        #jira-direct-timer [data-toasts]::-webkit-scrollbar {display:none}
         #jira-direct-timer [data-toast] {padding:18px;border:2px solid #12532d;border-radius:12px;background:#176538;color:#fff;box-shadow:0 8px 28px #172b4d50;font-size:14px;line-height:1.5;overflow-wrap:anywhere;animation:jira-direct-timer-toast 5s ease-in-out both}
         #jira-direct-timer [data-toast="discarded"] {border-color:#872929;background:#a73434}
         #jira-direct-timer [data-toast] strong {margin-bottom:8px;color:inherit;font-size:18px;font-weight:800;letter-spacing:1px}

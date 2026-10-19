@@ -12,6 +12,8 @@ Instalace:
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
 
 Pouziti:
+- Verze 1.14.1: Posuvnik toastu je skryty i behem animace.
+  Pri vice zpravach nebo dlouhem nazvu lze obsah stale posouvat.
 - Verze 1.14: Uspesne ulozeni potvrdi vyrazny zeleny toast ZAZNAMENANO
   nad panelem. Vetsi karta ma tucny nadpis a cas, bile pismo a stin.
   CANCEL potvrdi cerveny toast ZAHOZENO; maze pouze neulozene mereni,

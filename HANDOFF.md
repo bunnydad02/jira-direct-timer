@@ -7,7 +7,7 @@ conversation. This document preserves project context for future maintainers.
 
 - Repository: `C:\REPO\jira-direct-timer`; work on `master` as requested.
 - Baseline before v1.14: `ad89abe`; working tree clean.
-- Userscript version: **1.14**, standalone fixed panel at the bottom left.
+- Userscript version: **1.14.1**, standalone fixed panel at the bottom left.
 - Target: authenticated `https://jira.alza.cz`, historically identified as Jira
   Data Center 8.20.10. No current server-version recheck was performed.
 - No package manager, bundler, server, Clockify account or API key is needed.
@@ -75,6 +75,8 @@ These are historical findings, not proof of Clockify's current service status.
   backgrounds, white text and larger headings/durations. Fade/slide in for
   0.5 seconds, hold for 4 seconds, fade/slide out for 0.5 seconds. Respect
   prefers-reduced-motion by disabling animation, keeping the 5-second lifetime.
+- Hide toast scrollbars (standard and WebKit CSS) to avoid animation flicker,
+  but retain overflow scrolling for stacked messages and long titles.
 - The current source also sets panel styles inline. Node mocks do not verify
   actual CSS precedence or rendered colors; check browser styling when changing it.
 
