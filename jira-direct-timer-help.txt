@@ -1,5 +1,10 @@
 JIRA STOPKY BEZ CLOCKIFY
 
+Pro budouci udrzbu a AI agenty:
+- Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
+  architektura, bezpecne obnoveni zapisu, testovani a historie.
+- Vychozi pracovni vetev je master, dokud uzivatel nerekne jinak.
+
 Instalace:
 1. V Tampermonkey vytvor novy skript.
 2. Nahrad cely obsah souborem jira-direct-timer.user.js a uloz Ctrl+S.
