@@ -85,6 +85,13 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.match(legacyPanel.styles, /#timer-sidebar\s*\{\s*display:\s*none\s*!important\s*\}/,
         'hide the entire legacy Clockify module, including its heading, without reserving space');
     assert.equal(legacyPanel.panel.id, 'jira-direct-timer', 'keep our timer separate from the hidden module');
+    const version = metadata.match(/^\/\/ @version\s+(\d+\.\d+\.\d+)\s*$/m)?.[1];
+    assert.ok(version, 'publish a three-part userscript version');
+    assert.match(legacyPanel.panel.innerHTML, /<span data-version><\/span>/);
+    assert.equal(legacyPanel.nodes['[data-version]'].textContent, `v${version}`,
+        'display the installed userscript version, keeping the label in sync with metadata');
+    assert.match(legacyPanel.styles, /\[data-version\] \{position:absolute;top:14px;right:14px;font-size:9px;.*opacity:\.5\}/,
+        'keep the version small and unobtrusive in the top-right corner');
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].hidden, false);
@@ -129,6 +136,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         [null, 'manual'], [{...running(), ended: 200000000, phase: 'stopped'}, 'manual']
     ]) {
         const stable = setup(initial);
+        assert.equal(stable.nodes['[data-version]'].textContent, `v${version}`);
         const before = {
             running: stable.panel.dataset.running,
             other: stable.panel.dataset.other,

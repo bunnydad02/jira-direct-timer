@@ -42,6 +42,9 @@ Po vyse uvedene jednorazove vymene obsahu uz hlavicku rucne neupravuj.
 3. Pro okamzitou kontrolu pouzij prikaz Tampermonkey pro kontrolu aktualizaci.
    Po instalaci nove verze obnov otevrenou Jiru.
 
+Aktualni verze stopek je drobnym nenapadnym pismem vpravo nahore v jejich
+panelu (napr. `v1.16.5`).
+
 Pri kazdem vydani zvys `@version` zmeneneho skriptu a publikuj soubor do `main`.
 Tampermonkey kontroluje vyssi verzi v nastavenem intervalu, ne pri kazdem otevreni
 Jiry; prohlizec s rozsirenim musi bezet. Nazvy voleb zavisi na verzi a jazyku.
