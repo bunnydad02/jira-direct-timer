@@ -10,7 +10,7 @@ conversation. This document preserves project context for future maintainers.
   No Git remote is configured; there is no hosted repository to rename.
 - Work on `feat/jira-local-workspace` for the redesign, not on `master`.
 - Independent scripts: `jira-workspace-issue.user.js` (local issue redesign)
-  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.1).
+  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.3).
 - Start with [README.md](./README.md) and
   [jira-workspace-help.txt](./jira-workspace-help.txt) for installation.
 - The timer rename is metadata/file naming only. Keep `alza.jira-direct-timer`,
@@ -185,9 +185,10 @@ scripts/network requests. Do not store the supplied full Jira HTML or its tokens
   Worklogs use `/rest/api/2/issue/{key}/worklog?adjustEstimate=leave`; preserve
   the remaining estimate. No API secrets belong in the userscript.
 - The timer displays the open issue's total logged seconds below its clock.
-  Read every page of the issue's worklog endpoint, surface loading errors, and
-  invalidate the cached total after a confirmed save. This is read-only apart
-  from the timer's existing explicit save actions.
+  Display it as hours rounded to one decimal, omit `.0`, and use a decimal
+  comma. Read every page of the issue's worklog endpoint, surface loading
+  errors, and invalidate the cached total after a confirmed save. This is
+  read-only apart from the timer's existing explicit save actions.
 - Issue selection precedence: `selectedIssue` query parameter, `/browse/{key}`,
   then `meta[name="ajs-issue-key"]`. Title comes from stored data, `#summary-val`,
   or a summary-only issue API read. Insert issue titles as text, not HTML.
@@ -196,10 +197,10 @@ scripts/network requests. Do not store the supplied full Jira HTML or its tokens
 
 ## Validation and deployment
 
-The Jira Local Workspace v1.0.0 redesign and timer v1.16.2 passed both Node
+The Jira Local Workspace v1.0.0 redesign and timer v1.16.3 passed both Node
 regression suites and both userscript syntax checks. Timer tests cover the
-all-pages worklog total, issue changes, visible fetch errors and refresh after
-a successful save. No real Jira requests or worklogs were made.
+all-pages worklog total, hour formatting, issue changes, visible fetch errors
+and refresh after a successful save. No real Jira requests or worklogs were made.
 The redesign tests cover scope detection, native-view/density preferences,
 safe section labels, storage failures, cross-tab preference events, root
 replacement, late loading, stable navigation links and observer coalescing.

@@ -81,8 +81,14 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         'hide the entire legacy Clockify module, including its heading, without reserving space');
     assert.equal(legacyPanel.panel.id, 'jira-direct-timer', 'keep our timer separate from the hidden module');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:00:00');
+    assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].hidden, false);
+    for (const [seconds, expected] of [[7200, 'Dosud vykaz\u00e1no: 2h'], [1440, 'Dosud vykaz\u00e1no: 0,4h'], [439200, 'Dosud vykaz\u00e1no: 122h']]) {
+        const formatted = setup(null);
+        formatted.onFetch(() => ({total: 1, worklogs: [{timeSpentSeconds: seconds}]}));
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(formatted.nodes['[data-worklog-total]'].textContent, expected);
+    }
     const pagedTotal = setup(null);
     pagedTotal.onFetch(path => {
         const offset = Number(new URLSearchParams(path.split('?')[1]).get('startAt'));
@@ -92,7 +98,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         return {total: 3, worklogs: [{timeSpentSeconds: 3661}]};
     });
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 02:31:01',
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 2,5h',
         'sum all worklogs across Jira pages');
     const issueQueries = [];
     pagedTotal.onFetch(path => {
@@ -101,12 +107,12 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     });
     pagedTotal.navigate('/browse/DEMO-102');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:01:00');
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
     assert.ok(issueQueries.some(path => path.includes('/DEMO-102/')), 'load a fresh total when the open issue changes');
     const queryCount = issueQueries.length;
     pagedTotal.navigate('/browse/DEMO-101');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:01:00');
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
     assert.ok(issueQueries.length > queryCount, 'refresh the total when reopening a previously viewed issue');
     const failedTotal = setup(null);
     failedTotal.onFetch(() => { throw new Error('Jira offline'); });
@@ -316,7 +322,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(minimum.posts[0].body.timeSpentSeconds, 60);
     const fresh = setup(null);
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:00:00');
+    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
     assert.equal(fresh.panel.dataset.running, 'false');
     assert.equal(fresh.panel.dataset.other, 'false');
     assert.equal(fresh.nodes['[data-issue]'].hidden, true);
@@ -338,7 +344,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(fresh.posts[0].body.timeSpentSeconds, 60);
     assert.equal(fresh.state().phase, 'saved');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:01:00',
+    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h',
         'refresh the displayed total after saving a worklog');
     assert.equal(fresh.state().completedAt, 200004000);
     assert.equal(fresh.confirmations(), 0);

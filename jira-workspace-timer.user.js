@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.16.2
+// @version      1.16.3
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -110,6 +110,12 @@
 
     function formatDuration(seconds) {
         return [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
+    }
+    function formatLoggedHours(seconds) {
+        const tenths = Math.round(seconds / 360);
+        const hours = Math.floor(tenths / 10);
+        const decimal = tenths % 10;
+        return `${hours}${decimal ? `,${decimal}` : ''}h`;
     }
     function showToast(value, discarded = false) {
         const node = document.createElement('div');
@@ -227,11 +233,11 @@
         }
         worklogTotal.dataset.state = state.status;
         if (state.status === 'loaded') {
-            worklogTotal.textContent = `Dosud vykazano: ${formatDuration(state.seconds)}`;
+            worklogTotal.textContent = `Dosud vykaz\u00e1no: ${formatLoggedHours(state.seconds)}`;
         } else if (state.status === 'error') {
-            worklogTotal.textContent = `Vykazany cas se nepodarilo nacist: ${state.message}`;
+            worklogTotal.textContent = `Vyk\u00e1zan\u00fd \u010das se nepoda\u0159ilo na\u010d\u00edst: ${state.message}`;
         } else {
-            worklogTotal.textContent = 'Dosud vykazano: nacitam...';
+            worklogTotal.textContent = 'Dosud vykaz\u00e1no: nac\u00edt\u00e1m...';
         }
     }
 
