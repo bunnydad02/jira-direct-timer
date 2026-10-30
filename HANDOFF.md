@@ -16,6 +16,14 @@ conversation. This document preserves project context for future maintainers.
   pointing at their raw GitHub files on `main`. The owner plans to make the
   repository public; do not assume that visibility change or publication
   has happened. Never embed credentials in update URLs.
+- Publication cleanup rewrote all published branch histories with owner
+  approval. Personal author contacts and real Jira identifiers were scrubbed;
+  the historical support-email draft was purged. The Jira hostname and
+  compatibility namespace remain intentionally unchanged for functionality.
+  Use a fresh clone after the rewrite; never merge or push pre-cleanup refs.
+  Old abbreviated hashes below refer to the pre-cleanup history. Local backups
+  contain the original data and must remain private. GitHub caches/hidden refs
+  are not guaranteed to be purged by a force-push.
 - Start with [README.md](./README.md) and
   [jira-workspace-help.txt](./jira-workspace-help.txt) for installation.
 - The timer rename is metadata/file naming only. Keep `alza.jira-direct-timer`,
@@ -319,7 +327,8 @@ been verified; Node regressions check the exact metadata URLs.
 - `cf72b0f`: historical standalone rollback/import plus support artifacts;
   included an inline panel-style assignment later removed in v1.14.3.
 - `5f8c0c3`: removed old Clockify workaround, support-email draft and completed
-  v1.7 text-editing worksheet. They remain retrievable in Git history.
+  v1.7 text-editing worksheet. The support-email draft was subsequently purged
+  from the published history during the owner-approved privacy cleanup.
 - Use new commits; do not rewrite reconstructed history or amend by default.
   Existing convention: `feat:`, `fix:`, `refactor:` and `chore:` subjects.
   The current redesign belongs on `feat/jira-local-workspace`;

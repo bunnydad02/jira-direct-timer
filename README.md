@@ -71,6 +71,21 @@ Podrobny navod, vcetne bezpecne obnovy worklogu:
 
 ## Vyvoj a overeni
 
+### Soukromi a prepsana historie
+
+Historie byla se souhlasem vlastnika ocistena: navrh e-mailu podpore byl
+odstranen, osobni kontakt autora nahrazen GitHub noreply identitou a skutecne
+identifikatory Jira zaznamu nahrazeny syntetickymi priklady nebo vynechany.
+Firemni hostname v `@match` a kompatibilni namespace zustavaji zamerne
+zachovany, aby instalovane skripty fungovaly beze zmeny.
+
+Po prepsani historie pouzij cerstvy klon. Neslucuj ani nepushuj stare vetve:
+mohly by vratit odstranena data. Stare hashe v historickych poznamkach
+odkazuji na puvodni historii. Lokalni zaloha puvodni historie neni urcena
+ke zverejneni. Prepis nezarucuje odstraneni kopii, cache ani skrytych GitHub
+referenci; pripadne skutecne pristupove udaje je nutne zneplatnit.
+Pri dalsich commitech pouzivej svou GitHub noreply adresu.
+
 Zmena je oddelena ve vetvi `feat/jira-local-workspace`; `master` zustava beze zmen.
 Projekt se drive jmenoval Jira direct timer. Interni identifikatory stopek jsou
 umyslne zachovany kvuli rozpracovanemu casu, zamykani a ochrane proti duplicitam.
