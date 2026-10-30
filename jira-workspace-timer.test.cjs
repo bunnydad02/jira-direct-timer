@@ -7,12 +7,14 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let state = initial;
     let confirmations = 0;
     const posts = [];
+    const persisted = [];
     const nodes = {};
     let panel;
     let now = 200000000;
     let render;
     let interval;
     let onFetch = () => {};
+    const location = {pathname: '/browse/DEMO-101', search: ''};
     function element() {
         return {dataset: {}, value: '', children: [], attributes: {},
             get innerHTML() { return this.html; },
@@ -35,22 +37,27 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     const context = {
         window, document: {body: element(), createElement: tag => { const node = element(); if (tag === 'section') panel = node; return node; }, getElementById: () => null,
             querySelector: selector => selector === '#summary-val' ? {textContent: 'Full issue title <safe text>'} : {content: 'PMA-OLD'}},
-        location: {pathname: '/browse/DEMO-101', search: ''}, URLSearchParams,
+        location, URLSearchParams,
         localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }, removeItem: () => { state = null; }},
         Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval: (callback, ms) => { render = callback; interval = ms; },
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
             if (path.endsWith('?fields=summary')) return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
-            await onFetch(path, options);
+            await Promise.resolve();
+            const override = await onFetch(path, options);
+            if (override !== undefined) return {ok: true, json: async () => override};
             now += latency;
             if (options.method === 'POST') {
                 const body = JSON.parse(options.body);
                 posts.push({path, body});
                 if (posts.length === failureAt) throw new Error('Network failure');
+                persisted.push({path, body});
                 return {ok: true, json: async () => ({id: `log-${posts.length}`, timeSpentSeconds: body.timeSpentSeconds})};
             }
-            return {ok: true, json: async () => ({total: existing ? 1 : 0, worklogs: existing ?
-                [{id: 'existing', timeSpentSeconds: 120, comment: `[jira-direct-timer:${state.manualEntry?.id || state.id}]`}] : []})};
+            const worklogs = existing ?
+                [{id: 'existing', timeSpentSeconds: 120, comment: `[jira-direct-timer:${state.manualEntry?.id || state.id}]`}] :
+                persisted.map((post, index) => ({id: `log-${index + 1}`, timeSpentSeconds: post.body.timeSpentSeconds, comment: post.body.comment}));
+            return {ok: true, json: async () => ({total: worklogs.length, worklogs})};
         }
     };
     vm.runInNewContext(source, context);
@@ -60,6 +67,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         toasts: () => panel.children.find(child => 'toasts' in child.dataset).children,
         advance: ms => { now += ms; }, render: () => render(), interval: () => interval,
         onFetch: callback => { onFetch = callback; },
+        navigate: path => { location.pathname = path; render(); },
         keydown: async (key = 'Enter') => {
             let prevented = false;
             await nodes['[data-minutes]'].onkeydown({key, preventDefault: () => { prevented = true; }});
@@ -72,6 +80,39 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.match(legacyPanel.styles, /#timer-sidebar\s*\{\s*display:\s*none\s*!important\s*\}/,
         'hide the entire legacy Clockify module, including its heading, without reserving space');
     assert.equal(legacyPanel.panel.id, 'jira-direct-timer', 'keep our timer separate from the hidden module');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:00:00');
+    assert.equal(legacyPanel.nodes['[data-worklog-total]'].hidden, false);
+    const pagedTotal = setup(null);
+    pagedTotal.onFetch(path => {
+        const offset = Number(new URLSearchParams(path.split('?')[1]).get('startAt'));
+        if (offset === 0) return {total: 3, worklogs: [
+            {timeSpentSeconds: 3600}, {timeSpentSeconds: 1800}
+        ]};
+        return {total: 3, worklogs: [{timeSpentSeconds: 3661}]};
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 02:31:01',
+        'sum all worklogs across Jira pages');
+    const issueQueries = [];
+    pagedTotal.onFetch(path => {
+        if (path.includes('/worklog?startAt=')) issueQueries.push(path);
+        return {total: 1, worklogs: [{timeSpentSeconds: 60}]};
+    });
+    pagedTotal.navigate('/browse/DEMO-102');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:01:00');
+    assert.ok(issueQueries.some(path => path.includes('/DEMO-102/')), 'load a fresh total when the open issue changes');
+    const queryCount = issueQueries.length;
+    pagedTotal.navigate('/browse/DEMO-101');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:01:00');
+    assert.ok(issueQueries.length > queryCount, 'refresh the total when reopening a previously viewed issue');
+    const failedTotal = setup(null);
+    failedTotal.onFetch(() => { throw new Error('Jira offline'); });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(failedTotal.nodes['[data-worklog-total]'].textContent, /Jira offline/,
+        'show worklog fetch failures instead of hiding them');
     for (const [initial, action] of [
         [running(), 'stop'], [running(), 'start'], [running(), 'manual'],
         [null, 'manual'], [{...running(), ended: 200000000, phase: 'stopped'}, 'manual']
@@ -274,6 +315,8 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await minimum.click('start');
     assert.equal(minimum.posts[0].body.timeSpentSeconds, 60);
     const fresh = setup(null);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:00:00');
     assert.equal(fresh.panel.dataset.running, 'false');
     assert.equal(fresh.panel.dataset.other, 'false');
     assert.equal(fresh.nodes['[data-issue]'].hidden, true);
@@ -294,6 +337,9 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(fresh.posts.length, 1);
     assert.equal(fresh.posts[0].body.timeSpentSeconds, 60);
     assert.equal(fresh.state().phase, 'saved');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Dosud vykazano: 00:01:00',
+        'refresh the displayed total after saving a worklog');
     assert.equal(fresh.state().completedAt, 200004000);
     assert.equal(fresh.confirmations(), 0);
     assert.equal(fresh.nodes['[data-save-row]'].hidden, true);
@@ -383,7 +429,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         assert.equal(enter.nodes['[data-minutes]'].value, '');
         if (initial) {
             assert.deepEqual(enter.state(), initial, 'slow API must not pause or restart the timer');
-            assert.equal(enter.nodes['[data-clock]'].textContent, '00:02:08');
+            assert.equal(enter.nodes['[data-clock]'].textContent, '00:02:09');
             await enter.click('stop');
             assert.match(enter.posts[1].path, /DEMO-102/);
             assert.equal(enter.posts[1].body.timeSpentSeconds, 120);

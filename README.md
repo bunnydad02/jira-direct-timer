@@ -9,7 +9,7 @@ Cilem je modernejsi pracovni prostredi, ne nahrada funkcnosti Jiry.
 | Skript | Ucel |
 | --- | --- |
 | [jira-workspace-issue.user.js](./jira-workspace-issue.user.js) | Kompaktni dark mode inspirovany Asanou: ploche sekce, husta metadata, tmave formulare i stopky, responzivni sloupce, navigace a prepnuti na puvodni vzhled. |
-| [jira-workspace-timer.user.js](./jira-workspace-timer.user.js) | Dosavadni samostatne stopky a prime ukladani worklogu, vcetne obnoveni nejisteho zapisu. |
+| [jira-workspace-timer.user.js](./jira-workspace-timer.user.js) | Samostatne stopky, soucet vykazaneho casu otevreneho ukolu a prime ukladani worklogu, vcetne obnoveni nejisteho zapisu. |
 
 Oba jsou urcene pro `https://jira.alza.cz/*`. Lze je pouzivat spolu i oddelene.
 Redesign neodesila zadne pozadavky, nemeni obsah ukolu a neovlada stopky.

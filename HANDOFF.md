@@ -184,6 +184,10 @@ scripts/network requests. Do not store the supplied full Jira HTML or its tokens
 - REST requests use the existing Jira session (`credentials: same-origin`).
   Worklogs use `/rest/api/2/issue/{key}/worklog?adjustEstimate=leave`; preserve
   the remaining estimate. No API secrets belong in the userscript.
+- The timer displays the open issue's total logged seconds below its clock.
+  Read every page of the issue's worklog endpoint, surface loading errors, and
+  invalidate the cached total after a confirmed save. This is read-only apart
+  from the timer's existing explicit save actions.
 - Issue selection precedence: `selectedIssue` query parameter, `/browse/{key}`,
   then `meta[name="ajs-issue-key"]`. Title comes from stored data, `#summary-val`,
   or a summary-only issue API read. Insert issue titles as text, not HTML.
@@ -192,9 +196,10 @@ scripts/network requests. Do not store the supplied full Jira HTML or its tokens
 
 ## Validation and deployment
 
-The Jira Local Workspace v1.0.0 redesign and renamed v1.16.1 timer passed both
-Node regression suites and both userscript syntax checks. The timer body is
-unchanged; only its file name, display name and patch version changed.
+The Jira Local Workspace v1.0.0 redesign and timer v1.16.2 passed both Node
+regression suites and both userscript syntax checks. Timer tests cover the
+all-pages worklog total, issue changes, visible fetch errors and refresh after
+a successful save. No real Jira requests or worklogs were made.
 The redesign tests cover scope detection, native-view/density preferences,
 safe section labels, storage failures, cross-tab preference events, root
 replacement, late loading, stable navigation links and observer coalescing.

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.16.1
+// @version      1.16.2
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle
@@ -24,6 +24,8 @@
         #jira-direct-timer [data-clock] {display:block;font-size:34px;line-height:1.2;font-weight:750;letter-spacing:1px;font-variant-numeric:tabular-nums;color:#8d3030;margin:4px 0 8px}
         #jira-direct-timer[data-running="true"] [data-clock] {color:#176538}
         #jira-direct-timer[data-other="true"] [data-clock] {color:#20559a}
+        #jira-direct-timer [data-worklog-total] {margin:-5px 0 8px;color:#526078;font-size:10px;line-height:1.4;overflow-wrap:anywhere}
+        #jira-direct-timer [data-worklog-total][data-state="error"] {color:#ae2a19}
         #jira-direct-timer [data-measuring] {font-size:14px;font-weight:750;color:#20559a;overflow-wrap:anywhere}
         #jira-direct-timer a[data-issue],#jira-direct-timer a[data-title],#jira-direct-timer a[data-measuring] {display:block;color:inherit;text-decoration:none}
         #jira-direct-timer a[data-measuring] {color:#20559a}
@@ -68,7 +70,7 @@
         }
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<strong>Jira stopky</strong><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<strong>Jira stopky</strong><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
     manualRow.dataset.manualRow = '';
@@ -85,6 +87,7 @@
     const issueLink = panel.querySelector('[data-issue]');
     const titleLink = panel.querySelector('[data-title]');
     const clock = panel.querySelector('[data-clock]');
+    const worklogTotal = panel.querySelector('[data-worklog-total]');
     const saveRow = panel.querySelector('[data-save-row]');
     const start = panel.querySelector('[data-start]');
     const stop = panel.querySelector('[data-stop]');
@@ -98,9 +101,11 @@
     const manual = panel.querySelector('[data-manual]');
     let busy = false;
     let actionDisplay = null;
+    let displayedIssue = null;
     let notice = '';
     const titles = new Map();
     const titleRequests = new Set();
+    const worklogTotals = new Map();
     let notifications = [];
 
     function formatDuration(seconds) {
@@ -173,6 +178,62 @@
     function newTimer(key, started) {
         return {id: crypto.randomUUID(), issue: key, title: titleFor({issue: key}), started, ended: null, phase: 'running'};
     }
+    async function totalLoggedSeconds(key) {
+        let offset = 0;
+        let total = 0;
+        let seconds = 0;
+        do {
+            const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}/worklog?startAt=${offset}&maxResults=100`);
+            if (!Array.isArray(body.worklogs) || !Number.isSafeInteger(body.total) || body.total < 0) {
+                throw new Error('Neocekavana odpoved Jira worklogu.');
+            }
+            total = body.total;
+            for (const worklog of body.worklogs) {
+                if (!Number.isSafeInteger(worklog.timeSpentSeconds) || worklog.timeSpentSeconds < 0 ||
+                    !Number.isSafeInteger(seconds + worklog.timeSpentSeconds)) {
+                    throw new Error('Jira vratila neplatnou delku worklogu.');
+                }
+                seconds += worklog.timeSpentSeconds;
+            }
+            offset += body.worklogs.length;
+            if (offset < total && !body.worklogs.length) {
+                throw new Error('Jira nevratila vsechny zaznamy worklogu.');
+            }
+        } while (offset < total);
+        return seconds;
+    }
+    function renderWorklogTotal(key) {
+        if (!key) {
+            worklogTotal.hidden = true;
+            worklogTotal.textContent = '';
+            return;
+        }
+        worklogTotal.hidden = false;
+        let state = worklogTotals.get(key);
+        if (!state) {
+            state = {status: 'loading'};
+            worklogTotals.set(key, state);
+            totalLoggedSeconds(key).then(seconds => {
+                if (worklogTotals.get(key) !== state) return;
+                state.status = 'loaded';
+                state.seconds = seconds;
+                render();
+            }).catch(error => {
+                if (worklogTotals.get(key) !== state) return;
+                state.status = 'error';
+                state.message = error.message;
+                render();
+            });
+        }
+        worklogTotal.dataset.state = state.status;
+        if (state.status === 'loaded') {
+            worklogTotal.textContent = `Dosud vykazano: ${formatDuration(state.seconds)}`;
+        } else if (state.status === 'error') {
+            worklogTotal.textContent = `Vykazany cas se nepodarilo nacist: ${state.message}`;
+        } else {
+            worklogTotal.textContent = 'Dosud vykazano: nacitam...';
+        }
+    }
 
     function read() {
         const raw = localStorage.getItem(KEY);
@@ -208,6 +269,11 @@
             renderToasts();
             const value = busy ? actionDisplay : read();
             const currentIssue = issue();
+            if (currentIssue !== displayedIssue) {
+                displayedIssue = currentIssue;
+                if (currentIssue) worklogTotals.delete(currentIssue);
+            }
+            renderWorklogTotal(currentIssue);
             const independentManual = value && value.manualEntry;
             const queuedManual = value && value.manualNext;
             const active = value && (value.phase !== 'saved' || queuedManual);
@@ -399,6 +465,7 @@
         value.worklogId = worklog.id;
         value.recordedSeconds = worklog.timeSpentSeconds;
         value.completedAt = Date.now();
+        worklogTotals.delete(value.issue);
         persist(value);
         showToast(value);
     }

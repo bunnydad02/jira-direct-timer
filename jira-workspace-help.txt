@@ -32,7 +32,7 @@ Pouziti:
 - Pokud Jira pouzije jine HTML, nektere casti mohou zustat puvodni.
   Prepinac Puvodni vzhled umoznuje okamzity navrat bez obnoveni stranky.
 
-JIRA STOPKY - verze 1.16.1
+JIRA STOPKY - verze 1.16.2
 
 Pro budouci udrzbu a AI agenty:
 - Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
@@ -55,6 +55,8 @@ Pouziti:
 - Nejprve zastav jine stopky, vcetne Clockify. Tyto stopky Clockify neridi.
 - Na otevrenem ukolu klikni START. Stopky zacinaji od 00:00:00,
   zobrazuji skutecne uplynule sekundy a obnovuji se po 100 ms.
+- Pod stopkami se zobrazuje celkovy dosud vykazany cas otevreneho ukolu.
+  Pocita vsechny worklogy napric dny; pri chybe nacitani se zobrazi upozorneni.
 - Otevreni jineho ukolu samo mereni neprepina. START na jinem ukolu ulozi
   predchozi mereni a spusti nove od okamziku zastaveni, bez mezery kvuli API.
 - STOP zastavi a automaticky ulozi pouze mereny ukol; nic dalsiho nespousti.
