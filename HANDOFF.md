@@ -7,7 +7,8 @@ conversation. This document preserves project context for future maintainers.
 
 - Project name: **Jira Local Workspace**. The existing local checkout remains
   `C:\REPO\jira-direct-timer` so the open editor/workspace stays valid.
-  No Git remote is configured; there is no hosted repository to rename.
+  Git remote `origin` points to the private GitHub repository
+  `https://github.com/bunnydad02/jira-direct-timer.git`.
 - Work on `feat/jira-local-workspace` for the redesign, not on `master`.
 - Independent scripts: `jira-workspace-issue.user.js` (local issue redesign)
   and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.3).

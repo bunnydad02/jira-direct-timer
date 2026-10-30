@@ -46,7 +46,9 @@ Podrobny navod, vcetne bezpecne obnovy worklogu:
 Zmena je oddelena ve vetvi `feat/jira-local-workspace`; `master` zustava beze zmen.
 Projekt se drive jmenoval Jira direct timer. Interni identifikatory stopek jsou
 umyslne zachovany kvuli rozpracovanemu casu, zamykani a ochrane proti duplicitam.
-Neni nastaven zadny Git remote. Nazev projektu a souboru je novy; fyzicka slozka
+GitHub repozitar: [bunnydad02/jira-direct-timer](https://github.com/bunnydad02/jira-direct-timer).
+Remote `origin` pouziva HTTPS; pristup vyzaduje opravneny GitHub ucet.
+Nazev projektu a souboru je novy; fyzicka slozka
 otevreneho checkoutu zustava puvodni, aby se nerozbil editor. Po zavreni editoru
 ji lze prejmenovat na `jira-local-workspace` a znovu otevrit. Nazev slozky neni
 verzovanou soucasti vetve.
