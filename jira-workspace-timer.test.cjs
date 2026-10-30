@@ -2,6 +2,11 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(`${__dirname}\\jira-workspace-timer.user.js`, 'utf8');
+const metadata = source.split('// ==/UserScript==')[0];
+for (const directive of ['updateURL', 'downloadURL']) {
+    assert.equal(metadata.match(new RegExp(`^// @${directive}\\s+(\\S+)\\s*$`, 'm'))?.[1],
+        'https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js');
+}
 
 function setup(initial, failureAt = 0, input = '30', existing = false, latency = 0) {
     let state = initial;

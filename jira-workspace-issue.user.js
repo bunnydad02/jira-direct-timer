@@ -1,7 +1,9 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Modern issue view
 // @namespace    alza.jira-local-workspace
-// @version      1.0.0
+// @version      1.0.1
+// @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-issue.user.js
+// @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-issue.user.js
 // @description  A compact dark Jira workspace with native editing, workflow and a reversible theme.
 // @match        https://jira.alza.cz/*
 // @run-at       document-idle

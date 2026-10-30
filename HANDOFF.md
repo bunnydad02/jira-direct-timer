@@ -7,11 +7,15 @@ conversation. This document preserves project context for future maintainers.
 
 - Project name: **Jira Local Workspace**. The existing local checkout remains
   `C:\REPO\jira-direct-timer` so the open editor/workspace stays valid.
-  Git remote `origin` points to the private GitHub repository
+  Git remote `origin` points to the GitHub repository
   `https://github.com/bunnydad02/jira-direct-timer.git`.
 - Work on `feat/jira-local-workspace` for the redesign, not on `master`.
 - Independent scripts: `jira-workspace-issue.user.js` (local issue redesign)
-  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.3).
+  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.4).
+  Issue view is v1.0.1. Both scripts now use `@updateURL` and `@downloadURL`
+  pointing at their raw GitHub files on `main`. The owner plans to make the
+  repository public; do not assume that visibility change or publication
+  has happened. Never embed credentials in update URLs.
 - Start with [README.md](./README.md) and
   [jira-workspace-help.txt](./jira-workspace-help.txt) for installation.
 - The timer rename is metadata/file naming only. Keep `alza.jira-direct-timer`,
@@ -296,9 +300,14 @@ For UI changes, verify in an authenticated browser with care: start/stop/manual
 entry can write real worklogs. Obtain authorization for new diagnostic entries.
 Historical live diagnostics were performed; their issue and worklog identifiers are intentionally omitted. Do not recreate diagnostic writes.
 
-Deployment is manual: replace the full installed Tampermonkey script with the
-repository userscript, save, then reload Jira. A Git edit does not update an
-already installed userscript. Preserve browser state during updates.
+Deployment bootstrap: replace the full existing Tampermonkey script with the
+repository userscript, save, then reload Jira. Preserve browser state and script
+identities. Once the repository is public and the files are published to `main`,
+Tampermonkey can update both scripts at its configured interval. Increase the
+changed script's `@version` for every release and keep both metadata URLs.
+A local Git edit or commit alone does not publish an update. Reload Jira after
+installation. Automatic installation in a real Tampermonkey profile has not
+been verified; Node regressions check the exact metadata URLs.
 
 ## History and continuation
 

@@ -3,6 +3,11 @@ const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(path.join(__dirname, 'jira-workspace-issue.user.js'), 'utf8');
+const metadata = source.split('// ==/UserScript==')[0];
+for (const directive of ['updateURL', 'downloadURL']) {
+    assert.equal(metadata.match(new RegExp(`^// @${directive}\\s+(\\S+)\\s*$`, 'm'))?.[1],
+        'https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-issue.user.js');
+}
 const KEY = 'jira-local-workspace-ui-v1';
 
 function setup({stored = null, brokenRead = false, brokenWrite = false, pathname = '/browse/DEMO-42', search = '', frame = false, issue = true} = {}) {

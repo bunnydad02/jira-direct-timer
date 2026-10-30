@@ -3,10 +3,10 @@ JIRA LOCAL WORKSPACE - prirucka
 Projekt lokalne modernizuje Jiru pomoci dvou nezavislych Tampermonkey skriptu.
 Prehled projektu a navrat zpet: README.md.
 
-MODERNI DETAIL UKOLU - verze 1.0.0
+MODERNI DETAIL UKOLU - verze 1.0.1
 
 Instalace:
-1. V Tampermonkey vytvor NOVY skript.
+1. V Tampermonkey otevri existujici skript vzhledu (pri prvni instalaci novy).
 2. Vloz cely jira-workspace-issue.user.js a uloz Ctrl+S.
 3. Povol pristup k https://jira.alza.cz a obnov detail ukolu.
 4. Nad detailem se objevi lista Jira Local Workspace.
@@ -32,7 +32,7 @@ Pouziti:
 - Pokud Jira pouzije jine HTML, nektere casti mohou zustat puvodni.
   Prepinac Puvodni vzhled umoznuje okamzity navrat bez obnoveni stranky.
 
-JIRA STOPKY - verze 1.16.3
+JIRA STOPKY - verze 1.16.4
 
 Pro budouci udrzbu a AI agenty:
 - Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
@@ -49,7 +49,21 @@ Instalace a aktualizace:
 3. Povol rozsireni pristup k https://jira.alza.cz a pouzivani uzivatelskych skriptu.
 4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
 5. Pri aktualizaci nemaz data webu; rozpracovane mereni zustane zachovane.
-   Samotna zmena souboru v Gitu neaktualizuje nainstalovany skript.
+
+Automaticke aktualizace obou skriptu:
+- Tato verze uz obsahuje adresy aktualizaci z GitHubu; nic rucne nedoplnuj.
+- Jednou nahrad cely obsah existujicich skriptu podle navodu vyse a uloz.
+- Repozitar bunnydad02/jira-direct-timer musi byt verejny a nove soubory
+  publikovane ve vetvi main. Lokalni ulozeni ani commit sam nestaci.
+- Tampermonkey -> Prehled / Dashboard -> Nastaveni / Settings ->
+  Aktualizace skriptu / Script Update: nastav interval napr. denne.
+  Pokud sekci nevidis, zapni Pokrocily / Advanced rezim nastaveni.
+  U obou skriptu ponech kontroly aktualizaci povolene.
+- Pro okamzitou kontrolu pouzij kontrolu aktualizaci v Tampermonkey.
+  Po aktualizaci obnov Jiru. Prohlizec s rozsirenim musi bezet.
+- Kazde dalsi vydani vyzaduje vyssi @version zmeneneho skriptu na GitHubu.
+  Nemaz data webu, nemen namespace a nevytvarej duplicitni instalace.
+- Nikdy nevkladej pristupovy token do skriptu ani adres aktualizaci.
 
 Pouziti:
 - Nejprve zastav jine stopky, vcetne Clockify. Tyto stopky Clockify neridi.

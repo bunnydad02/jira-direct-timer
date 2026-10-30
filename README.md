@@ -18,14 +18,39 @@ Zmeny vzhledu se aktivuji jen na rozpoznanem detailu, vcetne `selectedIssue`.
 
 ## Instalace
 
-1. V Tampermonkey vytvor **novy** skript pro
-   [jira-workspace-issue.user.js](./jira-workspace-issue.user.js), vloz jeho cely
-   obsah a uloz. Obnov detail ukolu.
+1. Pro vzhled otevri v Tampermonkey **existujici** skript
+   (pri prvni instalaci vytvor novy), nahrad jeho cely obsah souborem
+   [jira-workspace-issue.user.js](./jira-workspace-issue.user.js) a uloz Ctrl+S.
 2. Pro aktualizaci stopek otevri **existujici** nainstalovany skript a nahrad ho
    obsahem [jira-workspace-timer.user.js](./jira-workspace-timer.user.js).
    Neinstaluj druhou kopii a nemaz data webu.
 3. Povol Tampermonkey pristup k Jire a spousteni uzivatelskych skriptu.
-   Uprava souboru v Gitu sama nainstalovany skript neaktualizuje.
+   Obnov stranku Jiry.
+
+## Automaticke aktualizace z GitHubu
+
+Oba cele skripty uz obsahuji `@updateURL` a `@downloadURL` pro vetev `main`.
+Po vyse uvedene jednorazove vymene obsahu uz hlavicku rucne neupravuj.
+
+1. Repozitar musi byt verejny a nove soubory odeslane do vetve `main` na GitHubu.
+   Lokalni commit sam nestaci. Verejnost repozitare meni vlastnik na GitHubu;
+   zadny pristupovy token nepatri do skriptu ani URL.
+2. V Tampermonkey otevri **Prehled / Dashboard -> Nastaveni / Settings**.
+   V sekci **Aktualizace skriptu / Script Update** nastav interval, napr. denne.
+   Pokud sekci nevidis, prepni rezim nastaveni na **Pokrocily / Advanced**.
+   U obou skriptu ponech povolene kontroly aktualizaci.
+3. Pro okamzitou kontrolu pouzij prikaz Tampermonkey pro kontrolu aktualizaci.
+   Po instalaci nove verze obnov otevrenou Jiru.
+
+Pri kazdem vydani zvys `@version` zmeneneho skriptu a publikuj soubor do `main`.
+Tampermonkey kontroluje vyssi verzi v nastavenem intervalu, ne pri kazdem otevreni
+Jiry; prohlizec s rozsirenim musi bezet. Nazvy voleb zavisi na verzi a jazyku.
+Nemen `@name`, `@namespace` ani ulozena data. Neinstaluj duplicitni kopie.
+
+Po zverejneni a publikovani lze prvni instalaci provest i pres prime odkazy:
+[stopky](https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js)
+a [vzhled](https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-issue.user.js).
+U existujici instalace radeji nahrad obsah podle navodu vyse.
 
 Nad detailem se objevi lista **Jira Local Workspace** s odkazy na dostupne sekce.
 Kompaktni rezim je **zapnuty ve vychozim stavu**. **Kompaktni** prepina hustotu
