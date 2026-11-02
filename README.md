@@ -1,123 +1,63 @@
-# Jira Local Workspace
+# Jira Local Workspace - stopky
 
-Lokalni modernizace Jiry: kompaktni tmavy detail ukolu a spolehlive vykazovani casu.
-Zadny serverovy plugin, build, API klic ani zmena pro ostatni uzivatele.
-Cilem je modernejsi pracovni prostredi, ne nahrada funkcnosti Jiry.
-
-## Dva nezavisle Tampermonkey skripty
-
-| Skript | Ucel |
-| --- | --- |
-| [jira-workspace-issue.user.js](./jira-workspace-issue.user.js) | Kompaktni dark mode inspirovany Asanou: ploche sekce, husta metadata, tmave formulare i stopky, responzivni sloupce, navigace a prepnuti na puvodni vzhled. |
-| [jira-workspace-timer.user.js](./jira-workspace-timer.user.js) | Samostatne stopky, soucet vykazaneho casu otevreneho ukolu a prime ukladani worklogu, vcetne obnoveni nejisteho zapisu. |
-
-Oba jsou urcene pro `https://jira.alza.cz/*`. Lze je pouzivat spolu i oddelene.
-Redesign neodesila zadne pozadavky, nemeni obsah ukolu a neovlada stopky.
-Tlacitka editace, workflow, komentare, prilohy i pluginy zustavaji nativni.
-Zmeny vzhledu se aktivuji jen na rozpoznanem detailu, vcetne `selectedIssue`.
+Projekt obsahuje pouze Tampermonkey stopky pro vykazovani casu do Jiry.
+Bezi lokalne v prohlizeci, uklada worklogy primo do Jiry a nepotrebuje serverovy
+plugin, API klic ani externi ucet. Stopky nejsou propojene s Clockify.
 
 ## Instalace
 
-1. Pro vzhled otevri v Tampermonkey **existujici** skript
-   (pri prvni instalaci vytvor novy), nahrad jeho cely obsah souborem
-   [jira-workspace-issue.user.js](./jira-workspace-issue.user.js) a uloz Ctrl+S.
-2. Pro aktualizaci stopek otevri **existujici** nainstalovany skript a nahrad ho
-   obsahem [jira-workspace-timer.user.js](./jira-workspace-timer.user.js).
-   Neinstaluj druhou kopii a nemaz data webu.
-3. Povol Tampermonkey pristup k Jire a spousteni uzivatelskych skriptu.
-   Obnov stranku Jiry.
+1. V Tampermonkey otevri existujici Jira stopky, nebo pri prvni instalaci
+   vytvor novy skript.
+2. Nahrad cely obsah skriptu souborem
+   [jira-workspace-timer.user.js](./jira-workspace-timer.user.js) a uloz jej.
+3. Povol Tampermonkey pristup k `https://jira.alza.cz/*` a obnov Jiru.
+4. Pri aktualizaci nepouzivej druhou kopii a nemaz data webu; rozpracovane
+   mereni zustane zachovane.
 
-## Automaticke aktualizace z GitHubu
+Aktualizacni metadata odkazuji na soubor ve verejne vetvi `main` na GitHubu.
+Tampermonkey nabidne aktualizaci, az publikovana verze prevysi nainstalovanou.
+Pri kazdem vydani zmen `@version` i konstantu `VERSION` v userscriptu.
+Nastaveni aktualizaci najdes v Tampermonkey v Dashboard -> Settings ->
+Script Update. Pristupovy token nevkladej do skriptu ani URL.
 
-Oba cele skripty uz obsahuji `@updateURL` a `@downloadURL` pro vetev `main`.
-Po vyse uvedene jednorazove vymene obsahu uz hlavicku rucne neupravuj.
+## Pouziti
 
-1. Repozitar musi byt verejny a nove soubory odeslane do vetve `main` na GitHubu.
-   Lokalni commit sam nestaci. Verejnost repozitare meni vlastnik na GitHubu;
-   zadny pristupovy token nepatri do skriptu ani URL.
-2. V Tampermonkey otevri **Prehled / Dashboard -> Nastaveni / Settings**.
-   V sekci **Aktualizace skriptu / Script Update** nastav interval, napr. denne.
-   Pokud sekci nevidis, prepni rezim nastaveni na **Pokrocily / Advanced**.
-   U obou skriptu ponech povolene kontroly aktualizaci.
-3. Pro okamzitou kontrolu pouzij prikaz Tampermonkey pro kontrolu aktualizaci.
-   Po instalaci nove verze obnov otevrenou Jiru.
+- `START` spusti mereni na otevrenem ukolu. Pokud uz bezi jiny casovac,
+  nejprve ulozi jeho worklog a nove mereni navaze bez mezery kvuli API.
+- Samotna navigace na jiny ukol mereni neprepina.
+- `STOP` zastavi a ulozi prave mereny ukol.
+- `CANCEL` zahodi pouze dosud neulozene mereni.
+- `ADD MINUTES` zapise kladny pocet celych minut na otevrenem ukolu.
+  Potvrdit lze tlacitkem nebo klavesou Enter. Rucni zapis nemení bezici casovac.
+- Panel zobrazuje celkovy dosud vykazany cas otevreneho ukolu a upozorni,
+  pokud se jej nepodari nacist.
+- Cela stara sekce Clockify je skryta. Stopky ji neodinstaluji ani neovladaji;
+  pred pouzitim zastav jine bezici stopky, abys cas nevykazal dvakrat.
 
-Aktualni verze stopek je drobnym nenapadnym odkazem vpravo nahore v jejich
-panelu. Kliknutim otevres GitHub repozitar; zadne poznamky k vydanim se
-nezobrazuji.
+## Obnova a bezpecnost dat
 
-Tampermonkey nabidne aktualizaci jen tehdy, kdyz publikovany `@version` prevysuje
-verzi nainstalovaneho skriptu. Pri kazdem vydani proto zvys `@version` zmeneneho
-skriptu a publikuj soubor do `main`; lokalni zmena samotna aktualizaci nespusti.
-Kontrola probiha v nastavenem intervalu, ne pri kazdem otevreni Jiry; prohlizec
-s rozsirenim musi bezet. Nazvy voleb zavisi na verzi a jazyku. Nemen `@name`,
-`@namespace` ani ulozena data. Neinstaluj duplicitni kopie.
+Stav se uklada do `localStorage` Jira webu a sdili se mezi kartami stejneho
+profilu. Nemaz data webu ani nemen prihlaseneho uzivatele, dokud mereni nebo
+ukladani neni dokonceno.
 
-Pri vydani stopek uprav soucasne `@version` a konstantu `VERSION` v
-[jira-workspace-timer.user.js](./jira-workspace-timer.user.js). Kontrola v
-[GitHub Actions](./.github/workflows/validate.yml) spousti testy pri kazdem PR
-do `main` a overi, ze zobrazena verze odpovida metadatum skriptu.
+Worklog se uklada primo do Jiry a zachovava odhad zbyvajici prace. Minimum
+zaznamu je jedna minuta; delsi intervaly se zaokrouhluji dolu na cele minuty.
+Pri nejasnem vysledku POST se zapis automaticky neopakuje, aby nevznikla
+duplicita. Pouzij `Ulozit / Overit`; pokud Jira zaznam nenajde, zkontroluj
+Work log rucne a stejny cas znovu neposilej bez kontroly.
 
-Po zverejneni a publikovani lze prvni instalaci provest i pres prime odkazy:
-[stopky](https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js)
-a [vzhled](https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-issue.user.js).
-U existujici instalace radeji nahrad obsah podle navodu vyse.
+Podrobny navod a invarianty pro udrzbu jsou v
+[jira-workspace-help.txt](./jira-workspace-help.txt) a [HANDOFF.md](./HANDOFF.md).
 
-Nad detailem se objevi lista **Jira Local Workspace** s odkazy na dostupne sekce.
-Kompaktni rezim je **zapnuty ve vychozim stavu**. **Kompaktni** prepina hustotu
-rozestupu; na siroke obrazovce sklada podporovana metadata do dvou sloupcu.
-Zadna velka uvodni karta, gradienty ani stiny mezi sekcemi.
-**Puvodni vzhled** okamzite vypne redesign;
-tlacitko **Novy vzhled** jej znovu zapne. Volby zustavaji v tomto profilu
-prohlizece. Pro uplny navrat vypni novy skript v Tampermonkey a obnov stranku.
-Stopky funguji dale; jejich dosavadni skryti Clockify tim neni ovlivneno.
-Dark mode pouze prebarvi jejich panel a potvrzeni, bez zmeny mereni a ukladani.
-Vypnutim redesignu se vrati take puvodni barvy stopek.
-
-Podrobny navod, vcetne bezpecne obnovy worklogu:
-[jira-workspace-help.txt](./jira-workspace-help.txt).
-
-## Vyvoj a overeni
-
-### Soukromi a prepsana historie
-
-Historie byla se souhlasem vlastnika ocistena: navrh e-mailu podpore byl
-odstranen, osobni kontakt autora nahrazen GitHub noreply identitou a skutecne
-identifikatory Jira zaznamu nahrazeny syntetickymi priklady nebo vynechany.
-Firemni hostname v `@match` a kompatibilni namespace zustavaji zamerne
-zachovany, aby instalovane skripty fungovaly beze zmeny.
-
-Po prepsani historie pouzij cerstvy klon. Neslucuj ani nepushuj stare vetve:
-mohly by vratit odstranena data. Stare hashe v historickych poznamkach
-odkazuji na puvodni historii. Lokalni zaloha puvodni historie neni urcena
-ke zverejneni. Prepis nezarucuje odstraneni kopii, cache ani skrytych GitHub
-referenci; pripadne skutecne pristupove udaje je nutne zneplatnit.
-Pri dalsich commitech pouzivej svou GitHub noreply adresu.
-
-Zmena je oddelena ve vetvi `feat/jira-local-workspace`; `master` zustava beze zmen.
-Projekt se drive jmenoval Jira direct timer. Interni identifikatory stopek jsou
-umyslne zachovany kvuli rozpracovanemu casu, zamykani a ochrane proti duplicitam.
-GitHub repozitar: [bunnydad02/jira-direct-timer](https://github.com/bunnydad02/jira-direct-timer).
-Remote `origin` pouziva HTTPS; pristup vyzaduje opravneny GitHub ucet.
-Nazev projektu a souboru je novy; fyzicka slozka
-otevreneho checkoutu zustava puvodni, aby se nerozbil editor. Po zavreni editoru
-ji lze prejmenovat na `jira-local-workspace` a znovu otevrit. Nazev slozky neni
-verzovanou soucasti vetve.
+## Vyvoj a testy
 
 Bez instalace zavislosti, z korene projektu:
 
 ```powershell
-node --check .\jira-workspace-issue.user.js
 node --check .\jira-workspace-timer.user.js
-node .\jira-workspace-issue.test.cjs
 node .\jira-workspace-timer.test.cjs
 ```
 
-[Browser fixture](./tests/jira-workspace-issue.fixture.html) obsahuje pouze
-synteticky detail, zadna soukroma Jira data. Otevri ji v prohlizeci pro lokalni
-kontrolu vzhledu a obou skriptu. Nepripojuje se k Jire a nevytvari worklogy.
-Regrese neprokazuji funkcnost vsech variant ziveho Jira DOM; na skutecnem detailu
-je potreba overit konkretni Jira/plugin rozlozeni. Neprovadej diagnosticke zapisy
-do skutecnych worklogu bez souhlasu.
-
-Kontext, datove invarianty a historie: [HANDOFF.md](./HANDOFF.md).
+Testy pouzivaji Node.js a simulovane Jira odpovedi; neodesilaji pozadavky na
+Jiru ani nevytvareji skutecne worklogy. CI spousti stejne kontroly pri pull
+requestu a zmenach ve vetvi `main`.
