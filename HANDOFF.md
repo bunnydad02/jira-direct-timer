@@ -81,6 +81,18 @@ Tests use Node built-ins and simulated DOM, storage, time, locks, and fetch.
 They do not create real worklogs. CI runs both commands on pull requests and
 pushes to `main`.
 
+The local visual playground runs with `npm run playground` at
+`http://127.0.0.1:4173` without dependencies. It executes the unmodified
+userscript with injected, memory-only Jira/storage/clock/lock mocks. CSP
+blocks network connections, the loopback server rejects writes, and panel
+links are intercepted locally. Refresh discards all fixture data.
+`tests/scenarios.js` is shared by the interactive runner and Chromium tests.
+For automated browser validation, run `npm ci`, then
+`npx playwright install chromium`, then `npm test` (Node and browser tests).
+CI also runs these browser regressions and retains failure traces/screenshots.
+Do not add production test hooks or enable the userscript on localhost.
+Test-only changes do not require a userscript version bump.
+
 The current userscript metadata and in-panel version are `1.16.7`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
