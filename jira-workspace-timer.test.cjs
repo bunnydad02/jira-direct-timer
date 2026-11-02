@@ -1,7 +1,8 @@
 const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const source = fs.readFileSync(`${__dirname}\\jira-workspace-timer.user.js`, 'utf8');
+const source = fs.readFileSync(path.join(__dirname, 'jira-workspace-timer.user.js'), 'utf8');
 const metadata = source.split('// ==/UserScript==')[0];
 for (const directive of ['updateURL', 'downloadURL']) {
     assert.equal(metadata.match(new RegExp(`^// @${directive}\\s+(\\S+)\\s*$`, 'm'))?.[1],
