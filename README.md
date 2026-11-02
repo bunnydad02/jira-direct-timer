@@ -20,6 +20,26 @@ Pri kazdem vydani zmen `@version` i konstantu `VERSION` v userscriptu.
 Nastaveni aktualizaci najdes v Tampermonkey v Dashboard -> Settings ->
 Script Update. Pristupovy token nevkladej do skriptu ani URL.
 
+## Vydani a prehled zmen
+
+Kazda uzivatelska verze ma vlastni
+[GitHub Release](https://github.com/bunnydad02/jira-direct-timer/releases)
+s citelnym prehledem zmen, ne pouze Git tag.
+
+Pri vydani zvys `@version` i `VERSION` a ve stejnem PR pridej
+`releases/v<verze>.md` podle [v1.16.7](./releases/v1.16.7.md).
+Poznamky popisuji skutecne zmeny pro uzivatele, aktualizaci a provedene overeni.
+CI vyzaduje soubor pro aktualni verzi, odpovidajici nadpis a sekci `Changes`.
+Po mergi do `main` a uspesnych regresich automaticky publikuje tag a Release
+s timto textem. Zmeny pouze dokumentace nebo testu novou verzi nevyzaduji
+a jiz publikovany Release neprepisuji.
+
+Pri chybe publikace oprav pricinu a znovu spust workflow `Validate userscripts`
+nad `main` v GitHub Actions. Opakovany beh nevytvari duplicity a neposouva
+existujici tagy. Vydani je hotove az po overeni publikovaneho Release.
+Tampermonkey nadale aktualizuje z `main`; GitHub Release slouzi jako
+prehled vydanych verzi a jejich zmen.
+
 ## Pouziti
 
 - `START` spusti mereni na otevrenem ukolu. Pokud uz bezi jiny casovac,

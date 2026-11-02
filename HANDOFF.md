@@ -99,6 +99,20 @@ update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.
 Never put credentials in the script or update URLs.
 
+Every user-facing version must also have authored release notes in
+`releases/v<version>.md`; use `releases/v1.16.7.md` as the template. Include
+the exact version heading, a `Changes` section with user-facing changes,
+update instructions, and an honest validation summary. Add the notes in the
+same PR as the version bump. Release validation runs in `npm test` and CI.
+After successful tests on `main`, the workflow publishes the matching GitHub
+Release and creates its tag at the tested commit if absent. Existing tags
+are reused only when their userscript matches; published releases are never
+overwritten. Test/documentation-only changes keep the current version.
+If publishing fails, fix the cause and rerun `Validate userscripts` on `main`
+using its manual trigger. Verify the published Release before considering a
+user-facing version complete. Tampermonkey still updates from `main`, not
+from the Release.
+
 ## History and repository safety
 
 The timer originated as a direct Jira worklog alternative after trouble with
