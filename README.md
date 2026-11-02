@@ -49,8 +49,11 @@ prehled vydanych verzi a jejich zmen.
 - `CANCEL` zahodi pouze dosud neulozene mereni.
 - `ADD MINUTES` zapise kladny pocet celych minut na otevrenem ukolu.
   Potvrdit lze tlacitkem nebo klavesou Enter. Rucni zapis nemení bezici casovac.
-- Panel zobrazuje celkovy dosud vykazany cas otevreneho ukolu a upozorni,
-  pokud se jej nepodari nacist.
+- Panel zobrazuje celkovy dosud vykazany cas otevreneho ukolu. Pokud subtasky
+  pridavaji dalsi cas, nasleduje v zavorce soucet vcetne subtasku (napr.
+  `Dosud vykazano: 2h (3,5h)`). Shodne soucty se neopakuji. Oba casy jsou
+  zaokrouhlene na desetiny hodiny; zavorka se porovnava podle presnych sekund.
+  Chyba nacteni vlastniho casu nebo souhrnu se zobrazi v panelu.
 - Cela stara sekce Clockify je skryta. Stopky ji neodinstaluji ani neovladaji;
   pred pouzitim zastav jine bezici stopky, abys cas nevykazal dvakrat.
 

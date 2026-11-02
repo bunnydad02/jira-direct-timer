@@ -20,6 +20,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let render;
     let interval;
     let onFetch = () => {};
+    let onTotals = () => ({fields: {timespent: null, aggregatetimespent: null}});
     const location = {pathname: '/browse/DEMO-101', search: ''};
     function element() {
         return {dataset: {}, value: '', children: [], attributes: {},
@@ -49,6 +50,9 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
             if (path.endsWith('?fields=summary')) return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
+            if (path.endsWith('?fields=timespent,aggregatetimespent')) {
+                return {ok: true, json: async () => onTotals(path)};
+            }
             await Promise.resolve();
             const override = await onFetch(path, options);
             if (override !== undefined) return {ok: true, json: async () => override};
@@ -73,6 +77,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         toasts: () => panel.children.find(child => 'toasts' in child.dataset).children,
         advance: ms => { now += ms; }, render: () => render(), interval: () => interval,
         onFetch: callback => { onFetch = callback; },
+        onTotals: callback => { onTotals = callback; },
         navigate: path => { location.pathname = path; render(); },
         keydown: async (key = 'Enter') => {
             let prevented = false;
@@ -124,6 +129,36 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 2,5h',
         'sum all worklogs across Jira pages');
+    for (const [own, aggregate, expected] of [
+        [7200, 10800, 'Dosud vykaz\u00e1no: 2h (3h)'],
+        [7200, 7200, 'Dosud vykaz\u00e1no: 2h'],
+        [null, 3600, 'Dosud vykaz\u00e1no: 0h (1h)'],
+        [null, null, 'Dosud vykaz\u00e1no: 0h'],
+        [7200, 7260, 'Dosud vykaz\u00e1no: 2h (2h)']
+    ]) {
+        const total = setup(null);
+        total.onFetch(() => ({total: 1, worklogs: [{timeSpentSeconds: own || 0}]}));
+        total.onTotals(() => ({fields: {timespent: own, aggregatetimespent: aggregate}}));
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(total.nodes['[data-worklog-total]'].textContent, expected,
+            'compare exact seconds before rounding; do not double-count the parent');
+        assert.equal(total.posts.length, 0, 'loading subtask totals must be read-only');
+    }
+    for (const fields of [
+        {}, {timespent: 0}, {timespent: -1, aggregatetimespent: 0},
+        {timespent: 60, aggregatetimespent: 0}, {timespent: 0, aggregatetimespent: '60'},
+        {timespent: 0, aggregatetimespent: Number.MAX_SAFE_INTEGER + 1}
+    ]) {
+        const invalid = setup(null);
+        invalid.onTotals(() => ({fields}));
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(invalid.nodes['[data-worklog-total]'].dataset.state, 'error');
+        assert.match(invalid.nodes['[data-worklog-total]'].textContent, /subtasku/);
+    }
+    const failedAggregate = setup(null);
+    failedAggregate.onTotals(() => { throw new Error('Aggregate offline'); });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(failedAggregate.nodes['[data-worklog-total]'].textContent, /Aggregate offline/);
     const issueQueries = [];
     pagedTotal.onFetch(path => {
         if (path.includes('/worklog?startAt=')) issueQueries.push(path);
