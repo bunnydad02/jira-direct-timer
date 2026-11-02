@@ -33,7 +33,7 @@
         #jira-direct-timer [data-version-wrap] {position:absolute;top:14px;right:14px;font-size:9px;font-weight:400;line-height:1.45;color:inherit}
         #jira-direct-timer [data-version] {color:inherit;text-decoration:none;opacity:.55}
         #jira-direct-timer [data-version]:hover,#jira-direct-timer [data-version]:focus-visible {opacity:1;text-decoration:underline}
-        #jira-direct-timer [data-release-notes] {display:none;position:absolute;top:100%;right:0;z-index:1;width:min(320px,calc(100vw - 48px));box-sizing:border-box;padding:10px 12px;border:1px solid #dfe3e8;border-radius:8px;background:#fff;color:#253249;box-shadow:0 4px 16px #172b4d24;font-size:11px;line-height:1.4;text-align:left}
+        #jira-direct-timer [data-release-notes] {display:none;position:absolute;top:100%;right:0;z-index:1;width:min(212px,calc(100vw - 68px));box-sizing:border-box;padding:10px 12px;border:1px solid #dfe3e8;border-radius:8px;background:#fff;color:#253249;box-shadow:0 4px 16px #172b4d24;font-size:11px;line-height:1.4;text-align:left;overflow-wrap:anywhere}
         #jira-direct-timer [data-version-wrap]:hover [data-release-notes],#jira-direct-timer [data-version-wrap]:focus-within [data-release-notes] {display:block}
         #jira-direct-timer [data-release-note] + [data-release-note] {margin-top:8px;padding-top:7px;border-top:1px solid #e4e7ec}
         #jira-direct-timer [data-release-version] {display:block;margin-bottom:2px;font-size:11px}
@@ -98,7 +98,7 @@
     const releaseNotes = panel.querySelector('[data-release-notes]');
     releaseNotes.id = 'jira-direct-timer-release-notes';
     releaseNotes.textContent = 'Posledni tri verze:';
-    for (const release of RELEASE_NOTES.slice(0, 3)) {
+    for (const release of RELEASE_NOTES) {
         const entry = document.createElement('div');
         entry.dataset.releaseNote = '';
         const releaseVersion = document.createElement('strong');

@@ -114,8 +114,14 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
             (previous[1] === current[1] && previous[2] > current[2]))),
         'keep the release-note versions in descending order');
     }
-    assert.match(releaseEntries[0].children[1].children[0].textContent, /GitHub/,
-        'render release notes as safe text');
+    for (const entry of releaseEntries) {
+        assert.match(entry.children[0].textContent, /^v\d+\.\d+\.\d+$/,
+            'publish a three-part version for every release');
+        assert.ok(entry.children[1].children.length > 0, 'include changes for every release');
+        for (const change of entry.children[1].children) {
+            assert.ok(change.textContent.trim(), 'render nonempty release notes as safe text');
+        }
+    }
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].hidden, false);
