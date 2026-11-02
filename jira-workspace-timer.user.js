@@ -16,9 +16,9 @@
     const KEY = 'jira-direct-timer-v1';
     const VERSION = '1.16.6';
     const RELEASE_NOTES = [
-        {version: '1.16.6', changes: ['Verze odkazuje na GitHub a po najeti zobrazi posledni tri verze.']},
-        {version: '1.16.5', changes: ['Zobrazeni aktualni verze stopek v panelu.']},
-        {version: '1.16.4', changes: ['Automaticke aktualizace obou userscriptu z GitHubu.']}
+        {version: '1.16.6', changes: ['Links to GitHub and shows the three latest release notes on hover.']},
+        {version: '1.16.5', changes: ['Displays the current timer version in the panel.']},
+        {version: '1.16.4', changes: ['Automatically updates both userscripts from GitHub.']}
     ];
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
@@ -97,7 +97,7 @@
     versionLink.setAttribute('aria-describedby', 'jira-direct-timer-release-notes');
     const releaseNotes = panel.querySelector('[data-release-notes]');
     releaseNotes.id = 'jira-direct-timer-release-notes';
-    releaseNotes.textContent = 'Posledni tri verze:';
+    releaseNotes.textContent = 'Latest three versions:';
     for (const release of RELEASE_NOTES) {
         const entry = document.createElement('div');
         entry.dataset.releaseNote = '';

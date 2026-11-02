@@ -102,8 +102,14 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         'show release notes on hover and keyboard focus');
     const releaseEntries = legacyPanel.nodes['[data-release-notes]'].children;
     assert.equal(releaseEntries.length, 3, 'show the three most recent release notes');
+    assert.equal(legacyPanel.nodes['[data-release-notes]'].textContent, 'Latest three versions:');
     assert.equal(releaseEntries[0].children[0].textContent, `v${version}`,
         'keep the newest release notes synchronized with the userscript version');
+    assert.deepEqual(releaseEntries.map(entry => entry.children[1].children[0].textContent), [
+        'Links to GitHub and shows the three latest release notes on hover.',
+        'Displays the current timer version in the panel.',
+        'Automatically updates both userscripts from GitHub.'
+    ]);
     const releaseVersions = releaseEntries.map(entry => entry.children[0].textContent);
     assert.equal(new Set(releaseVersions).size, 3, 'keep release-note versions unique');
     for (let index = 1; index < releaseVersions.length; index++) {
