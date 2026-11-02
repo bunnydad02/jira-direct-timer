@@ -1,6 +1,10 @@
 # Repository instructions
 
 - Read [HANDOFF.md](./HANDOFF.md) before changing this project.
+- For every new feature or behavior change, the agent must run the full regression suite (`npm test`: production-script syntax, Node regressions, and all Chromium tests) before reporting completion or merging. Targeted tests alone are not sufficient.
+- Review coverage for each feature and add or update regression tests for new or changed behavior, relevant edge cases, and failure/recovery paths. Reuse [tests/scenarios.js](./tests/scenarios.js) for scenarios that should also appear in the interactive playground.
+- Run regressions autonomously using local mocks only; never contact Jira or create real worklogs. Do not ask the user to run tests or the playground as a substitute for agent validation. Report the test results and any validation blocker explicitly; do not claim unrun or failing checks passed.
+- The interactive playground is optional for the user. Do not start it as a persistent service unless requested; stop any agent-owned playground occupying port 4173 before running the browser suite, and never stop unrelated processes.
 - After completing and validating requested changes, always create a Git commit before reporting completion, unless the user explicitly asks not to commit.
 - Follow existing commit conventions and keep unrelated changes out of the commit.
 - Before editing, inspect both staged and unstaged changes to establish the task baseline.
