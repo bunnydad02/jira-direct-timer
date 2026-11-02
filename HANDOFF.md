@@ -11,7 +11,7 @@ conversation. This document preserves project context for future maintainers.
   `https://github.com/bunnydad02/jira-direct-timer.git`.
 - Work on `feat/jira-local-workspace` for the redesign, not on `master`.
 - Independent scripts: `jira-workspace-issue.user.js` (local issue redesign)
-  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.4).
+  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.6).
   Issue view is v1.0.1. Both scripts now use `@updateURL` and `@downloadURL`
   pointing at their raw GitHub files on `main`. The owner plans to make the
   repository public; do not assume that visibility change or publication
@@ -202,6 +202,12 @@ scripts/network requests. Do not store the supplied full Jira HTML or its tokens
   comma. Read every page of the issue's worklog endpoint, surface loading
   errors, and invalidate the cached total after a confirmed save. This is
   read-only apart from the timer's existing explicit save actions.
+- The timer version in the panel links to the GitHub repository. Hovering it or
+  focusing it by keyboard reveals the latest three release notes from the
+  `RELEASE_NOTES` constant beside `VERSION` in the timer userscript. On each
+  timer release, update `@version`, `VERSION`, and the first release-note entry,
+  retaining exactly the three newest versions. The pull-request workflow runs
+  the regression suite, which checks that these values stay synchronized.
 - Issue selection precedence: `selectedIssue` query parameter, `/browse/{key}`,
   then `meta[name="ajs-issue-key"]`. Title comes from stored data, `#summary-val`,
   or a summary-only issue API read. Insert issue titles as text, not HTML.
