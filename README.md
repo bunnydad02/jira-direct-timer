@@ -42,13 +42,21 @@ Po vyse uvedene jednorazove vymene obsahu uz hlavicku rucne neupravuj.
 3. Pro okamzitou kontrolu pouzij prikaz Tampermonkey pro kontrolu aktualizaci.
    Po instalaci nove verze obnov otevrenou Jiru.
 
-Aktualni verze stopek je drobnym nenapadnym pismem vpravo nahore v jejich
-panelu (napr. `v1.16.5`).
+Aktualni verze stopek je drobnym nenapadnym odkazem vpravo nahore v jejich
+panelu. Kliknutim otevres GitHub repozitar; pri najeti mysi nebo zameri
+klavesnici se zobrazi poznamky ke trem poslednim verzim.
 
 Pri kazdem vydani zvys `@version` zmeneneho skriptu a publikuj soubor do `main`.
 Tampermonkey kontroluje vyssi verzi v nastavenem intervalu, ne pri kazdem otevreni
 Jiry; prohlizec s rozsirenim musi bezet. Nazvy voleb zavisi na verzi a jazyku.
 Nemen `@name`, `@namespace` ani ulozena data. Neinstaluj duplicitni kopie.
+
+Pri vydani stopek uprav soucasne `@version`, konstantu `VERSION` a prvni
+polozku `RELEASE_NOTES` v [jira-workspace-timer.user.js](./jira-workspace-timer.user.js).
+Ponech tam vzdy tri posledni verze, od nejnovejsi. Kontrola v
+[GitHub Actions](./.github/workflows/validate.yml) spousti testy pri kazdem PR
+do `main` a overi, ze poznamky odpovidaji verzi skriptu; bez nove polozky test
+neprojde.
 
 Po zverejneni a publikovani lze prvni instalaci provest i pres prime odkazy:
 [stopky](https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js)

@@ -32,7 +32,7 @@ Pouziti:
 - Pokud Jira pouzije jine HTML, nektere casti mohou zustat puvodni.
   Prepinac Puvodni vzhled umoznuje okamzity navrat bez obnoveni stranky.
 
-JIRA STOPKY - verze 1.16.4
+JIRA STOPKY - verze 1.16.6
 
 Pro budouci udrzbu a AI agenty:
 - Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,

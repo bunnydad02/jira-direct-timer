@@ -1,7 +1,8 @@
 const fs = require('node:fs');
+const path = require('node:path');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
-const source = fs.readFileSync(`${__dirname}\\jira-workspace-timer.user.js`, 'utf8');
+const source = fs.readFileSync(path.join(__dirname, 'jira-workspace-timer.user.js'), 'utf8');
 const metadata = source.split('// ==/UserScript==')[0];
 for (const directive of ['updateURL', 'downloadURL']) {
     assert.equal(metadata.match(new RegExp(`^// @${directive}\\s+(\\S+)\\s*$`, 'm'))?.[1],
@@ -87,11 +88,40 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(legacyPanel.panel.id, 'jira-direct-timer', 'keep our timer separate from the hidden module');
     const version = metadata.match(/^\/\/ @version\s+(\d+\.\d+\.\d+)\s*$/m)?.[1];
     assert.ok(version, 'publish a three-part userscript version');
-    assert.match(legacyPanel.panel.innerHTML, /<span data-version><\/span>/);
+    assert.match(legacyPanel.panel.innerHTML, /<span data-version-wrap><a data-version><\/a><span data-release-notes role="tooltip"><\/span><\/span>/);
     assert.equal(legacyPanel.nodes['[data-version]'].textContent, `v${version}`,
         'display the installed userscript version, keeping the label in sync with metadata');
-    assert.match(legacyPanel.styles, /\[data-version\] \{position:absolute;top:14px;right:14px;font-size:9px;.*opacity:\.5\}/,
-        'keep the version small and unobtrusive in the top-right corner');
+    assert.equal(legacyPanel.nodes['[data-version]'].attributes.href,
+        'https://github.com/bunnydad02/jira-direct-timer', 'link the version to the GitHub repository');
+    assert.equal(legacyPanel.nodes['[data-version]'].attributes.target, '_blank');
+    assert.equal(legacyPanel.nodes['[data-version]'].attributes.rel, 'noopener noreferrer');
+    assert.equal(legacyPanel.nodes['[data-version]'].attributes['aria-describedby'],
+        'jira-direct-timer-release-notes', 'associate the version link with its accessible release notes');
+    assert.match(legacyPanel.styles, /\[data-version-wrap\] \{position:absolute;top:14px;right:14px;font-size:9px/);
+    assert.match(legacyPanel.styles, /\[data-version-wrap\]:hover \[data-release-notes\].*\[data-version-wrap\]:focus-within \[data-release-notes\] \{display:block\}/,
+        'show release notes on hover and keyboard focus');
+    const releaseEntries = legacyPanel.nodes['[data-release-notes]'].children;
+    assert.equal(releaseEntries.length, 3, 'show the three most recent release notes');
+    assert.equal(releaseEntries[0].children[0].textContent, `v${version}`,
+        'keep the newest release notes synchronized with the userscript version');
+    const releaseVersions = releaseEntries.map(entry => entry.children[0].textContent);
+    assert.equal(new Set(releaseVersions).size, 3, 'keep release-note versions unique');
+    for (let index = 1; index < releaseVersions.length; index++) {
+        const previous = releaseVersions[index - 1].slice(1).split('.').map(Number);
+        const current = releaseVersions[index].slice(1).split('.').map(Number);
+        assert.ok(previous[0] > current[0] ||
+            (previous[0] === current[0] && (previous[1] > current[1] ||
+            (previous[1] === current[1] && previous[2] > current[2]))),
+        'keep the release-note versions in descending order');
+    }
+    for (const entry of releaseEntries) {
+        assert.match(entry.children[0].textContent, /^v\d+\.\d+\.\d+$/,
+            'publish a three-part version for every release');
+        assert.ok(entry.children[1].children.length > 0, 'include changes for every release');
+        for (const change of entry.children[1].children) {
+            assert.ok(change.textContent.trim(), 'render nonempty release notes as safe text');
+        }
+    }
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].hidden, false);
