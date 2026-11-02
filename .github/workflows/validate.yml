@@ -5,6 +5,7 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,6 +20,7 @@ jobs:
           node-version: 20
       - run: node --check jira-workspace-timer.user.js
       - run: node jira-workspace-timer.test.cjs
+      - run: node --test .github/release.test.cjs
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
@@ -27,3 +29,21 @@ jobs:
         with:
           name: browser-test-results
           path: test-results/
+
+  release:
+    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: userscript-release
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const {loadRelease, publishRelease} = require('./.github/release.cjs');
+            const result = await publishRelease(github, context.repo, context.sha, loadRelease());
+            core.info(`${result.created ? 'Published' : 'Already published'}: ${result.url}`);
