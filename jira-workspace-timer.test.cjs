@@ -88,6 +88,8 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(legacyPanel.panel.id, 'jira-direct-timer', 'keep our timer separate from the hidden module');
     const version = metadata.match(/^\/\/ @version\s+(\d+\.\d+\.\d+)\s*$/m)?.[1];
     assert.ok(version, 'publish a three-part userscript version');
+    assert.equal(source.match(/const VERSION = '(\d+\.\d+\.\d+)';/)?.[1], version,
+        'keep the displayed version synchronized with userscript update metadata');
     assert.match(legacyPanel.panel.innerHTML, /<span data-version-wrap><a data-version><\/a><\/span>/);
     assert.doesNotMatch(legacyPanel.panel.innerHTML, /data-release-notes|data-release-note/);
     assert.doesNotMatch(legacyPanel.styles, /data-release-notes|data-release-note/);

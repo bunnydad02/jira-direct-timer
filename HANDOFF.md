@@ -11,7 +11,7 @@ conversation. This document preserves project context for future maintainers.
   `https://github.com/bunnydad02/jira-direct-timer.git`.
 - Work on `feat/jira-local-workspace` for the redesign, not on `master`.
 - Independent scripts: `jira-workspace-issue.user.js` (local issue redesign)
-  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.6).
+  and `jira-workspace-timer.user.js` (existing worklog timer, v1.16.7).
   Issue view is v1.0.1. Both scripts now use `@updateURL` and `@downloadURL`
   pointing at their raw GitHub files on `main`. The owner plans to make the
   repository public; do not assume that visibility change or publication
@@ -204,9 +204,11 @@ scripts/network requests. Do not store the supplied full Jira HTML or its tokens
   read-only apart from the timer's existing explicit save actions.
 - The timer version in the panel is a link to the GitHub repository; it does not
   show release notes on hover or keyboard focus. On each timer release, update
-  `@version` and `VERSION` in the timer userscript. The pull-request workflow
-  runs the regression suite, which checks that the displayed version stays
-  synchronized with the userscript metadata and that the link targets GitHub.
+  `@version` and `VERSION` in the timer userscript, then publish the merged file
+  to `main`. Tampermonkey only offers an update when the published `@version`
+  exceeds the installed version. The pull-request workflow checks that the
+  displayed version stays synchronized with metadata and the link targets
+  GitHub.
 - Issue selection precedence: `selectedIssue` query parameter, `/browse/{key}`,
   then `meta[name="ajs-issue-key"]`. Title comes from stored data, `#summary-val`,
   or a summary-only issue API read. Insert issue titles as text, not HTML.

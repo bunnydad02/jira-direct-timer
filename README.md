@@ -46,10 +46,12 @@ Aktualni verze stopek je drobnym nenapadnym odkazem vpravo nahore v jejich
 panelu. Kliknutim otevres GitHub repozitar; zadne poznamky k vydanim se
 nezobrazuji.
 
-Pri kazdem vydani zvys `@version` zmeneneho skriptu a publikuj soubor do `main`.
-Tampermonkey kontroluje vyssi verzi v nastavenem intervalu, ne pri kazdem otevreni
-Jiry; prohlizec s rozsirenim musi bezet. Nazvy voleb zavisi na verzi a jazyku.
-Nemen `@name`, `@namespace` ani ulozena data. Neinstaluj duplicitni kopie.
+Tampermonkey nabidne aktualizaci jen tehdy, kdyz publikovany `@version` prevysuje
+verzi nainstalovaneho skriptu. Pri kazdem vydani proto zvys `@version` zmeneneho
+skriptu a publikuj soubor do `main`; lokalni zmena samotna aktualizaci nespusti.
+Kontrola probiha v nastavenem intervalu, ne pri kazdem otevreni Jiry; prohlizec
+s rozsirenim musi bezet. Nazvy voleb zavisi na verzi a jazyku. Nemen `@name`,
+`@namespace` ani ulozena data. Neinstaluj duplicitni kopie.
 
 Pri vydani stopek uprav soucasne `@version` a konstantu `VERSION` v
 [jira-workspace-timer.user.js](./jira-workspace-timer.user.js). Kontrola v
