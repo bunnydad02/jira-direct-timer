@@ -59,7 +59,7 @@
         };
         const mockFetch = async (path, options = {}) => {
             const method = options.method || 'GET';
-            const match = /^\/rest\/api\/2\/issue\/(DEMO-10[123])(\?fields=summary|\/worklog\?.+)$/.exec(path);
+            const match = /^\/rest\/api\/2\/issue\/(DEMO-10[123])(\?fields=summary|\?fields=timespent,aggregatetimespent|\/worklog\?.+)$/.exec(path);
             if (!match || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
             current.requests.push({method, path});
             current.active++;
@@ -70,6 +70,15 @@
                 if (match[2] === '?fields=summary') {
                     if (method !== 'GET') throw new Error('Summary fixture is read-only');
                     return {ok: true, json: async () => ({fields: {summary: titles[issue]}})};
+                }
+                if (match[2] === '?fields=timespent,aggregatetimespent') {
+                    if (method !== 'GET') throw new Error('Aggregate fixture is read-only');
+                    if (current.aggregateError) throw new Error('Simulovana chyba souhrnu subtasku');
+                    const own = current.logs.filter(log => log.issue === issue)
+                        .reduce((sum, log) => sum + log.timeSpentSeconds, 0);
+                    const children = current.logs.filter(log => current.parents[log.issue] === issue)
+                        .reduce((sum, log) => sum + log.timeSpentSeconds, 0);
+                    return {ok: true, json: async () => ({fields: {timespent: own || null, aggregatetimespent: own + children || null}})};
                 }
                 if (method === 'POST') {
                     if (match[2] !== '/worklog?adjustEstimate=leave') throw new Error('Estimate must be preserved');
@@ -121,7 +130,8 @@
             raw: options.raw ?? (options.state ? JSON.stringify(options.state) : null),
             logs: clone(options.logs || []), requests: [], posts: [], offset: 0, active: 0,
             latency: options.latency ?? 30, failure: 'none', lock: options.lock || 'available',
-            totalError: options.totalError || false, location: {pathname: '', search: ''}
+            totalError: options.totalError || false, location: {pathname: '', search: ''},
+            parents: clone(options.parents || {}), aggregateError: options.aggregateError || false
         };
         render = null;
         navigate(options.issue ?? 'DEMO-101');

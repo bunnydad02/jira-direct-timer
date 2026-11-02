@@ -51,6 +51,52 @@
             await p.reload();
             equal(p.node('version').textContent, `v${version}`);
         }},
+        {title: 'Soucty se subtasky: zavorka, strankovani, navigace a obnoveni po zapisu', async run(p) {
+            await p.reset({
+                parents: {'DEMO-102': 'DEMO-101', 'DEMO-103': 'DEMO-101'},
+                logs: [
+                    {issue: 'DEMO-101', timeSpentSeconds: 3600},
+                    {issue: 'DEMO-101', timeSpentSeconds: 1800},
+                    {issue: 'DEMO-101', timeSpentSeconds: 1800},
+                    {issue: 'DEMO-102', timeSpentSeconds: 3600},
+                    {issue: 'DEMO-103', timeSpentSeconds: 1800}
+                ]
+            });
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 2h (3,5h)');
+            equal(p.posts().length, 0);
+            p.navigate('DEMO-102');
+            await p.idle();
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 1h');
+            await p.manual('30');
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 1,5h');
+            p.navigate('DEMO-101');
+            await p.idle();
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 2h (4h)');
+            await p.manual('30');
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 2,5h (4,5h)');
+        }},
+        {title: 'Subtasky bez worklogu: bez zavorky; cas jen v subtasku: se zavorkou', async run(p) {
+            const parents = {'DEMO-102': 'DEMO-101'};
+            await p.reset({parents});
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0h');
+            await p.reset({parents, logs: [{issue: 'DEMO-101', timeSpentSeconds: 7200}]});
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 2h');
+            await p.reset({parents, logs: [{issue: 'DEMO-102', timeSpentSeconds: 3600}]});
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0h (1h)');
+        }},
+        {title: 'Chyba souhrnu subtasku je viditelna a neblokuje stopky', async run(p) {
+            await p.reset({aggregateError: true});
+            equal(p.node('worklog-total').dataset.state, 'error');
+            includes(p.node('worklog-total').textContent, 'Simulovana chyba souhrnu subtasku');
+            await p.click('start');
+            equal(p.state().phase, 'running');
+            await p.click('stop');
+            equal(p.posts().length, 1);
+            equal(p.state().phase, 'saved');
+            equal(p.node('worklog-total').dataset.state, 'error');
+            await p.reset();
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0h');
+        }},
         {title: 'START: zelena, bezpecny titul, odkazy a bezici hodiny', async run(p) {
             await p.reset();
             await p.click('start');

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.16.7
+// @version      1.16.8
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -14,7 +14,7 @@
     'use strict';
     if (window.top !== window || document.getElementById('jira-direct-timer')) return;
     const KEY = 'jira-direct-timer-v1';
-    const VERSION = '1.16.7';
+    const VERSION = '1.16.8';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -221,6 +221,22 @@
         } while (offset < total);
         return seconds;
     }
+    async function loggedTime(key) {
+        const seconds = await totalLoggedSeconds(key);
+        const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=timespent,aggregatetimespent`);
+        const fields = body.fields;
+        if (!fields || !Object.hasOwn(fields, 'timespent') || !Object.hasOwn(fields, 'aggregatetimespent')) {
+            throw new Error('Jira nevratila souhrn casu vcetne subtasku.');
+        }
+        const own = fields.timespent === null ? 0 : fields.timespent;
+        const aggregate = fields.aggregatetimespent === null ? 0 : fields.aggregatetimespent;
+        if (!Number.isSafeInteger(own) || own < 0 || !Number.isSafeInteger(aggregate) || aggregate < own ||
+            !Number.isSafeInteger(seconds + aggregate - own)) {
+            throw new Error('Jira vratila neplatny souhrn casu vcetne subtasku.');
+        }
+        // Keep the all-pages worklog total; Jira's aggregate also includes the issue itself.
+        return {seconds, secondsWithSubtasks: seconds + aggregate - own};
+    }
     function renderWorklogTotal(key) {
         if (!key) {
             worklogTotal.hidden = true;
@@ -232,10 +248,10 @@
         if (!state) {
             state = {status: 'loading'};
             worklogTotals.set(key, state);
-            totalLoggedSeconds(key).then(seconds => {
+            loggedTime(key).then(totals => {
                 if (worklogTotals.get(key) !== state) return;
                 state.status = 'loaded';
-                state.seconds = seconds;
+                Object.assign(state, totals);
                 render();
             }).catch(error => {
                 if (worklogTotals.get(key) !== state) return;
@@ -247,6 +263,9 @@
         worklogTotal.dataset.state = state.status;
         if (state.status === 'loaded') {
             worklogTotal.textContent = `Dosud vykaz\u00e1no: ${formatLoggedHours(state.seconds)}`;
+            if (state.secondsWithSubtasks !== state.seconds) {
+                worklogTotal.textContent += ` (${formatLoggedHours(state.secondsWithSubtasks)})`;
+            }
         } else if (state.status === 'error') {
             worklogTotal.textContent = `Vyk\u00e1zan\u00fd \u010das se nepoda\u0159ilo na\u010d\u00edst: ${state.message}`;
         } else {

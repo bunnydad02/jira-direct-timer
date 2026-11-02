@@ -27,7 +27,9 @@ Pouziti:
 - Rucni zapis nemeni bezici casovac. Intervaly se mohou prekryvat; zapisuj jen
   cas, ktery jeste neni vykazany.
 - Pod casovacem se zobrazuje celkovy dosud vykazany cas otevreneho ukolu,
-  zaokrouhleny na desetiny hodiny. Chyba nacteni se zobrazi v panelu.
+  zaokrouhleny na desetiny hodiny. Pokud subtasky pridavaji cas, nasleduje
+  v zavorce soucet vcetne subtasku, napr. 2h (3,5h). Pri shodnem poctu sekund
+  se zavorka nezobrazuje. Chyba nacteni se zobrazi v panelu.
 - Panel ma sirku 240 px, na uzke obrazovce se prizpusobi. Zelena znamena
   mereni otevreneho ukolu, modra jineho ukolu a cervena neaktivni stav.
 - Ulozeni a zahozeni potvrdi samostatne docasne karty nad panelem.
