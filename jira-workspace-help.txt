@@ -1,141 +1,64 @@
-JIRA LOCAL WORKSPACE - prirucka
+JIRA LOCAL WORKSPACE - Jira stopky
 
-Projekt lokalne modernizuje Jiru pomoci dvou nezavislych Tampermonkey skriptu.
-Prehled projektu a navrat zpet: README.md.
-
-MODERNI DETAIL UKOLU - verze 1.0.1
-
-Instalace:
-1. V Tampermonkey otevri existujici skript vzhledu (pri prvni instalaci novy).
-2. Vloz cely jira-workspace-issue.user.js a uloz Ctrl+S.
-3. Povol pristup k https://jira.alza.cz a obnov detail ukolu.
-4. Nad detailem se objevi lista Jira Local Workspace.
-
-Pouziti:
-- Detail je tmavy a kompaktni ve stylu Asany: ploche sekce, jemne oddelovace,
-  mala hlavicka a husta metadata. Zadna velka karta, gradienty ani velke mezery.
-- Popis, komentare, prilohy, odkazy, lide, datumy a worklog zustavaji v Jire.
-  Skript nekopiruje obsah ani nepresouva puvodni formulare.
-- Odkazy v liste preskoci na existujici sekce detailu.
-- Kompaktni je zapnute ve vychozim stavu; tlacitko prepina hustotu.
-  Puvodni vzhled vrati nativni zobrazeni.
-  Lista zustane dostupna pro opetovne zapnuti pres Novy vzhled.
-- Volby jsou spolecne pro karty tohoto profilu na stejnem webu.
-- Na uzke obrazovce se podporovane dvousloupcove detaily slozi pod sebe.
-- Pri dynamickem prechodu mezi ukoly se upravy pripoji znovu.
-- Mimo rozpoznany detail ukolu se vzhled Jiry nemeni.
-- Upravy jsou pouze lokalni; nevyzaduji serverovy plugin ani API.
-- Dark mode barevne sladi take stopky, jejich potvrzeni, formulare a Jira dialogy.
-  Stavy mereni zustavaji zelene/modre/cervene. Mereni a ukladani se nemeni.
-- Pro uplne odstraneni vypni tento skript v Tampermonkey a obnov stranku.
-  Nemaz data webu, protoze v nich mohou zustavat rozpracovane stopky.
-- Pokud Jira pouzije jine HTML, nektere casti mohou zustat puvodni.
-  Prepinac Puvodni vzhled umoznuje okamzity navrat bez obnoveni stranky.
-
-JIRA STOPKY - verze 1.16.6
-
-Pro budouci udrzbu a AI agenty:
-- Nejprve precti HANDOFF.md v koreni repozitare: kontext, rozhodnuti,
-  architektura, bezpecne obnoveni zapisu, testovani a historie.
-- Redesign se vyviji ve vetvi feat/jira-local-workspace, nikoli na master.
-- Historicke verze a zmeny jsou v historii Gitu. Tento navod popisuje
-  aktualni chovani, nikoli drivejsi popisky a opustene varianty.
+Projekt obsahuje pouze samostatne Tampermonkey stopky pro Jira worklogy.
+Prehled projektu: README.md.
 
 Instalace a aktualizace:
-1. V Tampermonkey otevri EXISTUJICI Jira stopky (pri prvni instalaci novy skript).
+1. V Tampermonkey otevri EXISTUJICI Jira stopky (pri prvni instalaci vytvor novy skript).
 2. Nahrad cely obsah souborem jira-workspace-timer.user.js a uloz Ctrl+S.
-   Projekt i skript maji novy nazev; neinstaluj druhou kopii stopek.
-   Interni namespace, ulozena data, zamek a worklog znacky zustavaji stejne.
-3. Povol rozsireni pristup k https://jira.alza.cz a pouzivani uzivatelskych skriptu.
-4. Obnov stranku ukolu. Vlevo dole se objevi "Jira stopky".
-5. Pri aktualizaci nemaz data webu; rozpracovane mereni zustane zachovane.
+3. Povol Tampermonkey pristup k https://jira.alza.cz a spousteni userscriptu.
+4. Obnov stranku Jiry. Panel Jira stopky se zobrazi vlevo dole.
+5. Neinstaluj druhou kopii a pri aktualizaci nemaz data webu.
 
-Automaticke aktualizace obou skriptu:
-- Tato verze uz obsahuje adresy aktualizaci z GitHubu; nic rucne nedoplnuj.
-- Jednou nahrad cely obsah existujicich skriptu podle navodu vyse a uloz.
-- Repozitar bunnydad02/jira-direct-timer musi byt verejny a nove soubory
-  publikovane ve vetvi main. Lokalni ulozeni ani commit sam nestaci.
-- Tampermonkey -> Prehled / Dashboard -> Nastaveni / Settings ->
-  Aktualizace skriptu / Script Update: nastav interval napr. denne.
-  Pokud sekci nevidis, zapni Pokrocily / Advanced rezim nastaveni.
-  U obou skriptu ponech kontroly aktualizaci povolene.
-- Pro okamzitou kontrolu pouzij kontrolu aktualizaci v Tampermonkey.
-  Po aktualizaci obnov Jiru. Prohlizec s rozsirenim musi bezet.
-- Kazde dalsi vydani vyzaduje vyssi @version zmeneneho skriptu na GitHubu.
-  Nemaz data webu, nemen namespace a nevytvarej duplicitni instalace.
-- Nikdy nevkladej pristupovy token do skriptu ani adres aktualizaci.
+Skript obsahuje @updateURL a @downloadURL pro vetev main. Tampermonkey potrebuje
+verejne publikovany soubor a vyssi @version nez ma nainstalovana kopie.
+Pri vydani uprav @version i konstantu VERSION. Automaticke kontroly najdes v
+Tampermonkey -> Dashboard -> Settings -> Script Update. Nikdy nevkladej token
+do skriptu ani URL.
 
 Pouziti:
-- Nejprve zastav jine stopky, vcetne Clockify. Tyto stopky Clockify neridi.
-- Na otevrenem ukolu klikni START. Stopky zacinaji od 00:00:00,
-  zobrazuji skutecne uplynule sekundy a obnovuji se po 100 ms.
-- Pod stopkami se zobrazuje celkovy dosud vykazany cas otevreneho ukolu.
-  Pocita vsechny worklogy napric dny a ukazuje hodiny zaokrouhlene na desetiny
-  (napr. 2h nebo 0,4h); pri chybe nacitani se zobrazi upozorneni.
-- Otevreni jineho ukolu samo mereni neprepina. START na jinem ukolu ulozi
-  predchozi mereni a spusti nove od okamziku zastaveni, bez mezery kvuli API.
-- STOP zastavi a automaticky ulozi pouze mereny ukol; nic dalsiho nespousti.
-- CANCEL je viditelne jen pri mereni. Zrusi neulozene stopky bez zapisu
-  do Jiry. Drive ulozene worklogy nemeni. Akce nemaji potvrzovaci dialogy.
-- ADD MINUTES prijima kladne cele minuty bez predvyplneneho prikladu.
-  Zapis do otevreneho ukolu odesles tlacitkem ADD MINUTES nebo klavesou Enter.
-  Interval konci okamzikem odeslani; po uspechu se pole vyprazdni.
-- Rucni zapis nemeni bezici casovac, ani pri zapisu na jiny ukol.
-  Intervaly se mohou prekryvat; uvadej jen cas, ktery uz neni vykazany.
-  Drive zastavene neulozene stopky se pred rucnim zapisem nejprve ulozi.
+- Pred startem zastav jine stopky, vcetne Clockify. Jira stopky Clockify neridi.
+- START spusti mereni otevreneho ukolu. Pokud uz meri jiny ukol, nejprve jej
+  ulozi a nove mereni navaze v okamziku zastaveni.
+- Navigace na jiny ukol sama o sobe mereni neprepina.
+- STOP zastavi a ulozi mereny ukol. CANCEL zahodi neulozene mereni bez zapisu.
+- ADD MINUTES zapise kladny pocet celych minut na otevreny ukol. Zapis odesles
+  tlacitkem nebo Enterem; po uspechu se vstup vycisti.
+- Rucni zapis nemeni bezici casovac. Intervaly se mohou prekryvat; zapisuj jen
+  cas, ktery jeste neni vykazany.
+- Pod casovacem se zobrazuje celkovy dosud vykazany cas otevreneho ukolu,
+  zaokrouhleny na desetiny hodiny. Chyba nacteni se zobrazi v panelu.
+- Panel ma sirku 240 px, na uzke obrazovce se prizpusobi. Zelena znamena
+  mereni otevreneho ukolu, modra jineho ukolu a cervena neaktivni stav.
+- Ulozeni a zahozeni potvrdi samostatne docasne karty nad panelem.
+- Cela stara sekce Clockify je skryta bez prazdneho mista. Skryti ji neodinstaluje
+  na serveru a nezastavi pripadne bezici Clockify mereni.
 
 Vykazovany cas:
-- Zaznamy se ukladaji primo do Jiry, NE do Clockify. Nevykazuj stejny cas dvakrat.
+- Worklogy se ukladaji primo do Jiry, nikoli do Clockify; nezapisuj stejny cas
+  dvakrat.
 - Odhad zbyvajici prace zustane nezmeneny.
-- Minimum zapisu je 1 minuta, i pri okamzitem zastaveni. U kratsiho mereni
-  komentar uvadi skutecnou delku a navyseni na minimum.
-- U delsich mereni se ukladaji cele minuty; zbyvajici sekundy se nezapisi.
-  Rychle prepinani proto muze vykazat vice casu, nez skutecne uplynulo.
+- Minimum zaznamu je jedna minuta. U kratsiho mereni komentar vysvetli
+  skutecnou delku a navyseni na minimum.
+- Delky nad jednu minutu se zaokrouhluji dolu na cele minuty.
 
-Panel a potvrzeni:
-- Cela puvodni sekce Clockify v detailu ukolu je skryta, vcetne nadpisu
-  a stareho casovace, bez prazdneho mista. Plati i po prekresleni detailu.
-  Jira stopky zustavaji samostatne vlevo dole. Skryti neodinstaluje plugin
-  na serveru ani nezastavuje pripadne bezici mereni v Clockify.
-- Behem ukladani zustava panel ve vychozim stavu s docasne vypnutymi
-  ovladacimi prvky. Interni mezistavy ani tlacitko Overit neproblikavaji.
-  Po uspechu prejde primo do vysledneho stavu; pri chybe nabidne obnoveni.
-- Panel ma sirku 240 px (na uzke obrazovce se prizpusobi). Zelena znamena
-  mereni otevreneho ukolu, modra mereni jineho ukolu, cervena ze nic nebezi.
-- Klic a cely nazev odkazuji na mereny ukol. Na jinem ukolu panel ukazuje
-  "Nyni se meri: ...". Vyber ukolu podporuje take parametr selectedIssue.
-- Uspesny zapis potvrdi bila karta Zaznamenano se zelenou teckou,
-  zahozeni karta Zahozeno s tlumene hnedou teckou (nejde o chybu).
-  Obsahuje HH:MM:SS, klic a cely zalomeny nazev; odkazy vedou na prislusny ukol.
-- Ulozeni ukazuje skutecne vykazanou dobu, zahozeni skutecne namerenou.
-  Kazda akce ma samostatne potvrzeni nad panelem, bez rolovani a orezavani.
-- Karta se 0,5 sekundy objevuje, 4 sekundy zustava a 0,5 sekundy mizi.
-  Pri systemovem omezeni animaci zustane 5 sekund bez pohybu.
-- Panel se ihned vrati do stavu "Nyni se nic nemeri.", pokud nebezi dalsi
-  mereni nebo nezbyva nedokonceny zapis. Stare toasty se po obnoveni neopakuji.
-
-Trvalost, chyby a obnoveni:
-- Start, konec a stav zapisu zustavaji v localStorage tohoto profilu
-  pro jira.alza.cz. Obnoveni stranky nebo zavreni karty cas neztrati.
-- Je podporovan jeden casovac sdileny kartami stejneho profilu a webu,
-  nikoli mezi ruznymi profily nebo zarizenimi. Zamykani vyzaduje Web Locks API.
-- Nemaz data webu a behem rozpracovaneho zaznamu nemen prihlaseneho uzivatele.
-- Chyby API se zobrazuji v panelu. Zadny API klic ani ucet Clockify neni potreba.
-- Pri chybe prepnuti zustava puvodni zaznam i cilovy ukol zachovany.
-  Tlacitko Ulozit / Overit dokonci rozpracovanou operaci, take po obnoveni.
-- Pri chybe nezavisleho rucniho zapisu casovac stale bezi. Do vyreseni nelze
-  stopky zastavit, zrusit ani prepnout nebo pridat dalsi rucni zapis.
-- Po nejasnem vysledku odeslani se POST automaticky neopakuje.
-  Overit predchozi zapis pouze vyhleda unikatni znacku ve worklogu.
-  Nalezeny zapis potvrdi a dokonci navazujici operaci bez duplicity.
-  Nenajde-li jej, je nutna kontrola Work log v Jire. Pozadavek nezadavej znovu
-  a nevykazuj stejny cas jinym zpusobem bez kontroly.
+Trvalost, chyby a obnova:
+- Mereni a stav ukladani jsou ulozene v localStorage pro jira.alza.cz.
+  Jsou sdilene mezi kartami stejneho profilu, ne mezi profily nebo zarizenimi.
+- Nemaz data webu a behem nedokonceneho zapisu nemen prihlaseneho uzivatele.
+- Chyby API zustavaji viditelne. Pri nejistem vysledku se POST automaticky
+  neopakuje.
+- Tlacitko Ulozit / Overit dohleda unikatni znacku ve worklogu. Nalezeny zapis
+  potvrdi bez duplicity. Pokud jej nenajde, zkontroluj Jira Work log rucne;
+  zapis bez kontroly znovu neposilej.
+- Po chybe prepnuti zustava ulozen puvodni ukol i cil prepnuti.
+- Pri chybe nezavisleho rucniho zapisu casovac stale bezi, ale dalsi akce
+  pockaji na vyreseni nedokonceneho zapisu.
+- Vyuzivaji se Jira session cookies; neni potreba API klic ani ucet Clockify.
 
 Overeni:
-- Lokalni regrese: node --check .\jira-workspace-timer.user.js
-  a node .\jira-workspace-timer.test.cjs (bez pripojeni k Jire).
-- Redesign: node --check .\jira-workspace-issue.user.js
-  a node .\jira-workspace-issue.test.cjs.
-- Historicke zive overeni z 15. 10. 2026 a podrobnosti simulovanych
-  prohlizecovych kontrol jsou v HANDOFF.md; nejde o aktualni overeni
-  nainstalovane kopie. Testy nevytvareji skutecne worklogy.
+- node --check .\jira-workspace-timer.user.js
+- node .\jira-workspace-timer.test.cjs
+
+Testy nepouzivaji zive Jira odpovedi ani nevytvareji skutecne worklogy.
+Kontext, architektura a datove invarianty: HANDOFF.md.

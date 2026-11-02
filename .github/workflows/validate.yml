@@ -17,7 +17,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: node --check jira-workspace-issue.user.js
-      - run: node jira-workspace-issue.test.cjs
       - run: node --check jira-workspace-timer.user.js
       - run: node jira-workspace-timer.test.cjs
