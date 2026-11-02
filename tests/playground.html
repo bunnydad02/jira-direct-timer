@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="cs">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="ajs-issue-key" content="DEMO-101">
+    <title>Jira stopky - lokalni regresni hriste</title>
+    <style>
+        body {margin:24px;font:15px/1.5 system-ui,sans-serif;background:#f4f6fa;color:#253249}
+        main {max-width:1000px;margin:auto;padding-bottom:440px}
+        h1 {margin-bottom:4px} h2 {font-size:18px}
+        section.controls,article {padding:16px;margin:16px 0;background:white;border:1px solid #ccd4df;border-radius:10px}
+        button,select {font:inherit;margin:4px;padding:7px;cursor:pointer}
+        pre {white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+        .columns {display:grid;grid-template-columns:1fr 1fr;gap:16px}
+        #safety {padding:12px;background:#d9f4e3;border:1px solid #75b58e}
+        #results li[data-result="passed"] {color:#176538}
+        #results li[data-result="failed"],#harness-error {color:#a73434}
+        @media(max-width:700px) {.columns {grid-template-columns:1fr}}
+    </style>
+    <script src="/timer-source.js" defer></script>
+    <script src="/scenarios.js" defer></script>
+    <script src="/playground.js" defer></script>
+</head>
+<body>
+<main>
+    <h1>Jira stopky: regresni hriste</h1>
+    <p id="safety">POUZE LOKALNI SIMULACE. Zadna Jira, zadne skutecne worklogy.
+        Stav i zaznamy jsou jen v pameti; obnoveni stranky vse zahodi.</p>
+    <section class="controls" aria-label="Testovaci ovladani">
+        <label>Otevreny task <select id="issue">
+            <option>DEMO-101</option><option>DEMO-102</option><option>DEMO-103</option><option value="">Bez tasku</option>
+        </select></label>
+        <h2 id="summary-val"></h2>
+        <button id="advance">Posunout cas +125 s</button>
+        <button id="reload">Simulovat reload (zachovat pamet)</button>
+        <button id="reset">Vynulovat simulaci</button>
+        <label>Pristi POST <select id="failure">
+            <option value="none">Uspech</option>
+            <option value="before">Chyba pred ulozenim</option>
+            <option value="after">Ulozeno, ale odpoved ztracena</option>
+        </select></label>
+        <p id="link-info" role="status"></p>
+        <p id="harness-error" role="alert"></p>
+    </section>
+    <section class="controls" aria-label="Automaticke regrese">
+        <button id="run">Spustit vsechny regresni scenare</button>
+        <p id="test-status" role="status">Pripraveno. Produkcni panel je vlevo dole.</p>
+        <ol id="results"></ol>
+    </section>
+    <div class="columns">
+        <article><h2>Simulovane worklogy (jen pamet)</h2><pre id="worklogs"></pre></article>
+        <article><h2>Stav stopek (jen pamet)</h2><pre id="state"></pre></article>
+    </div>
+    <article><h2>Mock API pozadavky</h2><pre id="requests"></pre></article>
+</main>
+</body>
+</html>

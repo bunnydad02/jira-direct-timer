@@ -59,5 +59,48 @@ node .\jira-workspace-timer.test.cjs
 ```
 
 Testy pouzivaji Node.js a simulovane Jira odpovedi; neodesilaji pozadavky na
-Jiru ani nevytvareji skutecne worklogy. CI spousti stejne kontroly pri pull
-requestu a zmenach ve vetvi `main`.
+Jiru ani nevytvareji skutecne worklogy.
+
+### Interaktivni lokalni hriste
+
+Pro testovaci nastroje pouzij Node.js 20 nebo novejsi. Samotne Tampermonkey
+stopky nadale nepotrebuji zadne zavislosti ani server.
+
+```powershell
+npm run playground
+```
+
+Otevri `http://127.0.0.1:4173`. Instalace zavislosti pro samotne hriste neni
+potreba. Vlevo dole bezi skutecny produkcni panel, nikoli jeho napodobenina.
+Prepinej mezi `DEMO-101` az `DEMO-103`, posunuj cas a zkousej START, STOP,
+CANCEL a ADD MINUTES (i Enter). Vedle panelu vidis simulovane worklogy,
+stav a API pozadavky. Lze simulovat reload i chybu pred ulozenim nebo ztracenou
+odpoved po ulozeni. Tlacitko **Spustit vsechny regresni scenare** zobrazi
+vysledek kazdeho scenare a postupne meni skutecny panel.
+
+Vse zustava pouze v pameti stranky, nepouziva se skutecny `localStorage`.
+Simulovany reload pamet zachova; skutecny refresh nebo reset ji zahodi.
+Server posloucha jen na loopbacku a odmita zapisy, CSP blokuje sitova spojeni.
+Odkazy panelu se zachyti lokalne. Neni potreba Jira ucet ani Tampermonkey.
+Server ukoncis pomoci Ctrl+C.
+
+### Automaticke browserove regrese
+
+```powershell
+npm ci
+npx playwright install chromium
+npm test
+```
+
+`npm test` spousti puvodni Node regrese i nove Chromium scenare.
+Pouze browserove testy spustis pres `npm run test:browser`; server si spusti
+samy (port 4173 musi byt volny). Scenare jsou sdilene s interaktivnim hristem:
+barvy a rozmery panelu, texty a odkazy, instalovana verze podle metadat,
+hodiny, prepinani tasku, ukladani/minimum/zaokrouhleni, cancel, rucni minuty,
+toasty, reload, pomale API, blokace dvojkliku, soucty vsech stran, chyby,
+obnova pres marker bez duplicit, legacy fronty, zamky a storage eventy.
+Stopky dnes nevyhledavaji novou verzi samy; testuje se zobrazeni instalovane
+verze a odkaz na GitHub, aktualizaci nadale zajistuje Tampermonkey.
+
+CI spousti Node i browserove kontroly pri pull requestu a zmenach v `main`.
+Pri chybe browseroveho testu prilozi screenshot a Playwright trace jako artefakt.
