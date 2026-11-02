@@ -15,11 +15,6 @@
     if (window.top !== window || document.getElementById('jira-direct-timer')) return;
     const KEY = 'jira-direct-timer-v1';
     const VERSION = '1.16.6';
-    const RELEASE_NOTES = [
-        {version: '1.16.6', changes: ['Links to GitHub and shows the three latest release notes on hover.']},
-        {version: '1.16.5', changes: ['Displays the current timer version in the panel.']},
-        {version: '1.16.4', changes: ['Automatically updates both userscripts from GitHub.']}
-    ];
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -33,11 +28,6 @@
         #jira-direct-timer [data-version-wrap] {position:absolute;top:14px;right:14px;font-size:9px;font-weight:400;line-height:1.45;color:inherit}
         #jira-direct-timer [data-version] {color:inherit;text-decoration:none;opacity:.55}
         #jira-direct-timer [data-version]:hover,#jira-direct-timer [data-version]:focus-visible {opacity:1;text-decoration:underline}
-        #jira-direct-timer [data-release-notes] {display:none;position:absolute;top:100%;right:0;z-index:1;width:min(212px,calc(100vw - 68px));box-sizing:border-box;padding:10px 12px;border:1px solid #dfe3e8;border-radius:8px;background:#fff;color:#253249;box-shadow:0 4px 16px #172b4d24;font-size:11px;line-height:1.4;text-align:left;overflow-wrap:anywhere}
-        #jira-direct-timer [data-version-wrap]:hover [data-release-notes],#jira-direct-timer [data-version-wrap]:focus-within [data-release-notes] {display:block}
-        #jira-direct-timer [data-release-note] + [data-release-note] {margin-top:8px;padding-top:7px;border-top:1px solid #e4e7ec}
-        #jira-direct-timer [data-release-version] {display:block;margin-bottom:2px;font-size:11px}
-        #jira-direct-timer [data-release-note] ul {margin:0;padding-left:16px}
         #jira-direct-timer [data-clock] {display:block;font-size:34px;line-height:1.2;font-weight:750;letter-spacing:1px;font-variant-numeric:tabular-nums;color:#8d3030;margin:4px 0 8px}
         #jira-direct-timer[data-running="true"] [data-clock] {color:#176538}
         #jira-direct-timer[data-other="true"] [data-clock] {color:#20559a}
@@ -87,33 +77,13 @@
         }
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<strong>Jira stopky</strong><span data-version-wrap><a data-version></a><span data-release-notes role="tooltip"></span></span><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<strong>Jira stopky</strong><span data-version-wrap><a data-version></a></span><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     const versionLink = panel.querySelector('[data-version]');
     versionLink.textContent = `v${VERSION}`;
     versionLink.setAttribute('href', 'https://github.com/bunnydad02/jira-direct-timer');
     versionLink.setAttribute('target', '_blank');
     versionLink.setAttribute('rel', 'noopener noreferrer');
-    versionLink.setAttribute('aria-label', `Verze ${VERSION}; otevrit GitHub repozitar`);
-    versionLink.setAttribute('aria-describedby', 'jira-direct-timer-release-notes');
-    const releaseNotes = panel.querySelector('[data-release-notes]');
-    releaseNotes.id = 'jira-direct-timer-release-notes';
-    releaseNotes.textContent = 'Latest three versions:';
-    for (const release of RELEASE_NOTES) {
-        const entry = document.createElement('div');
-        entry.dataset.releaseNote = '';
-        const releaseVersion = document.createElement('strong');
-        releaseVersion.dataset.releaseVersion = '';
-        releaseVersion.textContent = `v${release.version}`;
-        const changes = document.createElement('ul');
-        for (const change of release.changes) {
-            const item = document.createElement('li');
-            item.textContent = change;
-            changes.appendChild(item);
-        }
-        entry.appendChild(releaseVersion);
-        entry.appendChild(changes);
-        releaseNotes.appendChild(entry);
-    }
+    versionLink.setAttribute('aria-label', `Timer version ${VERSION}; open GitHub repository`);
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
     manualRow.dataset.manualRow = '';

@@ -202,12 +202,11 @@ scripts/network requests. Do not store the supplied full Jira HTML or its tokens
   comma. Read every page of the issue's worklog endpoint, surface loading
   errors, and invalidate the cached total after a confirmed save. This is
   read-only apart from the timer's existing explicit save actions.
-- The timer version in the panel links to the GitHub repository. Hovering it or
-  focusing it by keyboard reveals the latest three release notes from the
-  `RELEASE_NOTES` constant beside `VERSION` in the timer userscript. On each
-  timer release, update `@version`, `VERSION`, and the first release-note entry,
-  retaining exactly the three newest versions. The pull-request workflow runs
-  the regression suite, which checks that these values stay synchronized.
+- The timer version in the panel is a link to the GitHub repository; it does not
+  show release notes on hover or keyboard focus. On each timer release, update
+  `@version` and `VERSION` in the timer userscript. The pull-request workflow
+  runs the regression suite, which checks that the displayed version stays
+  synchronized with the userscript metadata and that the link targets GitHub.
 - Issue selection precedence: `selectedIssue` query parameter, `/browse/{key}`,
   then `meta[name="ajs-issue-key"]`. Title comes from stored data, `#summary-val`,
   or a summary-only issue API read. Insert issue titles as text, not HTML.
