@@ -59,26 +59,28 @@
         };
         const mockFetch = async (path, options = {}) => {
             const method = options.method || 'GET';
-            const match = /^\/rest\/api\/2\/issue\/(DEMO-10[123])(\?fields=summary|\?fields=timespent,aggregatetimespent|\/worklog\?.+)$/.exec(path);
-            if (!match || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
+            const myself = path === '/rest/api/2/myself' && method === 'GET';
+            const match = /^\/rest\/api\/2\/issue\/(DEMO-10[123])(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
+            if ((!match && !myself) || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
             current.requests.push({method, path});
             current.active++;
             inspect();
             try {
                 await sleep(current.latency);
+                if (myself) {
+                    if (current.identityError) throw new Error('Simulovana chyba identity uzivatele');
+                    return {ok: true, json: async () => clone(current.user)};
+                }
                 const issue = match[1];
                 if (match[2] === '?fields=summary') {
                     if (method !== 'GET') throw new Error('Summary fixture is read-only');
                     return {ok: true, json: async () => ({fields: {summary: titles[issue]}})};
                 }
-                if (match[2] === '?fields=timespent,aggregatetimespent') {
-                    if (method !== 'GET') throw new Error('Aggregate fixture is read-only');
+                if (match[2] === '?fields=subtasks') {
+                    if (method !== 'GET') throw new Error('Subtasks fixture is read-only');
                     if (current.aggregateError) throw new Error('Simulovana chyba souhrnu subtasku');
-                    const own = current.logs.filter(log => log.issue === issue)
-                        .reduce((sum, log) => sum + log.timeSpentSeconds, 0);
-                    const children = current.logs.filter(log => current.parents[log.issue] === issue)
-                        .reduce((sum, log) => sum + log.timeSpentSeconds, 0);
-                    return {ok: true, json: async () => ({fields: {timespent: own || null, aggregatetimespent: own + children || null}})};
+                    const subtasks = Object.keys(current.parents).filter(key => current.parents[key] === issue).map(key => ({key}));
+                    return {ok: true, json: async () => ({fields: {subtasks}})};
                 }
                 if (method === 'POST') {
                     if (match[2] !== '/worklog?adjustEstimate=leave') throw new Error('Estimate must be preserved');
@@ -88,12 +90,12 @@
                     current.failure = 'none';
                     $('#failure').value = 'none';
                     if (failure === 'before') throw new Error('Simulovana ztrata spojeni pred ulozenim');
-                    const log = {id: `mock-${current.logs.length + 1}`, issue, ...body};
+                    const log = {id: `mock-${current.logs.length + 1}`, issue, author: clone(current.user), ...body};
                     current.logs.push(log);
                     if (failure === 'after') throw new Error('Simulovana ztrata odpovedi po ulozeni');
                     return {ok: true, json: async () => clone(log)};
                 }
-                if (current.totalError) throw new Error('Simulovana chyba nacteni worklogu');
+                if (current.totalError || current.worklogErrorIssue === issue) throw new Error('Simulovana chyba nacteni worklogu');
                 const logs = current.logs.filter(log => log.issue === issue);
                 const offset = Number(new URLSearchParams(path.split('?')[1]).get('startAt'));
                 return {ok: true, json: async () => ({total: logs.length, worklogs: clone(logs.slice(offset, offset + 2))})};
@@ -126,12 +128,14 @@
         await sleep(0);
     }
     async function reset(options = {}) {
+        const user = options.user ?? {key: 'demo-user', name: 'demo', displayName: 'Demo User'};
         model = {
             raw: options.raw ?? (options.state ? JSON.stringify(options.state) : null),
-            logs: clone(options.logs || []), requests: [], posts: [], offset: 0, active: 0,
+            logs: clone(options.logs || []).map(log => ({author: clone(user), ...log})), requests: [], posts: [], offset: 0, active: 0,
             latency: options.latency ?? 30, failure: 'none', lock: options.lock || 'available',
             totalError: options.totalError || false, location: {pathname: '', search: ''},
-            parents: clone(options.parents || {}), aggregateError: options.aggregateError || false
+            parents: clone(options.parents || {}), aggregateError: options.aggregateError || false,
+            user: clone(user), identityError: options.identityError || false, worklogErrorIssue: options.worklogErrorIssue
         };
         render = null;
         navigate(options.issue ?? 'DEMO-101');

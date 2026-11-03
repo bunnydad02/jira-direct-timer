@@ -34,10 +34,15 @@ for compatibility with installed copies and saved timer state.
   to whole minutes.
 - The 240px panel uses green for the open tracked issue, blue for a different
   tracked issue, and red when idle. Issue and title link to the tracked issue.
-  The current issue's all-pages worklog total appears below the clock, with
-  the total including subtasks in parentheses only when exact seconds differ.
-  Jira's `aggregatetimespent - timespent` supplies the subtask contribution;
-  null time fields mean zero, missing/invalid fields are visible errors.
+  The current issue's all-pages worklog total for the signed-in user appears
+  below the clock, with that user's total including subtasks in parentheses
+  only when exact seconds differ. Resolve the user via `/rest/api/2/myself`
+  and match worklog `author` by shared stable `key`, `accountId`, or `name`
+  (in that priority order), never by display name or `updateAuthor`.
+  Enumerate `fields=subtasks` and page through each child's worklogs using
+  the same author filter; Jira's aggregate time fields include other users
+  and must not supply personal totals. Missing identities, malformed subtask
+  lists, or unreadable worklogs are visible errors, not zero/partial totals.
 - Save/discard confirmations are transient, separate toasts. Saved toasts show
   recorded duration; discarded toasts show measured duration. Do not replay
   toasts from persisted data after reload.
@@ -96,7 +101,7 @@ CI also runs these browser regressions and retains failure traces/screenshots.
 Do not add production test hooks or enable the userscript on localhost.
 Test-only changes do not require a userscript version bump.
 
-The current userscript metadata and in-panel version are `1.16.8`. On each
+The current userscript metadata and in-panel version are `1.16.9`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.

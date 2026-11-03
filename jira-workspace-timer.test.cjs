@@ -4,6 +4,8 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(path.join(__dirname, 'jira-workspace-timer.user.js'), 'utf8');
 const metadata = source.split('// ==/UserScript==')[0];
+const currentUser = {key: 'demo-user', name: 'demo', displayName: 'Demo User'};
+const ownLog = timeSpentSeconds => ({timeSpentSeconds, author: currentUser});
 for (const directive of ['updateURL', 'downloadURL']) {
     assert.equal(metadata.match(new RegExp(`^// @${directive}\\s+(\\S+)\\s*$`, 'm'))?.[1],
         'https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js');
@@ -20,7 +22,8 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let render;
     let interval;
     let onFetch = () => {};
-    let onTotals = () => ({fields: {timespent: null, aggregatetimespent: null}});
+    let onTotals = () => ({fields: {subtasks: []}});
+    let onIdentity = () => currentUser;
     const location = {pathname: '/browse/DEMO-101', search: ''};
     function element() {
         return {dataset: {}, value: '', children: [], attributes: {},
@@ -49,8 +52,10 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval: (callback, ms) => { render = callback; interval = ms; },
         navigator: {locks: {request: async (k, o, f) => f({})}},
         fetch: async (path, options) => {
+            await Promise.resolve();
+            if (path === '/rest/api/2/myself') return {ok: true, json: async () => onIdentity()};
             if (path.endsWith('?fields=summary')) return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
-            if (path.endsWith('?fields=timespent,aggregatetimespent')) {
+            if (path.endsWith('?fields=subtasks')) {
                 return {ok: true, json: async () => onTotals(path)};
             }
             await Promise.resolve();
@@ -65,8 +70,8 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
                 return {ok: true, json: async () => ({id: `log-${posts.length}`, timeSpentSeconds: body.timeSpentSeconds})};
             }
             const worklogs = existing ?
-                [{id: 'existing', timeSpentSeconds: 120, comment: `[jira-direct-timer:${state.manualEntry?.id || state.id}]`}] :
-                persisted.map((post, index) => ({id: `log-${index + 1}`, timeSpentSeconds: post.body.timeSpentSeconds, comment: post.body.comment}));
+                [{id: 'existing', ...ownLog(120), comment: `[jira-direct-timer:${state.manualEntry?.id || state.id}]`}] :
+                persisted.map((post, index) => ({id: `log-${index + 1}`, ...ownLog(post.body.timeSpentSeconds), comment: post.body.comment}));
             return {ok: true, json: async () => ({total: worklogs.length, worklogs})};
         }
     };
@@ -78,6 +83,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         advance: ms => { now += ms; }, render: () => render(), interval: () => interval,
         onFetch: callback => { onFetch = callback; },
         onTotals: callback => { onTotals = callback; },
+        onIdentity: callback => { onIdentity = callback; },
         navigate: path => { location.pathname = path; render(); },
         keydown: async (key = 'Enter') => {
             let prevented = false;
@@ -114,7 +120,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].hidden, false);
     for (const [seconds, expected] of [[7200, 'Dosud vykaz\u00e1no: 2h'], [1440, 'Dosud vykaz\u00e1no: 0,4h'], [439200, 'Dosud vykaz\u00e1no: 122h']]) {
         const formatted = setup(null);
-        formatted.onFetch(() => ({total: 1, worklogs: [{timeSpentSeconds: seconds}]}));
+        formatted.onFetch(() => ({total: 1, worklogs: [ownLog(seconds)]}));
         await new Promise(resolve => setImmediate(resolve));
         assert.equal(formatted.nodes['[data-worklog-total]'].textContent, expected);
     }
@@ -122,32 +128,98 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     pagedTotal.onFetch(path => {
         const offset = Number(new URLSearchParams(path.split('?')[1]).get('startAt'));
         if (offset === 0) return {total: 3, worklogs: [
-            {timeSpentSeconds: 3600}, {timeSpentSeconds: 1800}
+            ownLog(3600), ownLog(1800)
         ]};
-        return {total: 3, worklogs: [{timeSpentSeconds: 3661}]};
+        return {total: 3, worklogs: [ownLog(3661)]};
     });
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 2,5h',
         'sum all worklogs across Jira pages');
-    for (const [own, aggregate, expected] of [
-        [7200, 10800, 'Dosud vykaz\u00e1no: 2h (3h)'],
-        [7200, 7200, 'Dosud vykaz\u00e1no: 2h'],
-        [null, 3600, 'Dosud vykaz\u00e1no: 0h (1h)'],
-        [null, null, 'Dosud vykaz\u00e1no: 0h'],
-        [7200, 7260, 'Dosud vykaz\u00e1no: 2h (2h)']
+    const colleague = {key: 'colleague', name: 'other', displayName: currentUser.displayName};
+    const personal = setup(null);
+    const personalQueries = [];
+    personal.onFetch(path => {
+        personalQueries.push(path);
+        const offset = Number(new URLSearchParams(path.split('?')[1]).get('startAt'));
+        const ownSeconds = path.includes('/DEMO-102/') ? 1800 : 900;
+        return offset === 0 ?
+            {total: 2, worklogs: [{timeSpentSeconds: 4500, author: colleague, updateAuthor: currentUser}]} :
+            {total: 2, worklogs: [{...ownLog(ownSeconds), updateAuthor: colleague}]};
+    });
+    personal.onTotals(() => ({fields: {subtasks: [{key: 'DEMO-102'}]}}));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(personal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0,3h (0,8h)',
+        'count only the signed-in author on every page of the issue and its subtasks, never updateAuthor or displayName');
+    assert.ok(personalQueries.some(path => path.includes('/DEMO-102/') && path.includes('startAt=1')));
+    assert.equal(personal.posts.length, 0);
+    for (const [user, author] of [
+        [{key: 'stable', name: 'renamed'}, {key: 'stable', name: 'old-name'}],
+        [{accountId: 'cloud-id'}, {accountId: 'cloud-id'}],
+        [{name: 'server-user'}, {name: 'server-user'}]
+    ]) {
+        const identity = setup(null);
+        identity.onIdentity(() => user);
+        identity.onFetch(() => ({total: 1, worklogs: [{timeSpentSeconds: 3600, author}]}));
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(identity.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 1h');
+    }
+    for (const [user, author, message] of [
+        [{displayName: 'Demo User'}, currentUser, /prihlaseneho/],
+        [currentUser, undefined, /autora/],
+        [currentUser, {displayName: currentUser.displayName}, /autora/],
+        [{key: 'demo-user'}, {name: 'demo'}, /autora/]
+    ]) {
+        const invalid = setup(null);
+        invalid.onIdentity(() => user);
+        invalid.onFetch(() => ({total: 1, worklogs: [{timeSpentSeconds: 3600, author}]}));
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(invalid.nodes['[data-worklog-total]'].dataset.state, 'error');
+        assert.match(invalid.nodes['[data-worklog-total]'].textContent, message);
+        assert.equal(invalid.posts.length, 0);
+    }
+    const identityFailure = setup(null);
+    identityFailure.onIdentity(() => { throw new Error('Identity offline'); });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.match(identityFailure.nodes['[data-worklog-total]'].textContent, /Identity offline/);
+    identityFailure.onIdentity(() => currentUser);
+    identityFailure.navigate('/browse/DEMO-102');
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(identityFailure.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h',
+        'identity lookup is retried when totals are refreshed');
+    for (const broken of [
+        {total: 2, worklogs: []},
+        {total: 1, worklogs: [{...ownLog(-1)}]},
+        {total: 2, worklogs: [ownLog(Number.MAX_SAFE_INTEGER), ownLog(1)]}
+    ]) {
+        const invalid = setup(null);
+        invalid.onFetch(() => broken);
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(invalid.nodes['[data-worklog-total]'].dataset.state, 'error');
+    }
+    const overflow = setup(null);
+    overflow.onFetch(() => ({total: 1, worklogs: [ownLog(Number.MAX_SAFE_INTEGER)]}));
+    overflow.onTotals(() => ({fields: {subtasks: [{key: 'DEMO-102'}]}}));
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(overflow.nodes['[data-worklog-total]'].dataset.state, 'error');
+    for (const [own, child, expected] of [
+        [7200, 3600, 'Dosud vykaz\u00e1no: 2h (3h)'],
+        [7200, 0, 'Dosud vykaz\u00e1no: 2h'],
+        [0, 3600, 'Dosud vykaz\u00e1no: 0h (1h)'],
+        [0, 0, 'Dosud vykaz\u00e1no: 0h'],
+        [7200, 60, 'Dosud vykaz\u00e1no: 2h (2h)']
     ]) {
         const total = setup(null);
-        total.onFetch(() => ({total: 1, worklogs: [{timeSpentSeconds: own || 0}]}));
-        total.onTotals(() => ({fields: {timespent: own, aggregatetimespent: aggregate}}));
+        total.onFetch(path => ({total: 1, worklogs: [ownLog(path.includes('/DEMO-102/') ? child : own)]}));
+        total.onTotals(() => ({fields: {subtasks: [{key: 'DEMO-102'}]}}));
         await new Promise(resolve => setImmediate(resolve));
         assert.equal(total.nodes['[data-worklog-total]'].textContent, expected,
             'compare exact seconds before rounding; do not double-count the parent');
         assert.equal(total.posts.length, 0, 'loading subtask totals must be read-only');
     }
     for (const fields of [
-        {}, {timespent: 0}, {timespent: -1, aggregatetimespent: 0},
-        {timespent: 60, aggregatetimespent: 0}, {timespent: 0, aggregatetimespent: '60'},
-        {timespent: 0, aggregatetimespent: Number.MAX_SAFE_INTEGER + 1}
+        {}, {subtasks: null}, {subtasks: [{}]}, {subtasks: [null]},
+        {subtasks: [{key: 'DEMO-101'}]}, {subtasks: [{key: 'invalid'}]},
+        {subtasks: [{key: 'DEMO-102'}, {key: 'DEMO-102'}]}
     ]) {
         const invalid = setup(null);
         invalid.onTotals(() => ({fields}));
@@ -162,7 +234,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     const issueQueries = [];
     pagedTotal.onFetch(path => {
         if (path.includes('/worklog?startAt=')) issueQueries.push(path);
-        return {total: 1, worklogs: [{timeSpentSeconds: 60}]};
+        return {total: 1, worklogs: [ownLog(60)]};
     });
     pagedTotal.navigate('/browse/DEMO-102');
     await new Promise(resolve => setImmediate(resolve));

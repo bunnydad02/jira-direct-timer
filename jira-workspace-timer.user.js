@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.16.8
+// @version      1.16.9
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -14,7 +14,7 @@
     'use strict';
     if (window.top !== window || document.getElementById('jira-direct-timer')) return;
     const KEY = 'jira-direct-timer-v1';
-    const VERSION = '1.16.8';
+    const VERSION = '1.16.9';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -197,7 +197,16 @@
     function newTimer(key, started) {
         return {id: crypto.randomUUID(), issue: key, title: titleFor({issue: key}), started, ended: null, phase: 'running'};
     }
-    async function totalLoggedSeconds(key) {
+    const userIdentifiers = ['key', 'accountId', 'name'];
+    function hasIdentifier(user, field) {
+        return typeof user?.[field] === 'string' && user[field].trim() !== '';
+    }
+    function isOwnWorklog(worklog, user) {
+        const field = userIdentifiers.find(field => hasIdentifier(user, field) && hasIdentifier(worklog.author, field));
+        if (!field) throw new Error('Jira nevratila identitu autora worklogu.');
+        return worklog.author[field] === user[field];
+    }
+    async function totalLoggedSeconds(key, user) {
         let offset = 0;
         let total = 0;
         let seconds = 0;
@@ -208,11 +217,13 @@
             }
             total = body.total;
             for (const worklog of body.worklogs) {
-                if (!Number.isSafeInteger(worklog.timeSpentSeconds) || worklog.timeSpentSeconds < 0 ||
-                    !Number.isSafeInteger(seconds + worklog.timeSpentSeconds)) {
+                if (!Number.isSafeInteger(worklog.timeSpentSeconds) || worklog.timeSpentSeconds < 0) {
                     throw new Error('Jira vratila neplatnou delku worklogu.');
                 }
-                seconds += worklog.timeSpentSeconds;
+                if (isOwnWorklog(worklog, user)) {
+                    seconds += worklog.timeSpentSeconds;
+                    if (!Number.isSafeInteger(seconds)) throw new Error('Jira vratila neplatny soucet worklogu.');
+                }
             }
             offset += body.worklogs.length;
             if (offset < total && !body.worklogs.length) {
@@ -222,20 +233,28 @@
         return seconds;
     }
     async function loggedTime(key) {
-        const seconds = await totalLoggedSeconds(key);
-        const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=timespent,aggregatetimespent`);
-        const fields = body.fields;
-        if (!fields || !Object.hasOwn(fields, 'timespent') || !Object.hasOwn(fields, 'aggregatetimespent')) {
-            throw new Error('Jira nevratila souhrn casu vcetne subtasku.');
+        const user = await request('/rest/api/2/myself');
+        if (!userIdentifiers.some(field => hasIdentifier(user, field))) {
+            throw new Error('Jira nevratila identitu prihlaseneho uzivatele.');
         }
-        const own = fields.timespent === null ? 0 : fields.timespent;
-        const aggregate = fields.aggregatetimespent === null ? 0 : fields.aggregatetimespent;
-        if (!Number.isSafeInteger(own) || own < 0 || !Number.isSafeInteger(aggregate) || aggregate < own ||
-            !Number.isSafeInteger(seconds + aggregate - own)) {
-            throw new Error('Jira vratila neplatny souhrn casu vcetne subtasku.');
+        const seconds = await totalLoggedSeconds(key, user);
+        const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=subtasks`);
+        if (!Array.isArray(body.fields?.subtasks)) {
+            throw new Error('Jira nevratila seznam subtasku.');
         }
-        // Keep the all-pages worklog total; Jira's aggregate also includes the issue itself.
-        return {seconds, secondsWithSubtasks: seconds + aggregate - own};
+        let secondsWithSubtasks = seconds;
+        const seen = new Set([key]);
+        for (const subtask of body.fields.subtasks) {
+            if (!/^[A-Z][A-Z0-9_]*-\d+$/.test(subtask?.key) || seen.has(subtask.key)) {
+                throw new Error('Jira vratila neplatny seznam subtasku.');
+            }
+            seen.add(subtask.key);
+            secondsWithSubtasks += await totalLoggedSeconds(subtask.key, user);
+            if (!Number.isSafeInteger(secondsWithSubtasks)) {
+                throw new Error('Jira vratila neplatny soucet casu subtasku.');
+            }
+        }
+        return {seconds, secondsWithSubtasks};
     }
     function renderWorklogTotal(key) {
         if (!key) {
