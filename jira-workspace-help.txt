@@ -26,10 +26,12 @@ Pouziti:
   tlacitkem nebo Enterem; po uspechu se vstup vycisti.
 - Rucni zapis nemeni bezici casovac. Intervaly se mohou prekryvat; zapisuj jen
   cas, ktery jeste neni vykazany.
-- Pod casovacem se zobrazuje celkovy dosud vykazany cas otevreneho ukolu,
-  zaokrouhleny na desetiny hodiny. Pokud subtasky pridavaji cas, nasleduje
-  v zavorce soucet vcetne subtasku, napr. 2h (3,5h). Pri shodnem poctu sekund
-  se zavorka nezobrazuje. Chyba nacteni se zobrazi v panelu.
+- Pod casovacem se zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu
+  podle prihlaseneho Jira uctu, zaokrouhleny na desetiny hodiny. Vykazy kolegu
+  se nepricitaji. Pokud mas vlastni vykazy i na subtaskech, nasleduje
+  v zavorce tvuj soucet vcetne subtasku, napr. 2h (3,5h). Pri shodnem poctu
+  sekund se zavorka nezobrazuje. Chyba nacteni identity, autora nebo worklogu
+  se zobrazi v panelu, nikoli jako nula nebo castecny soucet.
 - Panel ma sirku 240 px, na uzke obrazovce se prizpusobi. Zelena znamena
   mereni otevreneho ukolu, modra jineho ukolu a cervena neaktivni stav.
 - Ulozeni a zahozeni potvrdi samostatne docasne karty nad panelem.

@@ -51,6 +51,62 @@
             await p.reload();
             equal(p.node('version').textContent, `v${version}`);
         }},
+        {title: 'Vlastni cas: kolega se nezapocita na tasku ani subtasku, ani po zapisu', async run(p) {
+            const colleague = {key: 'colleague', name: 'other', displayName: 'Demo User'};
+            await p.reset({
+                parents: {'DEMO-102': 'DEMO-101'},
+                logs: [
+                    {issue: 'DEMO-101', timeSpentSeconds: 4500, author: colleague},
+                    {issue: 'DEMO-101', timeSpentSeconds: 0, author: colleague},
+                    {issue: 'DEMO-101', timeSpentSeconds: 900, updateAuthor: colleague},
+                    {issue: 'DEMO-102', timeSpentSeconds: 7200, author: colleague},
+                    {issue: 'DEMO-102', timeSpentSeconds: 1800}
+                ]
+            });
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0,3h (0,8h)');
+            equal(p.posts().length, 0);
+            await p.manual('15');
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0,5h (1h)');
+            await p.reload();
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0,5h (1h)');
+            p.navigate('DEMO-102');
+            await p.idle();
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0,5h');
+            await p.reset({logs: [{issue: 'DEMO-101', timeSpentSeconds: 4500, author: colleague}]});
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0h');
+        }},
+        {title: 'Identita nebo autor chybi: viditelna chyba, stopky funguji, obnova nacteni', async run(p) {
+            for (const options of [
+                {identityError: true},
+                {user: {displayName: 'Demo User'}},
+                {logs: [{issue: 'DEMO-101', timeSpentSeconds: 900, author: null}]}
+            ]) {
+                await p.reset(options);
+                equal(p.node('worklog-total').dataset.state, 'error');
+                equal(p.node('worklog-total').hidden, false);
+                equal(p.posts().length, 0);
+                await p.click('start');
+                equal(p.state().phase, 'running');
+                await p.click('stop');
+                equal(p.state().phase, 'saved');
+                equal(p.posts().length, 1);
+                equal(p.node('worklog-total').dataset.state, 'error');
+            }
+            await p.reset();
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0h');
+        }},
+        {title: 'Chyba worklogu subtasku nezobrazi castecny soucet', async run(p) {
+            await p.reset({
+                parents: {'DEMO-102': 'DEMO-101'}, worklogErrorIssue: 'DEMO-102',
+                logs: [{issue: 'DEMO-101', timeSpentSeconds: 900}]
+            });
+            equal(p.node('worklog-total').dataset.state, 'error');
+            includes(p.node('worklog-total').textContent, 'Simulovana chyba nacteni worklogu');
+            equal(p.posts().length, 0);
+            p.navigate('DEMO-103');
+            await p.idle();
+            equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0h');
+        }},
         {title: 'Soucty se subtasky: zavorka, strankovani, navigace a obnoveni po zapisu', async run(p) {
             await p.reset({
                 parents: {'DEMO-102': 'DEMO-101', 'DEMO-103': 'DEMO-101'},
