@@ -21,7 +21,11 @@ for compatibility with installed copies and saved timer state.
 
 - `START` starts on the open issue. If another issue is tracked, save that
   timer first and start the selected issue at the prior timer's end time.
-  Navigation alone never switches timers.
+  Navigation alone never switches timers. The open issue is the `/browse/<KEY>`
+  path key; `selectedIssue` applies only when the path names no issue (boards,
+  backlogs), then the `ajs-issue-key` meta tag. When the panel does not
+  already show the open issue as the tracked issue, it shows the write target
+  (`Zápis do: <KEY>`).
 - `STOP` stops and saves the tracked issue. `CANCEL` discards only the current
   unsaved timer; it never deletes a saved Jira worklog. Actions have no
   confirmation dialogs.
@@ -31,7 +35,8 @@ for compatibility with installed copies and saved timer state.
   overlap, so users must avoid recording the same time twice.
 - `AUTO` is disabled by default and starts at 10 minutes. When enabled, observe
   successful Jira REST issue creation responses from `fetch` and
-  `XMLHttpRequest`, then record the configured duration on the returned issue
+  `XMLHttpRequest` whose resolved URL has the Jira page's own origin, then
+  record the configured duration on the returned issue
   key. Standard issues and subtasks use the same endpoint. Issue creation
   outside this Jira page is not observed. Automatic worklogs must not overwrite
   or alter the active timer.
@@ -74,7 +79,11 @@ for compatibility with installed copies and saved timer state.
   before POST. Serialize mutations with `navigator.locks.request`; if locks
   are unavailable or busy, show an error rather than writing unsafely.
 - Worklogs include `[jira-direct-timer:<id>]`. Before recovery, page through
-  Jira worklogs looking for that exact marker. If found, confirm the save.
+  Jira worklogs looking for that exact marker on a worklog authored by the
+  signed-in user (same `isOwnWorklog` identity rules as totals); another
+  user's worklog with the marker never confirms a save. Identity is read only
+  when a marker is found; if it is then unavailable, report an error without
+  POSTing. If found, confirm the save.
   If not found after an uncertain POST, report the issue and do not retry
   automatically; the user must inspect Jira's Work log to avoid duplicates.
 - Preserve `nextIssue` and `manualNext` intent across failures. An independent
@@ -113,7 +122,7 @@ CI also runs these browser regressions and retains failure traces/screenshots.
 Do not add production test hooks or enable the userscript on localhost.
 Test-only changes do not require a userscript version bump.
 
-The current userscript metadata and in-panel version are `1.17.0`. On each
+The current userscript metadata and in-panel version are `1.17.1`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.
@@ -132,6 +141,26 @@ If publishing fails, fix the cause and rerun `Validate userscripts` on `main`
 using its manual trigger. Verify the published Release before considering a
 user-facing version complete. Tampermonkey still updates from `main`, not
 from the Release.
+
+### Security review before release
+
+- Every PR and push to `main` runs `node .github/security-audit.cjs` (also part
+  of `npm test`) and `npm audit --audit-level=high`. The audit fails on changed
+  privileged metadata (`@match`, `@grant`, update URLs, any `@connect`,
+  `@require`, `@resource`), `eval`/`new Function`/string timers, dynamic
+  `innerHTML`/`insertAdjacentHTML`, `fetch` outside `request()`, non-relative
+  `request()` paths, unexpected absolute URLs, workflow actions not pinned to
+  a full commit SHA, and obvious secrets in tracked files. Changing an allowed
+  value requires a deliberate, reviewed edit of the audit script.
+- GitHub secret scanning with push protection is enabled on the repository.
+  Dependabot (`.github/dependabot.yml`) proposes monthly updates of the pinned
+  actions and npm dev dependencies; keep the `# vX.Y.Z` comment in sync.
+- PRs raising `@version` complete the release checklist in
+  `.github/pull_request_template.md` and include a security review of
+  `git diff v<previous>..HEAD`. File findings as issues labelled `security`.
+- `main` is protected (required `test` check, strict, admins included, no force
+  push or deletion). Tampermonkey auto-updates from `main`, so anyone able to
+  merge there can run code in users' Jira sessions; keep merge rights minimal.
 
 ## History and repository safety
 

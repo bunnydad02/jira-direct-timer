@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.17.0
+// @version      1.17.1
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -16,7 +16,7 @@
     const KEY = 'jira-direct-timer-v1';
     const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
     const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
-    const VERSION = '1.17.0';
+    const VERSION = '1.17.1';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -35,6 +35,7 @@
         #jira-direct-timer[data-other="true"] [data-clock] {color:#20559a}
         #jira-direct-timer [data-worklog-total] {margin:-5px 0 8px;color:#526078;font-size:10px;line-height:1.4;overflow-wrap:anywhere}
         #jira-direct-timer [data-worklog-total][data-state="error"] {color:#ae2a19}
+        #jira-direct-timer [data-target] {margin:-4px 0 8px;font-size:11px;font-weight:700;overflow-wrap:anywhere}
         #jira-direct-timer [data-measuring] {font-size:14px;font-weight:750;color:#20559a;overflow-wrap:anywhere}
         #jira-direct-timer a[data-issue],#jira-direct-timer a[data-title],#jira-direct-timer a[data-measuring] {display:block;color:inherit;text-decoration:none}
         #jira-direct-timer a[data-measuring] {color:#20559a}
@@ -89,7 +90,7 @@
         }
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<strong>Jira stopky</strong><span data-version-wrap><a data-version></a></span><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<strong>Jira stopky</strong><span data-version-wrap><a data-version></a></span><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-target hidden></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     const versionLink = panel.querySelector('[data-version]');
     versionLink.textContent = `v${VERSION}`;
     versionLink.setAttribute('href', 'https://github.com/bunnydad02/jira-direct-timer');
@@ -121,6 +122,7 @@
     const titleLink = panel.querySelector('[data-title]');
     const clock = panel.querySelector('[data-clock]');
     const worklogTotal = panel.querySelector('[data-worklog-total]');
+    const target = panel.querySelector('[data-target]');
     const saveRow = panel.querySelector('[data-save-row]');
     const start = panel.querySelector('[data-start]');
     const stop = panel.querySelector('[data-stop]');
@@ -379,8 +381,9 @@
     }
     function issue() {
         const meta = document.querySelector('meta[name="ajs-issue-key"]');
-        const selected = new URLSearchParams(location.search).get('selectedIssue');
-        const value = selected || (location.pathname.match(/\/browse\/([A-Z][A-Z0-9_]*-\d+)/) || [])[1] || meta && meta.content;
+        const browsed = (location.pathname.match(/\/browse\/([A-Z][A-Z0-9_]*-\d+)/) || [])[1];
+        // An issue page always targets its own key; selectedIssue applies only to boards and backlogs.
+        const value = browsed || new URLSearchParams(location.search).get('selectedIssue') || meta && meta.content;
         return /^[A-Z][A-Z0-9_]*-\d+$/.test(value || '') ? value : null;
     }
     function duration(value) {
@@ -421,6 +424,8 @@
                 link.href = displayValue ? `https://jira.alza.cz/browse/${encodeURIComponent(displayValue.issue)}` : '';
             }
             status.textContent = displayValue ? stateText : 'Nyn\u00ed se nic nem\u011b\u0159\u00ed.';
+            target.hidden = !currentIssue || (!!displayValue && displayValue.issue === currentIssue);
+            target.textContent = target.hidden ? '' : `Z\u00e1pis do: ${currentIssue}`;
             if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             if (independentManual) status.textContent += `\nCeka rucni zapis do ${independentManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
             const switching = active && value.issue !== currentIssue;
@@ -459,12 +464,22 @@
     }
     async function findSaved(value) {
         const marker = `[jira-direct-timer:${value.id}]`;
+        let user = null;
         let offset = 0;
         while (true) {
             const body = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?startAt=${offset}&maxResults=100`);
             if (!Array.isArray(body.worklogs) || !Number.isFinite(body.total)) throw new Error('Neocekavana odpoved Jira worklogu.');
-            const match = body.worklogs.find(w => typeof w.comment === 'string' && w.comment.includes(marker));
-            if (match) return match;
+            for (const worklog of body.worklogs) {
+                if (typeof worklog.comment !== 'string' || !worklog.comment.includes(marker)) continue;
+                // Another user's worklog carrying our marker must not count as our saved entry.
+                if (!user) {
+                    user = await request('/rest/api/2/myself');
+                    if (!userIdentifiers.some(field => hasIdentifier(user, field))) {
+                        throw new Error('Jira nevratila identitu prihlaseneho uzivatele. Zapis nebyl odeslan.');
+                    }
+                }
+                if (isOwnWorklog(worklog, user)) return worklog;
+            }
             offset += body.worklogs.length;
             if (offset >= body.total) return null;
             if (!body.worklogs.length) throw new Error('Jira nevratila vsechny zaznamy. Zapis nebyl opakovan.');
@@ -695,9 +710,16 @@
     }
 
     function issueCreationRequest(input, options) {
-        const url = typeof input === 'string' ? input : input && input.url;
+        const raw = input && typeof input === 'object' && typeof input.url === 'string' ? input.url : input;
         const method = String(options && options.method || input && input.method || 'GET').toUpperCase();
-        return method === 'POST' && /\/rest\/api\/(?:2|latest)\/issue\/?$/.test(String(url || '').split('?')[0]);
+        if (method !== 'POST' || raw === undefined || raw === null) return false;
+        let url;
+        try {
+            url = new URL(String(raw), location.href);
+        } catch (e) {
+            return false;
+        }
+        return url.origin === location.origin && /\/rest\/api\/(?:2|latest)\/issue\/?$/.test(url.pathname);
     }
 
     function captureCreatedIssue(body) {

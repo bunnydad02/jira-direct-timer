@@ -458,6 +458,27 @@
             equal(p.posts().length, 0);
             toast(p, 'saved', '00:02:00', 'DEMO-101');
         }},
+        {title: 'Odkaz se selectedIssue na strance tasku zapisuje do otevreneho tasku', async run(p) {
+            await p.reset();
+            p.search('?selectedIssue=DEMO-102');
+            equal(p.node('target').hidden, false);
+            equal(p.node('target').textContent, 'Z\u00e1pis do: DEMO-101');
+            await p.manual('5');
+            equal(p.posts().map(value => value.issue), ['DEMO-101']);
+            await p.click('start');
+            equal(p.state().issue, 'DEMO-101');
+            equal(p.node('target').hidden, true);
+        }},
+        {title: 'Cizi worklog s markerem neni povazovan za ulozeny', async run(p) {
+            const state = {...running(p), ended: p.now(), phase: 'stopped'};
+            const colleague = {key: 'colleague', name: 'other', displayName: 'Demo User'};
+            await p.reset({state, logs: [{id: 'foreign', issue: state.issue, timeSpentSeconds: 600, author: colleague,
+                comment: `[jira-direct-timer:${state.id}]`}]});
+            await p.click('save');
+            equal(p.posts().length, 1);
+            equal(p.state().phase, 'saved');
+            equal(p.state().worklogId, 'mock-2');
+        }},
         {title: 'Chyba souctu zustava viditelna, nezameni se za nulu', async run(p) {
             await p.reset({totalError: true});
             equal(p.node('worklog-total').dataset.state, 'error');

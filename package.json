@@ -2,8 +2,9 @@
   "name": "jira-direct-timer-tests",
   "private": true,
   "scripts": {
-    "test": "node --check jira-workspace-timer.user.js && node jira-workspace-timer.test.cjs && node --test .github/release.test.cjs && playwright test",
+    "test": "node --check jira-workspace-timer.user.js && node jira-workspace-timer.test.cjs && node --test .github/release.test.cjs .github/security-audit.test.cjs && node .github/security-audit.cjs && playwright test",
     "test:browser": "playwright test",
+    "audit:security": "node .github/security-audit.cjs",
     "playground": "node tests/server.cjs"
   },
   "devDependencies": {

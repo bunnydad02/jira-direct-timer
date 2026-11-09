@@ -49,6 +49,9 @@ prehled vydanych verzi a jejich zmen.
 - `CANCEL` zahodi pouze dosud neulozene mereni.
 - `ADD MINUTES` zapise kladny pocet celych minut na otevrenem ukolu.
   Potvrdit lze tlacitkem nebo klavesou Enter. Rucni zapis nemeni bezici casovac.
+- Otevreny ukol se na strance `/browse/<KLIC>` bere vzdy z adresy; parametr
+  `selectedIssue` plati jen na boardu / backlogu. Pokud panel zrovna nemeri
+  otevreny ukol, zobrazuje cil zapisu (`Zapis do: <KLIC>`).
 - Tlacitko `auto` u `ADD MINUTES` otevre nastaveni automatickeho vykazovani.
   Po zapnuti se pri vytvoreni issue pres Jira stranku automaticky vykaze
   nastaveny pocet minut (vychozi hodnota 10), vcetne subtasku. Vypnuto je
@@ -122,7 +125,8 @@ npx playwright install chromium
 npm test
 ```
 
-`npm test` spousti puvodni Node regrese i nove Chromium scenare.
+`npm test` spousti puvodni Node regrese, kontroly vydani, bezpecnostni audit
+(`npm run audit:security`) i nove Chromium scenare.
 Pouze browserove testy spustis pres `npm run test:browser`; server si spusti
 samy (port 4173 musi byt volny). Scenare jsou sdilene s interaktivnim hristem:
 barvy a rozmery panelu, texty a odkazy, instalovana verze podle metadat,
