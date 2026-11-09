@@ -746,20 +746,14 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(rapid.panel.children.find(child => 'toasts' in child.dataset).attributes['aria-live'], 'polite');
     const linkedIssue = setup(null);
     linkedIssue.search('?selectedIssue=DEMO-102');
-    assert.equal(linkedIssue.nodes['[data-target]'].hidden, false, 'show the write target while idle');
-    assert.equal(linkedIssue.nodes['[data-target]'].textContent, 'Z\u00e1pis do: DEMO-101');
+    assert.equal(linkedIssue.nodes['[data-target]'], undefined, 'the panel must not show a separate write-target label');
     await linkedIssue.click('manual');
     assert.match(linkedIssue.posts[0].path, /\/issue\/DEMO-101\/worklog/, 'selectedIssue must not redirect writes on an issue page');
     await linkedIssue.click('start');
     assert.equal(linkedIssue.state().issue, 'DEMO-101');
-    assert.equal(linkedIssue.nodes['[data-target]'].hidden, true, 'the tracked issue link already names the target');
-    linkedIssue.navigate('/browse/DEMO-103');
-    assert.equal(linkedIssue.nodes['[data-target]'].textContent, 'Z\u00e1pis do: DEMO-103',
-        'show where ADD MINUTES writes while another issue is measured');
     const board = setup(null);
     board.navigate('/secure/RapidBoard.jspa');
     board.search('?rapidView=1&selectedIssue=DEMO-102');
-    assert.equal(board.nodes['[data-target]'].textContent, 'Z\u00e1pis do: DEMO-102');
     await board.click('manual');
     assert.match(board.posts[0].path, /\/issue\/DEMO-102\/worklog/, 'boards keep using the selected issue');
     const foreignMarker = id => (path, options) => options.method === 'POST' ? undefined :

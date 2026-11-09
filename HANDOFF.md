@@ -23,9 +23,8 @@ for compatibility with installed copies and saved timer state.
   timer first and start the selected issue at the prior timer's end time.
   Navigation alone never switches timers. The open issue is the `/browse/<KEY>`
   path key; `selectedIssue` applies only when the path names no issue (boards,
-  backlogs), then the `ajs-issue-key` meta tag. When the panel does not
-  already show the open issue as the tracked issue, it shows the write target
-  (`Zápis do: <KEY>`).
+  backlogs), then the `ajs-issue-key` meta tag. The panel does not show a
+  separate write-target label.
 - `STOP` stops and saves the tracked issue. `CANCEL` discards only the current
   unsaved timer; it never deletes a saved Jira worklog. Actions have no
   confirmation dialogs.
@@ -122,7 +121,7 @@ CI also runs these browser regressions and retains failure traces/screenshots.
 Do not add production test hooks or enable the userscript on localhost.
 Test-only changes do not require a userscript version bump.
 
-The current userscript metadata and in-panel version are `1.17.1`. On each
+The current userscript metadata and in-panel version are `1.17.2`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.
