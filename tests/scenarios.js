@@ -257,6 +257,27 @@
             equal(p.posts()[1].body.timeSpentSeconds, 1200);
             equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0,8h');
         }},
+        {title: 'AUTO: nove issue vykazuje jen po zapnuti a zachova stopky', async run(p) {
+            await p.reset();
+            await p.createIssue();
+            equal(p.posts().length, 0, 'automatic reporting must be off by default');
+            await p.click('auto-open');
+            equal(p.node('auto-enabled').checked, false);
+            equal(p.node('auto-minutes').disabled, true);
+            p.node('auto-enabled').checked = true;
+            p.node('auto-enabled').dispatchEvent(new Event('change', {bubbles: true}));
+            equal(p.node('auto-minutes').disabled, false);
+            p.node('auto-minutes').value = '10';
+            await p.click('auto-save');
+            await p.click('start');
+            const timer = p.state();
+            await p.createIssue();
+            equal(p.posts().length, 1);
+            equal(p.posts()[0].issue, 'DEMO-104');
+            equal(p.posts()[0].body.timeSpentSeconds, 600);
+            includes(p.posts()[0].body.comment, 'Automaticky vykaz');
+            equal(p.state(), timer, 'automatic reporting must not replace the running timer');
+        }},
         {title: 'ADD MINUTES za behu nemeni mereni ani na jinem tasku', async run(p) {
             await p.reset();
             await p.click('start');

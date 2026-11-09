@@ -48,7 +48,12 @@ prehled vydanych verzi a jejich zmen.
 - `STOP` zastavi a ulozi prave mereny ukol.
 - `CANCEL` zahodi pouze dosud neulozene mereni.
 - `ADD MINUTES` zapise kladny pocet celych minut na otevrenem ukolu.
-  Potvrdit lze tlacitkem nebo klavesou Enter. Rucni zapis nemení bezici casovac.
+  Potvrdit lze tlacitkem nebo klavesou Enter. Rucni zapis nemeni bezici casovac.
+- Tlacitko `auto` u `ADD MINUTES` otevre nastaveni automatickeho vykazovani.
+  Po zapnuti se pri vytvoreni issue pres Jira stranku automaticky vykaze
+  nastaveny pocet minut (vychozi hodnota 10), vcetne subtasku. Vypnuto je
+  vychozi stav; automatika nemeni bezici stopky. Vytvoreni mimo tuto stranku
+  nezachyti.
 - Panel zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu podle
   prihlaseneho Jira uctu, nikoli vykazy kolegu. Pokud mas vlastni vykazy i na
   subtaskech, nasleduje v zavorce tvuj soucet vcetne subtasku (napr.

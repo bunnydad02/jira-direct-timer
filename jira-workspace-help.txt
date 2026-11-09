@@ -24,6 +24,12 @@ Pouziti:
 - STOP zastavi a ulozi mereny ukol. CANCEL zahodi neulozene mereni bez zapisu.
 - ADD MINUTES zapise kladny pocet celych minut na otevreny ukol. Zapis odesles
   tlacitkem nebo Enterem; po uspechu se vstup vycisti.
+- Tlacitko auto u ADD MINUTES otevre nastaveni automatickeho vykazovani.
+  Po zapnuti se pri vytvoreni issue pres Jira stranku automaticky vykaze
+  nastaveny pocet minut (vychozi hodnota 10), vcetne subtasku. Automatika je
+  ve vychozim stavu vypnuta a nemeni bezici stopky. Vytvoreni mimo tuto stranku
+  nezachyti. Pri nejistem vysledku zapis neodesila opakovane; pouzij
+  Zpracovat cekajici zapisy pro overeni znacky.
 - Rucni zapis nemeni bezici casovac. Intervaly se mohou prekryvat; zapisuj jen
   cas, ktery jeste neni vykazany.
 - Pod casovacem se zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu
@@ -49,6 +55,8 @@ Vykazovany cas:
 Trvalost, chyby a obnova:
 - Mereni a stav ukladani jsou ulozene v localStorage pro jira.alza.cz.
   Jsou sdilene mezi kartami stejneho profilu, ne mezi profily nebo zarizenimi.
+- Nastaveni AUTO a fronta automatickych zapisu jsou ulozeny oddelene od stavu
+  stopek; nemaz jejich polozky, dokud neni worklog overen.
 - Nemaz data webu a behem nedokonceneho zapisu nemen prihlaseneho uzivatele.
 - Chyby API zustavaji viditelne. Pri nejistem vysledku se POST automaticky
   neopakuje.
