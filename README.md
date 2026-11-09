@@ -125,7 +125,8 @@ npx playwright install chromium
 npm test
 ```
 
-`npm test` spousti puvodni Node regrese i nove Chromium scenare.
+`npm test` spousti puvodni Node regrese, kontroly vydani, bezpecnostni audit
+(`npm run audit:security`) i nove Chromium scenare.
 Pouze browserove testy spustis pres `npm run test:browser`; server si spusti
 samy (port 4173 musi byt volny). Scenare jsou sdilene s interaktivnim hristem:
 barvy a rozmery panelu, texty a odkazy, instalovana verze podle metadat,

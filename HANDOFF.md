@@ -142,6 +142,26 @@ using its manual trigger. Verify the published Release before considering a
 user-facing version complete. Tampermonkey still updates from `main`, not
 from the Release.
 
+### Security review before release
+
+- Every PR and push to `main` runs `node .github/security-audit.cjs` (also part
+  of `npm test`) and `npm audit --audit-level=high`. The audit fails on changed
+  privileged metadata (`@match`, `@grant`, update URLs, any `@connect`,
+  `@require`, `@resource`), `eval`/`new Function`/string timers, dynamic
+  `innerHTML`/`insertAdjacentHTML`, `fetch` outside `request()`, non-relative
+  `request()` paths, unexpected absolute URLs, workflow actions not pinned to
+  a full commit SHA, and obvious secrets in tracked files. Changing an allowed
+  value requires a deliberate, reviewed edit of the audit script.
+- GitHub secret scanning with push protection is enabled on the repository.
+  Dependabot (`.github/dependabot.yml`) proposes monthly updates of the pinned
+  actions and npm dev dependencies; keep the `# vX.Y.Z` comment in sync.
+- PRs raising `@version` complete the release checklist in
+  `.github/pull_request_template.md` and include a security review of
+  `git diff v<previous>..HEAD`. File findings as issues labelled `security`.
+- `main` is protected (required `test` check, strict, admins included, no force
+  push or deletion). Tampermonkey auto-updates from `main`, so anyone able to
+  merge there can run code in users' Jira sessions; keep merge rights minimal.
+
 ## History and repository safety
 
 The timer originated as a direct Jira worklog alternative after trouble with
