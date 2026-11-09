@@ -28,7 +28,8 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let onFetch = () => {};
     let onTotals = () => ({fields: {subtasks: []}});
     let onIdentity = () => currentUser;
-    const location = {pathname: '/browse/DEMO-101', search: ''};
+    const location = {pathname: '/browse/DEMO-101', search: '', origin: 'https://jira.alza.cz',
+        get href() { return `${this.origin}${this.pathname}${this.search}`; }};
     function element() {
         return {dataset: {}, value: '', children: [], attributes: {},
             checked: false, disabled: false, hidden: false,
@@ -61,13 +62,13 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
             Promise.resolve().then(() => onCreatedIssue('DEMO-105')).then(body => {
                 this.status = 201;
                 this.responseText = JSON.stringify(body);
-                this.listeners.load();
+                this.listeners.load?.();
             }).finally(() => { active--; });
         }
     }
     const mockFetch = async (path, options = {}) => {
         await Promise.resolve();
-        if (path === '/rest/api/2/issue' && options.method === 'POST') {
+        if (/^(?:https:\/\/[^/]+)?\/rest\/api\/2\/issue$/.test(path) && options.method === 'POST') {
             active++;
             try {
                 const body = await onCreatedIssue('DEMO-104');
@@ -106,7 +107,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     const context = {
         window, document: {body: element(), createElement: tag => { const node = element(); if (tag === 'section') panel = node; return node; }, getElementById: () => null,
             querySelector: selector => selector === '#summary-val' ? {textContent: 'Full issue title <safe text>'} : {content: 'PMA-OLD'}},
-        location, URLSearchParams,
+        location, URLSearchParams, URL,
         localStorage: {
             getItem: key => key === 'jira-direct-timer-v1' ? state ? JSON.stringify(state) : null :
                 key === AUTO_SETTINGS_KEY ? autoSettings ? JSON.stringify(autoSettings) : null :
@@ -140,16 +141,16 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
             nodes['[data-auto-minutes]'].value = String(value);
             nodes['[data-auto-save]'].onclick();
         },
-        createIssue: async () => {
-            await window.fetch('/rest/api/2/issue', {method: 'POST', body: '{}'});
+        createIssue: async (url = '/rest/api/2/issue') => {
+            await window.fetch(url, {method: 'POST', body: '{}'});
             await new Promise(resolve => setImmediate(resolve));
             while (active) await new Promise(resolve => setImmediate(resolve));
             await new Promise(resolve => setImmediate(resolve));
             await new Promise(resolve => setTimeout(resolve, 10));
         },
-        createIssueViaXhr: async () => {
+        createIssueViaXhr: async (url = '/rest/api/2/issue') => {
             const xhr = new window.XMLHttpRequest();
-            xhr.open('POST', '/rest/api/2/issue');
+            xhr.open('POST', url);
             xhr.send();
             while (active) await new Promise(resolve => setImmediate(resolve));
             await new Promise(resolve => setTimeout(resolve, 10));
@@ -161,6 +162,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         onTotals: callback => { onTotals = callback; },
         onIdentity: callback => { onIdentity = callback; },
         navigate: path => { location.pathname = path; render(); },
+        search: value => { location.search = value; render(); },
         keydown: async (key = 'Enter') => {
             let prevented = false;
             await nodes['[data-minutes]'].onkeydown({key, preventDefault: () => { prevented = true; }});
@@ -742,5 +744,58 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     rapid.render();
     assert.equal(rapid.toasts().length, 0);
     assert.equal(rapid.panel.children.find(child => 'toasts' in child.dataset).attributes['aria-live'], 'polite');
-    console.log('PASS: Enter/manual minutes, uninterrupted timer, second boundaries, slow API, failures, legacy recovery, deduplication, switching, cancellation, minimum duration, titles, immediate idle and save/discard toasts');
+    const linkedIssue = setup(null);
+    linkedIssue.search('?selectedIssue=DEMO-102');
+    assert.equal(linkedIssue.nodes['[data-target]'].hidden, false, 'show the write target while idle');
+    assert.equal(linkedIssue.nodes['[data-target]'].textContent, 'Z\u00e1pis do: DEMO-101');
+    await linkedIssue.click('manual');
+    assert.match(linkedIssue.posts[0].path, /\/issue\/DEMO-101\/worklog/, 'selectedIssue must not redirect writes on an issue page');
+    await linkedIssue.click('start');
+    assert.equal(linkedIssue.state().issue, 'DEMO-101');
+    assert.equal(linkedIssue.nodes['[data-target]'].hidden, true, 'the tracked issue link already names the target');
+    linkedIssue.navigate('/browse/DEMO-103');
+    assert.equal(linkedIssue.nodes['[data-target]'].textContent, 'Z\u00e1pis do: DEMO-103',
+        'show where ADD MINUTES writes while another issue is measured');
+    const board = setup(null);
+    board.navigate('/secure/RapidBoard.jspa');
+    board.search('?rapidView=1&selectedIssue=DEMO-102');
+    assert.equal(board.nodes['[data-target]'].textContent, 'Z\u00e1pis do: DEMO-102');
+    await board.click('manual');
+    assert.match(board.posts[0].path, /\/issue\/DEMO-102\/worklog/, 'boards keep using the selected issue');
+    const foreignMarker = id => (path, options) => options.method === 'POST' ? undefined :
+        {total: 1, worklogs: [{id: 'foreign', timeSpentSeconds: 600, author: {key: 'other-user', name: 'other'}, comment: `[jira-direct-timer:${id}]`}]};
+    const foreignAuto = setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 10}});
+    foreignAuto.onFetch(foreignMarker('auto-DEMO-104'));
+    await foreignAuto.createIssue();
+    assert.equal(foreignAuto.posts.length, 1, "another user's marker must not suppress the automatic worklog");
+    assert.equal(foreignAuto.autoQueue().length, 0);
+    const foreignStopped = setup({id: 'stopped-1', issue: 'DEMO-101', started: 199000000, ended: 199600000, phase: 'stopped'});
+    foreignStopped.onFetch(foreignMarker('stopped-1'));
+    await foreignStopped.click('save');
+    assert.equal(foreignStopped.posts.length, 1);
+    assert.equal(foreignStopped.state().phase, 'saved');
+    assert.equal(foreignStopped.state().worklogId, 'log-1', 'the saved worklog must be our own POST');
+    const foreignPending = setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 10}, autoQueue: [
+        {id: 'auto-DEMO-104', issue: 'DEMO-104', started: 199400000, ended: 200000000, phase: 'pending', automatic: true}]});
+    foreignPending.onFetch(foreignMarker('auto-DEMO-104'));
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(foreignPending.posts.length, 0, 'an uncertain POST must not be confirmed by a foreign worklog');
+    assert.equal(foreignPending.autoQueue()[0].phase, 'pending');
+    assert.match(foreignPending.nodes['[data-error]'].textContent, /nebyl nalezen/);
+    const unknownIdentity = setup({id: 'stopped-2', issue: 'DEMO-101', started: 199000000, ended: 199600000, phase: 'stopped'});
+    unknownIdentity.onIdentity(() => ({displayName: 'Demo User'}));
+    unknownIdentity.onFetch(foreignMarker('stopped-2'));
+    await unknownIdentity.click('save');
+    assert.equal(unknownIdentity.posts.length, 0, 'do not write when ownership of an existing marker cannot be verified');
+    assert.equal(unknownIdentity.state().phase, 'stopped');
+    assert.match(unknownIdentity.nodes['[data-error]'].textContent, /identitu prihlaseneho uzivatele/);
+    for (const via of ['createIssue', 'createIssueViaXhr']) {
+        const crossOrigin = setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 10}});
+        await crossOrigin[via]('https://evil.example/rest/api/2/issue');
+        assert.equal(crossOrigin.posts.length, 0, `${via}: ignore issue creation on another origin`);
+        assert.equal(crossOrigin.autoQueue().length, 0);
+        await crossOrigin[via]('https://jira.alza.cz/rest/api/2/issue');
+        assert.equal(crossOrigin.posts.length, 1, `${via}: accept absolute same-origin issue creation`);
+    }
+    console.log('PASS: Enter/manual minutes, uninterrupted timer, second boundaries, slow API, failures, legacy recovery, deduplication, switching, cancellation, minimum duration, titles, immediate idle and save/discard toasts, write target, worklog ownership and same-origin issue creation');
 })().catch(e => { console.error(e); process.exitCode = 1; });

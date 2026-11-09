@@ -151,7 +151,8 @@
             autoQueueRaw: options.autoQueue ? JSON.stringify(options.autoQueue) : null,
             logs: clone(options.logs || []).map(log => ({author: clone(user), ...log})), requests: [], posts: [], offset: 0, active: 0,
             latency: options.latency ?? 30, failure: 'none', lock: options.lock || 'available',
-            totalError: options.totalError || false, location: {pathname: '', search: ''},
+            totalError: options.totalError || false, location: {pathname: '', search: '', origin: 'https://jira.alza.cz',
+                get href() { return `${this.origin}${this.pathname}${this.search}`; }},
             parents: clone(options.parents || {}), aggregateError: options.aggregateError || false,
             user: clone(user), identityError: options.identityError || false, worklogErrorIssue: options.worklogErrorIssue
         };
@@ -164,6 +165,7 @@
     }
     window.playground = {
         reset, idle, navigate, sleep,
+        search(value) { model.location.search = value; render?.(); },
         node: name => $(`[data-${name}]`),
         panel: () => $('#jira-direct-timer'),
         state: () => model.raw ? JSON.parse(model.raw) : null,

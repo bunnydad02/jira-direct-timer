@@ -24,6 +24,9 @@ Pouziti:
 - STOP zastavi a ulozi mereny ukol. CANCEL zahodi neulozene mereni bez zapisu.
 - ADD MINUTES zapise kladny pocet celych minut na otevreny ukol. Zapis odesles
   tlacitkem nebo Enterem; po uspechu se vstup vycisti.
+- Na strance /browse/<KLIC> je cilem vzdy tento ukol (selectedIssue v odkazu
+  plati jen na boardu / backlogu). Kdyz se otevreny ukol nemeri, panel ukazuje
+  "Zapis do: <KLIC>".
 - Tlacitko auto u ADD MINUTES otevre nastaveni automatickeho vykazovani.
   Po zapnuti se pri vytvoreni issue pres Jira stranku automaticky vykaze
   nastaveny pocet minut (vychozi hodnota 10), vcetne subtasku. Automatika je
@@ -60,7 +63,8 @@ Trvalost, chyby a obnova:
 - Nemaz data webu a behem nedokonceneho zapisu nemen prihlaseneho uzivatele.
 - Chyby API zustavaji viditelne. Pri nejistem vysledku se POST automaticky
   neopakuje.
-- Tlacitko Ulozit / Overit dohleda unikatni znacku ve worklogu. Nalezeny zapis
+- Tlacitko Ulozit / Overit dohleda unikatni znacku ve tvem worklogu (worklog
+  jineho autora se stejnou znackou se nepocita). Nalezeny zapis
   potvrdi bez duplicity. Pokud jej nenajde, zkontroluj Jira Work log rucne;
   zapis bez kontroly znovu neposilej.
 - Po chybe prepnuti zustava ulozen puvodni ukol i cil prepnuti.
