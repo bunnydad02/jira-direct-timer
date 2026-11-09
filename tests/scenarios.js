@@ -461,13 +461,11 @@
         {title: 'Odkaz se selectedIssue na strance tasku zapisuje do otevreneho tasku', async run(p) {
             await p.reset();
             p.search('?selectedIssue=DEMO-102');
-            equal(p.node('target').hidden, false);
-            equal(p.node('target').textContent, 'Z\u00e1pis do: DEMO-101');
+            equal(p.node('target'), null);
             await p.manual('5');
             equal(p.posts().map(value => value.issue), ['DEMO-101']);
             await p.click('start');
             equal(p.state().issue, 'DEMO-101');
-            equal(p.node('target').hidden, true);
         }},
         {title: 'Cizi worklog s markerem neni povazovan za ulozeny', async run(p) {
             const state = {...running(p), ended: p.now(), phase: 'stopped'};

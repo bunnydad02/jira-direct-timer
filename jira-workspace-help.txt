@@ -25,8 +25,7 @@ Pouziti:
 - ADD MINUTES zapise kladny pocet celych minut na otevreny ukol. Zapis odesles
   tlacitkem nebo Enterem; po uspechu se vstup vycisti.
 - Na strance /browse/<KLIC> je cilem vzdy tento ukol (selectedIssue v odkazu
-  plati jen na boardu / backlogu). Kdyz se otevreny ukol nemeri, panel ukazuje
-  "Zapis do: <KLIC>".
+  plati jen na boardu / backlogu).
 - Tlacitko auto u ADD MINUTES otevre nastaveni automatickeho vykazovani.
   Po zapnuti se pri vytvoreni issue pres Jira stranku automaticky vykaze
   nastaveny pocet minut (vychozi hodnota 10), vcetne subtasku. Automatika je
