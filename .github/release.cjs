@@ -2,7 +2,22 @@ const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 
-function loadRelease(readFile = fs.readFileSync) {
+// Releases before this version were published before generated screenshots existed.
+const SCREENSHOTS_SINCE = [1, 17, 4];
+const SCREENSHOT_LINK = /!\[[^\]\n]*\]\(\.\.\/docs\/screenshots\/([a-z0-9-]+\.png)\)/g;
+
+function requiresScreenshots(version) {
+    const parts = version.split('.').map(Number);
+    const index = parts.findIndex((part, i) => part !== SCREENSHOTS_SINCE[i]);
+    return index === -1 || parts[index] > SCREENSHOTS_SINCE[index];
+}
+
+function releaseBody(release, repo) {
+    const base = `https://raw.githubusercontent.com/${repo.owner}/${repo.repo}/${release.tag}/docs/screenshots/`;
+    return release.body.replace(SCREENSHOT_LINK, (link, file) => link.replace(`../docs/screenshots/${file}`, `${base}${file}`));
+}
+
+function loadRelease(readFile = fs.readFileSync, exists = fs.existsSync) {
     const root = path.join(__dirname, '..');
     const source = readFile(path.join(root, 'jira-workspace-timer.user.js'), 'utf8');
     const version = source.split('// ==/UserScript==')[0].match(/^\/\/ @version\s+(\d+\.\d+\.\d+)\s*$/m)?.[1];
@@ -15,6 +30,14 @@ function loadRelease(readFile = fs.readFileSync) {
     assert.equal(body.split(/\r?\n/)[0], `# ${name}`, 'Release notes must identify the current version.');
     assert.match(body, /(?:^|\n)## Changes\r?\n(?:\r?\n)*- \S+/,
         'Release notes must include a Changes section with user-facing changes.');
+    const screenshots = [...body.matchAll(SCREENSHOT_LINK)].map(match => match[1]);
+    if (requiresScreenshots(version)) {
+        assert.match(body, /(?:^|\n)## Screenshots\r?\n/, 'Release notes must include a Screenshots section.');
+        assert.ok(screenshots.length, 'Release notes must embed relevant images from ../docs/screenshots/.');
+    }
+    for (const file of screenshots) {
+        assert.ok(exists(path.join(root, 'docs', 'screenshots', file)), `Missing release screenshot: docs/screenshots/${file}`);
+    }
     return {tag, name, body, source};
 }
 
@@ -49,7 +72,7 @@ async function publishRelease(github, repo, sha, release) {
 
     const {data: published} = await github.rest.repos.createRelease({
         ...repo, tag_name: release.tag, target_commitish: sha,
-        name: release.name, body: release.body, draft: false, prerelease: false,
+        name: release.name, body: releaseBody(release, repo), draft: false, prerelease: false,
         make_latest: 'legacy'
     });
     return {created: true, url: published.html_url};
