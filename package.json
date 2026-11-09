@@ -8,6 +8,6 @@
     "playground": "node tests/server.cjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.64.1"
+    "@playwright/test": "1.65.0"
   }
 }
