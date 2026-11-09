@@ -60,19 +60,22 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         send() {
             active++;
             Promise.resolve().then(() => onCreatedIssue('DEMO-105')).then(body => {
-                this.status = 201;
+                this.status = extra.createStatus || 201;
                 this.responseText = JSON.stringify(body);
+                this.response = body;
                 this.listeners.load?.();
             }).finally(() => { active--; });
         }
     }
     const mockFetch = async (path, options = {}) => {
         await Promise.resolve();
-        if (/^(?:https:\/\/[^/]+)?\/rest\/api\/2\/issue$/.test(path) && options.method === 'POST') {
+        const url = new URL(path, location.href);
+        if ((/\/rest\/api\/(?:2|latest)\/issue\/?$/.test(url.pathname) ||
+            /\/secure\/(?:QuickCreateIssue|Create(?:SubTask)?IssueDetails)(?:!init)?\.jspa$/.test(url.pathname)) && options.method === 'POST') {
             active++;
             try {
                 const body = await onCreatedIssue('DEMO-104');
-                return {ok: true, clone: () => ({json: async () => body})};
+                return {ok: (extra.createStatus || 201) < 400, clone: () => ({json: async () => body})};
             } finally {
                 active--;
             }
@@ -148,9 +151,10 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
             await new Promise(resolve => setImmediate(resolve));
             await new Promise(resolve => setTimeout(resolve, 10));
         },
-        createIssueViaXhr: async (url = '/rest/api/2/issue') => {
+        createIssueViaXhr: async (url = '/rest/api/2/issue', responseType = '') => {
             const xhr = new window.XMLHttpRequest();
             xhr.open('POST', url);
+            xhr.responseType = responseType;
             xhr.send();
             while (active) await new Promise(resolve => setImmediate(resolve));
             await new Promise(resolve => setTimeout(resolve, 10));
@@ -233,6 +237,57 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(automaticXhr.posts.length, 1, 'also observe Jira issue creation through XMLHttpRequest');
     assert.match(automaticXhr.posts[0].path, /DEMO-105\/worklog/);
     assert.equal(automaticXhr.posts[0].body.timeSpentSeconds, 300);
+    for (const via of ['createIssue', 'createIssueViaXhr']) {
+        for (const endpoint of ['/secure/QuickCreateIssue.jspa?decorator=none',
+            '/secure/CreateSubTaskIssueDetails.jspa?decorator=none',
+            'https://jira.alza.cz/secure/CreateIssueDetails.jspa']) {
+            const form = setup(activeTimer, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 11}});
+            form.onCreatedIssue(key => ({issueKey: key, issueId: '104', issueUrl: `/browse/${key}`}));
+            await form[via](endpoint, 'json');
+            assert.equal(form.posts.length, 1, `${via}: observe successful Jira creation forms`);
+            const key = via === 'createIssue' ? 'DEMO-104' : 'DEMO-105';
+            assert.equal(form.posts[0].path, `/rest/api/2/issue/${key}/worklog?adjustEstimate=leave`);
+            assert.equal(form.posts[0].body.timeSpentSeconds, 660);
+            assert.equal(form.posts[0].body.started, new Date(200000000 - 660000).toISOString().replace('Z', '+0000'));
+            assert.deepEqual(form.state(), activeTimer);
+            await form[via](endpoint);
+            assert.equal(form.posts.length, 1, 'duplicate creation notifications must not duplicate worklogs');
+        }
+        for (const endpoint of ['https://evil.example/secure/QuickCreateIssue.jspa',
+            'https://evil.example/secure/CreateSubTaskIssueDetails.jspa',
+            '/secure/QuickCreateIssue!init.jspa',
+            '/secure/CreateSubTaskIssueDetails!init.jspa']) {
+            const ignored = setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 11}});
+            ignored.onCreatedIssue(key => ({issueKey: key}));
+            await ignored[via](endpoint);
+            assert.equal(ignored.posts.length, 0, 'ignore foreign origins and form initialization');
+            assert.equal(ignored.autoQueue().length, 0);
+        }
+        for (const body of [{errors: {summary: 'Required'}}, {issueKey: 'invalid'}]) {
+            const invalid = setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 11}});
+            invalid.onCreatedIssue(() => body);
+            await invalid[via]('/secure/QuickCreateIssue.jspa');
+            assert.equal(invalid.posts.length, 0, 'validation failures or invalid keys must not create worklogs');
+            assert.equal(invalid.autoQueue().length, 0);
+            assert.match(invalid.nodes['[data-error]'].textContent, /nevratila jeji klic/);
+        }
+        const failed = setup(null, 0, '30', false, 0, {
+            autoSettings: {enabled: true, minutes: 11}, createStatus: 400
+        });
+        await failed[via]('/secure/QuickCreateIssue.jspa');
+        assert.equal(failed.posts.length, 0, 'failed creation HTTP responses must not create worklogs');
+        const recovery = setup(activeTimer, 1, '30', false, 0, {
+            autoSettings: {enabled: true, minutes: 11}, failureMode: 'after'
+        });
+        recovery.onCreatedIssue(key => ({issueKey: key}));
+        await recovery[via]('/secure/QuickCreateIssue.jspa');
+        assert.equal(recovery.autoQueue()[0].phase, 'pending');
+        assert.match(recovery.nodes['[data-error]'].textContent, /Response lost/);
+        await recovery.click('auto-retry');
+        assert.equal(recovery.posts.length, 1);
+        assert.equal(recovery.autoQueue().length, 0);
+        assert.deepEqual(recovery.state(), activeTimer);
+    }
     const unrecognizedCreatedIssue = setup(null, 0, '30', false, 0, {
         autoSettings: {enabled: true, minutes: 10}
     });

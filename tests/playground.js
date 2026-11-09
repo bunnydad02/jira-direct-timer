@@ -70,7 +70,8 @@
         const mockFetch = async (path, options = {}) => {
             const method = options.method || 'GET';
             const myself = path === '/rest/api/2/myself' && method === 'GET';
-            const createIssue = path === '/rest/api/2/issue' && method === 'POST';
+            const createForm = path === '/secure/QuickCreateIssue.jspa';
+            const createIssue = (path === '/rest/api/2/issue' || createForm) && method === 'POST';
             const match = /^\/rest\/api\/2\/issue\/(DEMO-10[1-4])(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
             if ((!match && !myself && !createIssue) || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
             current.requests.push({method, path});
@@ -83,7 +84,8 @@
                     return {ok: true, json: async () => clone(current.user)};
                 }
                 if (createIssue) {
-                    return {ok: true, clone: () => ({json: async () => ({key: 'DEMO-104'})})};
+                    const body = createForm ? {issueKey: 'DEMO-104', issueId: '104'} : {key: 'DEMO-104'};
+                    return {ok: true, clone: () => ({json: async () => body})};
                 }
                 const issue = match[1];
                 if (match[2] === '?fields=summary') {
@@ -176,8 +178,9 @@
         advance(ms) { model.offset += ms; render(); },
         failure(value) { model.failure = value; $('#failure').value = value; },
         async reload() { mount(); await idle(); },
-        async createIssue() {
-            await timerWindow.fetch('/rest/api/2/issue', {method: 'POST', body: '{}'});
+        async createIssue(subtask = false) {
+            await timerWindow.fetch(subtask ? '/secure/QuickCreateIssue.jspa' : '/rest/api/2/issue',
+                {method: 'POST', body: '{}'});
             await sleep(0);
             await idle();
             await sleep(0);

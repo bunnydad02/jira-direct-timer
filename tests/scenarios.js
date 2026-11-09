@@ -278,6 +278,25 @@
             includes(p.posts()[0].body.comment, 'Automaticky vykaz');
             equal(p.state(), timer, 'automatic reporting must not replace the running timer');
         }},
+        {title: 'AUTO: Sub-task Bug pres Jira formular vykaze 11 minut, obnova bez duplicit', async run(p) {
+            await p.reset({autoSettings: {enabled: true, minutes: 11}});
+            await p.click('start');
+            const timer = p.state();
+            p.failure('after');
+            await p.createIssue(true);
+            equal(p.posts().length, 1);
+            equal(p.posts()[0].issue, 'DEMO-104');
+            equal(p.posts()[0].body.timeSpentSeconds, 660);
+            includes(p.posts()[0].body.comment, '[jira-direct-timer:auto-DEMO-104]');
+            includes(p.node('error').textContent, 'Simulovana ztrata odpovedi');
+            equal(p.state(), timer);
+            await p.reload();
+            equal(p.posts().length, 1, 'reload must verify the marker, not repeat the POST');
+            equal(p.logs().length, 1);
+            await p.createIssue(true);
+            equal(p.posts().length, 1, 'repeated creation notification must not duplicate the worklog');
+            equal(p.state(), timer);
+        }},
         {title: 'ADD MINUTES za behu nemeni mereni ani na jinem tasku', async run(p) {
             await p.reset();
             await p.click('start');

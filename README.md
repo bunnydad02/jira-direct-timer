@@ -53,7 +53,8 @@ prehled vydanych verzi a jejich zmen.
   `selectedIssue` plati jen na boardu / backlogu.
 - Tlacitko `auto` u `ADD MINUTES` otevre nastaveni automatickeho vykazovani.
   Po zapnuti se pri vytvoreni issue pres Jira stranku automaticky vykaze
-  nastaveny pocet minut (vychozi hodnota 10), vcetne subtasku. Vypnuto je
+  nastaveny pocet minut (vychozi hodnota 10), vcetne Sub-task Bugu pres Jira
+  formular i REST API. Vyzaduje platny klic v odpovedi na vytvoreni. Vypnuto je
   vychozi stav; automatika nemeni bezici stopky. Vytvoreni mimo tuto stranku
   nezachyti.
 - Panel zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu podle
