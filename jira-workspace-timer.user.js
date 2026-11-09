@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.16.9
+// @version      1.17.0
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -14,7 +14,9 @@
     'use strict';
     if (window.top !== window || document.getElementById('jira-direct-timer')) return;
     const KEY = 'jira-direct-timer-v1';
-    const VERSION = '1.16.9';
+    const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
+    const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
+    const VERSION = '1.17.0';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -52,9 +54,19 @@
         #jira-direct-timer [data-save-row] {margin-top:8px}
         #jira-direct-timer [data-save] {width:100%}
         #jira-direct-timer [data-manual-row] {margin-top:12px;padding-top:10px;border-top:1px solid #172b4d20}
+        #jira-direct-timer [data-manual-heading] {display:flex;align-items:center;justify-content:space-between;gap:8px}
         #jira-direct-timer label {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;font-weight:700;letter-spacing:.4px}
         #jira-direct-timer input {box-sizing:border-box;width:70px;min-width:0;padding:6px;border:1px solid #b9c4d2;border-radius:6px;background:#fff;color:#253249;font-family:inherit;font-size:13px}
         #jira-direct-timer [data-manual] {width:100%;margin-top:7px}
+        #jira-direct-timer [data-auto-open] {padding:2px 5px;border:0;background:transparent;color:#526078;font-size:9px;font-weight:500}
+        #jira-direct-timer [data-auto-settings] {position:absolute;left:8px;right:8px;bottom:8px;z-index:2;padding:12px;border:1px solid #b9c4d2;border-radius:8px;background:#fff;box-shadow:0 4px 16px #172b4d30}
+        #jira-direct-timer [data-auto-settings] header {display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-weight:700}
+        #jira-direct-timer [data-auto-settings] header button {padding:1px 5px;border:0;font-size:14px}
+        #jira-direct-timer [data-auto-enabled-label] {justify-content:flex-start;font-weight:500;letter-spacing:0}
+        #jira-direct-timer [data-auto-enabled] {width:auto}
+        #jira-direct-timer [data-auto-minutes-row] {margin-top:8px}
+        #jira-direct-timer [data-auto-save],#jira-direct-timer [data-auto-retry] {width:100%;margin-top:9px}
+        #jira-direct-timer [data-auto-error] {margin-top:7px;color:#ae2a19;font-size:10px}
         #jira-direct-timer [data-error] {color:#ae2a19;font-size:11px;white-space:pre-wrap;overflow-wrap:anywhere}
         #jira-direct-timer [data-error]:not(:empty) {margin-top:8px}
         #jira-direct-timer [data-toasts] {position:absolute;left:-1px;right:-1px;bottom:calc(100% + 12px);display:flex;flex-direction:column;gap:10px;overflow:visible}
@@ -87,8 +99,16 @@
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
     manualRow.dataset.manualRow = '';
-    manualRow.innerHTML = '<label>ADD MINUTES <input data-minutes type="number" min="1" step="1"></label><button data-manual>ADD MINUTES</button>';
+    manualRow.innerHTML = '<div data-manual-heading><label>ADD MINUTES <input data-minutes type="number" min="1" step="1"></label><button data-auto-open aria-label="Otevrit nastaveni AUTO">auto</button></div><button data-manual>ADD MINUTES</button>';
     panel.appendChild(manualRow);
+    const autoSettingsDialog = document.createElement('div');
+    autoSettingsDialog.dataset.autoSettings = '';
+    autoSettingsDialog.hidden = true;
+    autoSettingsDialog.setAttribute('role', 'dialog');
+    autoSettingsDialog.setAttribute('aria-modal', 'true');
+    autoSettingsDialog.setAttribute('aria-label', 'Automaticke vykazovani');
+    autoSettingsDialog.innerHTML = '<header><span>Automaticke vykazovani</span><button data-auto-close aria-label="Zavrit bez ulozeni">x</button></header><label data-auto-enabled-label><input data-auto-enabled type="checkbox">Pri zalozeni nove issue vykazovat</label><label data-auto-minutes-row>Minuty <input data-auto-minutes type="number" min="1" step="1"></label><button data-auto-save>Ulozit</button><button data-auto-retry hidden>Zpracovat cekajici zapisy</button><div data-auto-error role="alert"></div>';
+    panel.appendChild(autoSettingsDialog);
     const toasts = document.createElement('div');
     toasts.dataset.toasts = '';
     toasts.setAttribute('role', 'status');
@@ -112,6 +132,13 @@
     const save = panel.querySelector('[data-save]');
     const minutes = panel.querySelector('[data-minutes]');
     const manual = panel.querySelector('[data-manual]');
+    const autoOpen = panel.querySelector('[data-auto-open]');
+    const autoClose = autoSettingsDialog.querySelector('[data-auto-close]');
+    const autoEnabled = autoSettingsDialog.querySelector('[data-auto-enabled]');
+    const autoMinutes = autoSettingsDialog.querySelector('[data-auto-minutes]');
+    const autoSave = autoSettingsDialog.querySelector('[data-auto-save]');
+    const autoRetry = autoSettingsDialog.querySelector('[data-auto-retry]');
+    const autoError = autoSettingsDialog.querySelector('[data-auto-error]');
     let busy = false;
     let actionDisplay = null;
     let displayedIssue = null;
@@ -120,6 +147,49 @@
     const titleRequests = new Set();
     const worklogTotals = new Map();
     let notifications = [];
+    let autoSettingsValue;
+    let autoBusy = false;
+
+    function readAutoSettings() {
+        const raw = localStorage.getItem(AUTO_SETTINGS_KEY);
+        if (!raw) return {enabled: false, minutes: 10};
+        const value = JSON.parse(raw);
+        if (!value || typeof value.enabled !== 'boolean' || !Number.isSafeInteger(value.minutes) || value.minutes < 1 ||
+            !Number.isSafeInteger(value.minutes * 60000) || !Number.isFinite(new Date(Date.now() - value.minutes * 60000).getTime())) {
+            throw new Error('Nastaveni automatickeho vykazovani je poskozene. Oprav ho v nastaveni AUTO.');
+        }
+        return value;
+    }
+
+    function readAutoQueue() {
+        const raw = localStorage.getItem(AUTO_QUEUE_KEY);
+        if (!raw) return [];
+        const entries = JSON.parse(raw);
+        if (!Array.isArray(entries) || entries.some(value =>
+            !value || value.automatic !== true || typeof value.id !== 'string' ||
+            !/^[A-Z][A-Z0-9_]*-\d+$/.test(value.issue) || value.id !== `auto-${value.issue}` ||
+            !Number.isFinite(value.started) || !Number.isFinite(value.ended) || value.ended < value.started ||
+            !['stopped', 'pending', 'saved'].includes(value.phase))) {
+            throw new Error('Fronta automatickych worklogu je poskozena. Nemaz data; je nutna kontrola.');
+        }
+        return entries;
+    }
+
+    function writeAutoQueue(entries) {
+        localStorage.setItem(AUTO_QUEUE_KEY, JSON.stringify(entries));
+    }
+
+    function persistAutoEntry(value) {
+        const entries = readAutoQueue();
+        const index = entries.findIndex(entry => entry.id === value.id);
+        if (index < 0) throw new Error('Automaticky worklog zmizel z fronty. Zapis nebyl opakovan.');
+        entries[index] = value;
+        writeAutoQueue(entries);
+    }
+
+    function removeAutoEntry(id) {
+        writeAutoQueue(readAutoQueue().filter(entry => entry.id !== id));
+    }
 
     function formatDuration(seconds) {
         return [Math.floor(seconds / 3600), Math.floor(seconds % 3600 / 60), seconds % 60].map(v => String(v).padStart(2, '0')).join(':');
@@ -375,7 +445,7 @@
         }
     }
     async function request(path, options) {
-        const response = await fetch(path, {...options, credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}});
+        const response = await window.fetch(path, {...options, credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}});
         if (!response.ok) {
             const text = await response.text();
             let details = text.slice(0, 500);
@@ -503,7 +573,57 @@
             if (!manual.disabled) return manual.onclick();
         }
     };
-    async function saveEntry(value, persist = write) {
+
+    function openAutoSettings() {
+        try {
+            autoSettingsValue = readAutoSettings();
+            autoEnabled.checked = autoSettingsValue.enabled;
+            autoMinutes.value = String(autoSettingsValue.minutes);
+            autoMinutes.disabled = !autoSettingsValue.enabled;
+            autoError.textContent = '';
+            autoRetry.hidden = readAutoQueue().length === 0;
+        } catch (e) {
+            autoError.textContent = e.message;
+            autoRetry.hidden = true;
+        }
+        autoSettingsDialog.hidden = false;
+        autoEnabled.focus();
+    }
+
+    autoOpen.onclick = openAutoSettings;
+    autoClose.onclick = () => { autoSettingsDialog.hidden = true; };
+    autoEnabled.onchange = () => { autoMinutes.disabled = !autoEnabled.checked; };
+    autoSave.onclick = () => {
+        const minutesValue = Number(autoMinutes.value);
+        if (autoEnabled.checked && (!/^\d+$/.test(autoMinutes.value) || !Number.isSafeInteger(minutesValue) ||
+            minutesValue < 1 || !Number.isSafeInteger(minutesValue * 60000) ||
+            !Number.isFinite(new Date(Date.now() - minutesValue * 60000).getTime()))) {
+            autoError.textContent = 'Zadej kladny cely pocet minut.';
+            return;
+        }
+        const value = {
+            enabled: autoEnabled.checked,
+            minutes: autoEnabled.checked ? minutesValue : autoSettingsValue.minutes
+        };
+        try {
+            localStorage.setItem(AUTO_SETTINGS_KEY, JSON.stringify(value));
+            autoSettingsValue = value;
+            notice = '';
+            autoSettingsDialog.hidden = true;
+            render();
+        } catch (e) {
+            autoError.textContent = e.message;
+        }
+    };
+    autoRetry.onclick = async () => { await processAutomaticEntries(); };
+
+    function reportAutomaticError(errorValue) {
+        notice = `Automaticke vykazani: ${errorValue.message}`;
+        autoError.textContent = errorValue.message;
+        render();
+    }
+
+    async function saveEntry(value, persist = write, notify = true) {
         if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('Neni co ulozit.');
         let worklog = await findSaved(value);
         if (!worklog) {
@@ -514,7 +634,7 @@
             persist(value);
             worklog = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?adjustEstimate=leave`, {
                 method: 'POST',
-                body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.manual ? 'Rucni vykaz (Jira stopky)' : 'Prace na ukolu (Jira stopky)'}${measuredSeconds < 60 ? `\nMereno ${measuredSeconds} s; ulozeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
+                body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.automatic ? 'Automaticky vykaz (Jira stopky)' : value.manual ? 'Rucni vykaz (Jira stopky)' : 'Prace na ukolu (Jira stopky)'}${measuredSeconds < 60 ? `\nMereno ${measuredSeconds} s; ulozeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
             });
             if (!worklog.id) throw new Error('Jira nevratila ID noveho worklogu. Over predchozi zapis.');
         }
@@ -524,8 +644,114 @@
         value.completedAt = Date.now();
         worklogTotals.delete(value.issue);
         persist(value);
-        showToast(value);
+        if (notify) showToast(value);
     }
+
+    async function processAutomaticEntries() {
+        if (autoBusy) return;
+        autoBusy = true;
+        const failures = [];
+        try {
+            if (!navigator.locks) throw new Error('Prohlizec nepodporuje zamykani mezi kartami. Automaticky zapis nebyl odeslan.');
+            await navigator.locks.request(KEY, {ifAvailable: true}, async lock => {
+                if (!lock) throw new Error('Stopky prave meni jina karta. Cekajici automaticky zapis zpracuj v nastaveni AUTO.');
+                for (const entry of readAutoQueue()) {
+                    if (entry.phase === 'saved') {
+                        removeAutoEntry(entry.id);
+                        continue;
+                    }
+                    try {
+                        await saveEntry(entry, persistAutoEntry, entry.phase !== 'pending');
+                        removeAutoEntry(entry.id);
+                        autoRetry.hidden = readAutoQueue().length === 0;
+                    } catch (e) {
+                        failures.push(`${entry.issue}: ${e.message}`);
+                    }
+                }
+                if (failures.length) throw new Error(failures.join('\n'));
+            });
+        } catch (e) {
+            reportAutomaticError(e);
+        } finally {
+            autoBusy = false;
+            render();
+        }
+    }
+
+    function automaticIssueCreated(key) {
+        if (!autoSettingsValue.enabled) return;
+        const ended = Date.now();
+        const entry = {
+            id: `auto-${key}`, issue: key, started: ended - autoSettingsValue.minutes * 60000,
+            ended, phase: 'stopped', automatic: true
+        };
+        const entries = readAutoQueue();
+        if (!entries.some(value => value.id === entry.id)) {
+            entries.push(entry);
+            writeAutoQueue(entries);
+            autoRetry.hidden = false;
+        }
+        void processAutomaticEntries();
+    }
+
+    function issueCreationRequest(input, options) {
+        const url = typeof input === 'string' ? input : input && input.url;
+        const method = String(options && options.method || input && input.method || 'GET').toUpperCase();
+        return method === 'POST' && /\/rest\/api\/(?:2|latest)\/issue\/?$/.test(String(url || '').split('?')[0]);
+    }
+
+    function captureCreatedIssue(body) {
+        const key = body && (body.key || body.issue && body.issue.key);
+        if (!/^[A-Z][A-Z0-9_]*-\d+$/.test(key || '')) {
+            throw new Error('Jira potvrdila vytvoreni issue, ale nevratila jeji klic. Worklog nebyl odeslan.');
+        }
+        return automaticIssueCreated(key);
+    }
+
+    function installIssueCreationObserver() {
+        const originalFetch = window.fetch;
+        if (typeof originalFetch === 'function') {
+            window.fetch = function (...args) {
+                const result = originalFetch.apply(this, args);
+                if (!issueCreationRequest(args[0], args[1])) return result;
+                return Promise.resolve(result).then(async response => {
+                    if (autoSettingsValue.enabled && response.ok) {
+                        try {
+                            captureCreatedIssue(await response.clone().json());
+                        } catch (e) {
+                            reportAutomaticError(e);
+                        }
+                    }
+                    return response;
+                });
+            };
+        }
+        const prototype = window.XMLHttpRequest && window.XMLHttpRequest.prototype;
+        if (!prototype) return;
+        const requests = new WeakMap();
+        const originalOpen = prototype.open;
+        const originalSend = prototype.send;
+        prototype.open = function (method, url, ...args) {
+            requests.set(this, {method, url});
+            return originalOpen.call(this, method, url, ...args);
+        };
+        prototype.send = function (...args) {
+            const requestValue = requests.get(this);
+            if (requestValue && issueCreationRequest(requestValue.url, {method: requestValue.method})) {
+                this.addEventListener('load', () => {
+                    if (!autoSettingsValue.enabled || this.status < 200 || this.status >= 300) return;
+                    try {
+                        const body = this.responseType === 'json' ? this.response : JSON.parse(this.responseText);
+                        Promise.resolve(captureCreatedIssue(body)).catch(reportAutomaticError);
+                    } catch (e) {
+                        reportAutomaticError(e);
+                    }
+                }, {once: true});
+            }
+            return originalSend.apply(this, args);
+        };
+    }
+
     save.onclick = () => act(async () => {
         const value = read();
         if (value && value.manualEntry) {
@@ -538,7 +764,28 @@
             write(newTimer(value.nextIssue, value.ended));
         }
     });
+    autoSettingsValue = {enabled: false, minutes: 10};
+    try {
+        autoSettingsValue = readAutoSettings();
+    } catch (e) {
+        notice = e.message;
+    }
+    installIssueCreationObserver();
     window.addEventListener('storage', event => { if (event.key === KEY) render(); });
+    window.addEventListener('storage', event => {
+        if (event.key !== AUTO_SETTINGS_KEY) return;
+        try {
+            autoSettingsValue = readAutoSettings();
+            render();
+        } catch (e) {
+            reportAutomaticError(e);
+        }
+    });
     setInterval(render, 100);
     render();
+    try {
+        if (readAutoQueue().length) void processAutomaticEntries();
+    } catch (e) {
+        reportAutomaticError(e);
+    }
 })();

@@ -2,16 +2,20 @@
 
 (() => {
     const KEY = 'jira-direct-timer-v1';
+    const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
+    const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
     const titles = {
         'DEMO-101': 'Testovaci task: implementace <bezpecny text>',
         'DEMO-102': 'Testovaci task: kontrola a opravy',
-        'DEMO-103': 'Testovaci task: dokumentace'
+        'DEMO-103': 'Testovaci task: dokumentace',
+        'DEMO-104': 'Testovaci task: automaticke vykazani'
     };
     const nativeDate = Date;
     let model;
     let interval;
     let render;
     let events;
+    let timerWindow;
     const $ = selector => document.querySelector(selector);
     const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
     const clone = value => JSON.parse(JSON.stringify(value));
@@ -43,25 +47,32 @@
         }
         const storage = {
             getItem(key) {
-                if (key !== KEY) throw new Error(`Unexpected storage key: ${key}`);
-                return current.raw;
+                if (key === KEY) return current.raw;
+                if (key === AUTO_SETTINGS_KEY) return current.autoSettingsRaw;
+                if (key === AUTO_QUEUE_KEY) return current.autoQueueRaw;
+                throw new Error(`Unexpected storage key: ${key}`);
             },
             setItem(key, value) {
-                if (key !== KEY) throw new Error(`Unexpected storage key: ${key}`);
-                current.raw = value;
+                if (key === KEY) current.raw = value;
+                else if (key === AUTO_SETTINGS_KEY) current.autoSettingsRaw = value;
+                else if (key === AUTO_QUEUE_KEY) current.autoQueueRaw = value;
+                else throw new Error(`Unexpected storage key: ${key}`);
                 inspect();
             },
             removeItem(key) {
-                if (key !== KEY) throw new Error(`Unexpected storage key: ${key}`);
-                current.raw = null;
+                if (key === KEY) current.raw = null;
+                else if (key === AUTO_SETTINGS_KEY) current.autoSettingsRaw = null;
+                else if (key === AUTO_QUEUE_KEY) current.autoQueueRaw = null;
+                else throw new Error(`Unexpected storage key: ${key}`);
                 inspect();
             }
         };
         const mockFetch = async (path, options = {}) => {
             const method = options.method || 'GET';
             const myself = path === '/rest/api/2/myself' && method === 'GET';
-            const match = /^\/rest\/api\/2\/issue\/(DEMO-10[123])(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
-            if ((!match && !myself) || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
+            const createIssue = path === '/rest/api/2/issue' && method === 'POST';
+            const match = /^\/rest\/api\/2\/issue\/(DEMO-10[1-4])(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
+            if ((!match && !myself && !createIssue) || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
             current.requests.push({method, path});
             current.active++;
             inspect();
@@ -70,6 +81,9 @@
                 if (myself) {
                     if (current.identityError) throw new Error('Simulovana chyba identity uzivatele');
                     return {ok: true, json: async () => clone(current.user)};
+                }
+                if (createIssue) {
+                    return {ok: true, clone: () => ({json: async () => ({key: 'DEMO-104'})})};
                 }
                 const issue = match[1];
                 if (match[2] === '?fields=summary') {
@@ -110,6 +124,8 @@
                 return callback(current.lock === 'busy' ? null : {});
             }}
         };
+        timerWindow = fakeWindow;
+        timerWindow.fetch = mockFetch;
         // Inject dependencies without changing the shipped userscript or browser globals.
         new Function('window', 'document', 'location', 'localStorage', 'fetch', 'Date', 'crypto', 'navigator', 'setInterval', window.timerSource)(
             fakeWindow, document, current.location, storage, mockFetch, Clock, crypto, navigatorMock,
@@ -131,6 +147,8 @@
         const user = options.user ?? {key: 'demo-user', name: 'demo', displayName: 'Demo User'};
         model = {
             raw: options.raw ?? (options.state ? JSON.stringify(options.state) : null),
+            autoSettingsRaw: options.autoSettings ? JSON.stringify(options.autoSettings) : null,
+            autoQueueRaw: options.autoQueue ? JSON.stringify(options.autoQueue) : null,
             logs: clone(options.logs || []).map(log => ({author: clone(user), ...log})), requests: [], posts: [], offset: 0, active: 0,
             latency: options.latency ?? 30, failure: 'none', lock: options.lock || 'available',
             totalError: options.totalError || false, location: {pathname: '', search: ''},
@@ -156,6 +174,13 @@
         advance(ms) { model.offset += ms; render(); },
         failure(value) { model.failure = value; $('#failure').value = value; },
         async reload() { mount(); await idle(); },
+        async createIssue() {
+            await timerWindow.fetch('/rest/api/2/issue', {method: 'POST', body: '{}'});
+            await sleep(0);
+            await idle();
+            await sleep(0);
+            await idle();
+        },
         async click(name) {
             const node = this.node(name);
             if (node.disabled || node.hidden || node.closest('[hidden]')) throw new Error(`Unavailable action: ${name}`);

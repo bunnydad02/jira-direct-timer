@@ -4,6 +4,8 @@ const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const source = fs.readFileSync(path.join(__dirname, 'jira-workspace-timer.user.js'), 'utf8');
 const metadata = source.split('// ==/UserScript==')[0];
+const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
+const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
 const currentUser = {key: 'demo-user', name: 'demo', displayName: 'Demo User'};
 const ownLog = timeSpentSeconds => ({timeSpentSeconds, author: currentUser});
 for (const directive of ['updateURL', 'downloadURL']) {
@@ -11,8 +13,10 @@ for (const directive of ['updateURL', 'downloadURL']) {
         'https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js');
 }
 
-function setup(initial, failureAt = 0, input = '30', existing = false, latency = 0) {
+function setup(initial, failureAt = 0, input = '30', existing = false, latency = 0, extra = {}) {
     let state = initial;
+    let autoSettings = extra.autoSettings || null;
+    let autoQueue = extra.autoQueue || [];
     let confirmations = 0;
     const posts = [];
     const persisted = [];
@@ -27,16 +31,18 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     const location = {pathname: '/browse/DEMO-101', search: ''};
     function element() {
         return {dataset: {}, value: '', children: [], attributes: {},
+            checked: false, disabled: false, hidden: false,
             get innerHTML() { return this.html; },
             set innerHTML(html) {
                 this.html = html;
-                for (const [, attribute, text] of html.matchAll(/<button (data-[a-z-]+)>([^<]*)<\/button>/g)) {
+                for (const [, attribute, text] of html.matchAll(/<button\s+(data-[a-z-]+)(?:\s+[^>]*)?>([^<]*)<\/button>/g)) {
                     this.querySelector(`[${attribute}]`).textContent = text;
                 }
             },
             querySelector: s => nodes[s] ||= element(),
             appendChild(child) { this.children.push(child); child.parent = this; },
             setAttribute(name, value) { this.attributes[name] = value; },
+            focus() {},
             remove() { this.parent.children.splice(this.parent.children.indexOf(this), 1); },
             after(child) { if ('cancel' in child.dataset) nodes['[data-cancel]'] = child; }};
     }
@@ -44,41 +50,111 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     window.top = window;
     class Clock extends Date { static now() { return now; } }
     let id = 0;
+    let active = 0;
+    let onCreatedIssue = key => ({key});
+    class MockXhr {
+        constructor() { this.listeners = {}; this.responseType = ''; this.status = 0; this.responseText = ''; }
+        open(method, url) { this.method = method; this.url = url; }
+        addEventListener(type, callback) { this.listeners[type] = callback; }
+        send() {
+            active++;
+            Promise.resolve().then(() => onCreatedIssue('DEMO-105')).then(body => {
+                this.status = 201;
+                this.responseText = JSON.stringify(body);
+                this.listeners.load();
+            }).finally(() => { active--; });
+        }
+    }
+    const mockFetch = async (path, options = {}) => {
+        await Promise.resolve();
+        if (path === '/rest/api/2/issue' && options.method === 'POST') {
+            active++;
+            try {
+                const body = await onCreatedIssue('DEMO-104');
+                return {ok: true, clone: () => ({json: async () => body})};
+            } finally {
+                active--;
+            }
+        }
+        if (path === '/rest/api/2/myself') return {ok: true, json: async () => onIdentity()};
+        const match = /^\/rest\/api\/2\/issue\/(DEMO-10[1-9])(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
+        if (match && match[2] === '?fields=summary') {
+            return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
+        }
+        if (match && match[2] === '?fields=subtasks') {
+            return {ok: true, json: async () => onTotals(path)};
+        }
+        await Promise.resolve();
+        const override = await onFetch(path, options);
+        if (override !== undefined) return {ok: true, json: async () => override};
+        now += latency;
+        if (options.method === 'POST') {
+            const body = JSON.parse(options.body);
+            posts.push({path, body});
+            if (posts.length === failureAt && extra.failureMode !== 'after') throw new Error('Network failure');
+            persisted.push({path, body});
+            if (posts.length === failureAt) throw new Error('Response lost after save');
+            return {ok: true, json: async () => ({id: `log-${posts.length}`, timeSpentSeconds: body.timeSpentSeconds})};
+        }
+        const worklogs = existing ?
+            [{id: 'existing', ...ownLog(120), comment: `[jira-direct-timer:${autoQueue[0]?.id || state?.manualEntry?.id || state?.id}]`}] :
+            persisted.map((post, index) => ({id: `log-${index + 1}`, ...ownLog(post.body.timeSpentSeconds), comment: post.body.comment}));
+        return {ok: true, json: async () => ({total: worklogs.length, worklogs})};
+    };
+    window.fetch = mockFetch;
+    window.XMLHttpRequest = MockXhr;
     const context = {
         window, document: {body: element(), createElement: tag => { const node = element(); if (tag === 'section') panel = node; return node; }, getElementById: () => null,
             querySelector: selector => selector === '#summary-val' ? {textContent: 'Full issue title <safe text>'} : {content: 'PMA-OLD'}},
         location, URLSearchParams,
-        localStorage: {getItem: () => state ? JSON.stringify(state) : null, setItem: (k, v) => { state = JSON.parse(v); }, removeItem: () => { state = null; }},
+        localStorage: {
+            getItem: key => key === 'jira-direct-timer-v1' ? state ? JSON.stringify(state) : null :
+                key === AUTO_SETTINGS_KEY ? autoSettings ? JSON.stringify(autoSettings) : null :
+                    key === AUTO_QUEUE_KEY ? autoQueue.length ? JSON.stringify(autoQueue) : null : null,
+            setItem: (key, value) => {
+                if (key === 'jira-direct-timer-v1') state = JSON.parse(value);
+                else if (key === AUTO_SETTINGS_KEY) autoSettings = JSON.parse(value);
+                else if (key === AUTO_QUEUE_KEY) autoQueue = JSON.parse(value);
+                else throw new Error(`Unexpected storage key: ${key}`);
+            },
+            removeItem: key => {
+                if (key === 'jira-direct-timer-v1') state = null;
+                else if (key === AUTO_SETTINGS_KEY) autoSettings = null;
+                else if (key === AUTO_QUEUE_KEY) autoQueue = [];
+                else throw new Error(`Unexpected storage key: ${key}`);
+            }
+        },
         Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval: (callback, ms) => { render = callback; interval = ms; },
         navigator: {locks: {request: async (k, o, f) => f({})}},
-        fetch: async (path, options) => {
-            await Promise.resolve();
-            if (path === '/rest/api/2/myself') return {ok: true, json: async () => onIdentity()};
-            if (path.endsWith('?fields=summary')) return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
-            if (path.endsWith('?fields=subtasks')) {
-                return {ok: true, json: async () => onTotals(path)};
-            }
-            await Promise.resolve();
-            const override = await onFetch(path, options);
-            if (override !== undefined) return {ok: true, json: async () => override};
-            now += latency;
-            if (options.method === 'POST') {
-                const body = JSON.parse(options.body);
-                posts.push({path, body});
-                if (posts.length === failureAt) throw new Error('Network failure');
-                persisted.push({path, body});
-                return {ok: true, json: async () => ({id: `log-${posts.length}`, timeSpentSeconds: body.timeSpentSeconds})};
-            }
-            const worklogs = existing ?
-                [{id: 'existing', ...ownLog(120), comment: `[jira-direct-timer:${state.manualEntry?.id || state.id}]`}] :
-                persisted.map((post, index) => ({id: `log-${index + 1}`, ...ownLog(post.body.timeSpentSeconds), comment: post.body.comment}));
-            return {ok: true, json: async () => ({total: worklogs.length, worklogs})};
-        }
+        fetch: mockFetch
     };
     vm.runInNewContext(source, context);
     nodes['[data-minutes]'].value = input;
     return {nodes, panel, posts, styles: context.document.body.children[0].textContent,
         state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick(),
+        settings: () => autoSettings, autoQueue: () => autoQueue,
+        configureAuto: (enabled, value = 10) => {
+            nodes['[data-auto-open]'].onclick();
+            nodes['[data-auto-enabled]'].checked = enabled;
+            nodes['[data-auto-enabled]'].onchange();
+            nodes['[data-auto-minutes]'].value = String(value);
+            nodes['[data-auto-save]'].onclick();
+        },
+        createIssue: async () => {
+            await window.fetch('/rest/api/2/issue', {method: 'POST', body: '{}'});
+            await new Promise(resolve => setImmediate(resolve));
+            while (active) await new Promise(resolve => setImmediate(resolve));
+            await new Promise(resolve => setImmediate(resolve));
+            await new Promise(resolve => setTimeout(resolve, 10));
+        },
+        createIssueViaXhr: async () => {
+            const xhr = new window.XMLHttpRequest();
+            xhr.open('POST', '/rest/api/2/issue');
+            xhr.send();
+            while (active) await new Promise(resolve => setImmediate(resolve));
+            await new Promise(resolve => setTimeout(resolve, 10));
+        },
+        onCreatedIssue: callback => { onCreatedIssue = callback; },
         toasts: () => panel.children.find(child => 'toasts' in child.dataset).children,
         advance: ms => { now += ms; }, render: () => render(), interval: () => interval,
         onFetch: callback => { onFetch = callback; },
@@ -115,6 +191,72 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.match(legacyPanel.styles, /\[data-version-wrap\] \{position:absolute;top:14px;right:14px;font-size:9px/);
     assert.equal(legacyPanel.nodes['[data-release-notes]'], undefined,
         'do not render release notes next to the GitHub version link');
+    const autoOff = setup(null);
+    autoOff.click('auto-open');
+    assert.equal(autoOff.nodes['[data-auto-enabled]'].checked, false);
+    assert.equal(autoOff.nodes['[data-auto-minutes]'].disabled, true,
+        'keep the minutes field disabled unless automatic reporting is enabled');
+    autoOff.nodes['[data-auto-enabled]'].checked = true;
+    autoOff.nodes['[data-auto-enabled]'].onchange();
+    autoOff.nodes['[data-auto-minutes]'].value = '25';
+    autoOff.click('auto-close');
+    assert.equal(autoOff.settings(), null, 'closing settings must discard unsaved changes');
+    await autoOff.createIssue();
+    assert.equal(autoOff.posts.length, 0, 'new issues must not create worklogs by default');
+    assert.equal(autoOff.state(), null);
+    const configuredAuto = setup(null);
+    configuredAuto.configureAuto(true, 10);
+    assert.deepEqual(configuredAuto.settings(), {enabled: true, minutes: 10});
+    const invalidAuto = setup(null);
+    invalidAuto.click('auto-open');
+    invalidAuto.nodes['[data-auto-enabled]'].checked = true;
+    invalidAuto.nodes['[data-auto-enabled]'].onchange();
+    invalidAuto.nodes['[data-auto-minutes]'].value = '1.5';
+    invalidAuto.click('auto-save');
+    assert.equal(invalidAuto.settings(), null);
+    assert.match(invalidAuto.nodes['[data-auto-error]'].textContent, /kladny/);
+    const activeTimer = running();
+    const automatic = setup(activeTimer, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 10}});
+    await automatic.createIssue();
+    assert.equal(automatic.posts.length, 1, `a successful issue creation should create one automatic worklog: ${automatic.nodes['[data-error]'].textContent}; queue=${JSON.stringify(automatic.autoQueue())}`);
+    assert.match(automatic.posts[0].path, /DEMO-104\/worklog/);
+    assert.equal(automatic.posts[0].body.timeSpentSeconds, 600);
+    assert.equal(automatic.posts[0].body.started, new Date(200000000 - 600000).toISOString().replace('Z', '+0000'));
+    assert.match(automatic.posts[0].body.comment, /Automaticky vykaz/);
+    assert.match(automatic.posts[0].body.comment, /\[jira-direct-timer:auto-DEMO-104\]/);
+    assert.deepEqual(automatic.state(), activeTimer, 'automatic reporting must preserve a running timer');
+    assert.equal(automatic.autoQueue().length, 0);
+    const automaticXhr = setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 5}});
+    await automaticXhr.createIssueViaXhr();
+    assert.equal(automaticXhr.posts.length, 1, 'also observe Jira issue creation through XMLHttpRequest');
+    assert.match(automaticXhr.posts[0].path, /DEMO-105\/worklog/);
+    assert.equal(automaticXhr.posts[0].body.timeSpentSeconds, 300);
+    const unrecognizedCreatedIssue = setup(null, 0, '30', false, 0, {
+        autoSettings: {enabled: true, minutes: 10}
+    });
+    unrecognizedCreatedIssue.onCreatedIssue(() => ({}));
+    await unrecognizedCreatedIssue.createIssue();
+    assert.equal(unrecognizedCreatedIssue.posts.length, 0);
+    assert.match(unrecognizedCreatedIssue.nodes['[data-error]'].textContent, /nevratila jeji klic/);
+    const uncertainAuto = setup(null, 1, '30', false, 0, {
+        autoSettings: {enabled: true, minutes: 10}, failureMode: 'after'
+    });
+    await uncertainAuto.createIssue();
+    assert.equal(uncertainAuto.posts.length, 1);
+    assert.equal(uncertainAuto.autoQueue()[0].phase, 'pending');
+    await uncertainAuto.click('auto-open');
+    assert.equal(uncertainAuto.nodes['[data-auto-retry]'].hidden, false);
+    await uncertainAuto.click('auto-retry');
+    assert.equal(uncertainAuto.posts.length, 1, 'recovery must find the marker instead of repeating an uncertain POST');
+    assert.equal(uncertainAuto.autoQueue().length, 0);
+    const missingMarkerAuto = setup(null, 1, '30', false, 0, {
+        autoSettings: {enabled: true, minutes: 10}
+    });
+    await missingMarkerAuto.createIssue();
+    await missingMarkerAuto.click('auto-open');
+    await missingMarkerAuto.click('auto-retry');
+    assert.equal(missingMarkerAuto.posts.length, 1, 'a pending automatic POST without a marker must not be repeated');
+    assert.equal(missingMarkerAuto.autoQueue()[0].phase, 'pending');
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].hidden, false);

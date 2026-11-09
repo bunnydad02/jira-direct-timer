@@ -29,6 +29,12 @@ for compatibility with installed copies and saved timer state.
   issue, ending at submission time. Enter submits as well as the button.
   Independent manual entry does not change a running timer; intervals can
   overlap, so users must avoid recording the same time twice.
+- `AUTO` is disabled by default and starts at 10 minutes. When enabled, observe
+  successful Jira REST issue creation responses from `fetch` and
+  `XMLHttpRequest`, then record the configured duration on the returned issue
+  key. Standard issues and subtasks use the same endpoint. Issue creation
+  outside this Jira page is not observed. Automatic worklogs must not overwrite
+  or alter the active timer.
 - Elapsed time is based on wall-clock timestamps and refreshes every 100ms.
   Jira worklogs have a one-minute minimum; longer durations are rounded down
   to whole minutes.
@@ -54,6 +60,12 @@ for compatibility with installed copies and saved timer state.
 - `jira-direct-timer-v1` in Jira-origin `localStorage` stores one timer shared
   across tabs in the same browser profile and Jira origin. It is not keyed by
   Jira account. Never clear or silently replace it.
+- `jira-direct-timer-auto-settings-v1` stores the opt-in flag and whole-minute
+  duration. `jira-direct-timer-auto-queue-v1` stores automatic worklogs
+  independently of the single timer state. Keep each queue entry pending
+  before POST, verify its exact marker after an uncertain result, and never
+  retry an uncertain POST when no marker is found. Surface malformed state and
+  errors; do not silently discard queued entries.
 - The base record contains `id`, `issue`, `started`, `ended`, and `phase`.
   Preserve compatibility with optional legacy fields including `title`,
   `nextIssue`, `manualNext`, `manual`, `worklogId`, `recordedSeconds`,
@@ -101,7 +113,7 @@ CI also runs these browser regressions and retains failure traces/screenshots.
 Do not add production test hooks or enable the userscript on localhost.
 Test-only changes do not require a userscript version bump.
 
-The current userscript metadata and in-panel version are `1.16.9`. On each
+The current userscript metadata and in-panel version are `1.17.0`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.
