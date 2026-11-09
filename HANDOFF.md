@@ -36,7 +36,12 @@ for compatibility with installed copies and saved timer state.
   successful Jira REST issue creation responses from `fetch` and
   `XMLHttpRequest` whose resolved URL has the Jira page's own origin, then
   record the configured duration on the returned issue
-  key. Standard issues and subtasks use the same endpoint. Issue creation
+  key. Also observe the same-origin Jira Server creation forms
+  `/secure/QuickCreateIssue.jspa`, `/secure/CreateIssueDetails.jspa` and
+  `/secure/CreateSubTaskIssueDetails.jspa`
+  (including Sub-task Bug), whose JSON response returns `issueKey`.
+  Only POST submission is observed, not form initialization; require a valid
+  returned key before queuing a worklog. Issue creation
   outside this Jira page is not observed. Automatic worklogs must not overwrite
   or alter the active timer.
 - Elapsed time is based on wall-clock timestamps and refreshes every 100ms.
@@ -121,7 +126,7 @@ CI also runs these browser regressions and retains failure traces/screenshots.
 Do not add production test hooks or enable the userscript on localhost.
 Test-only changes do not require a userscript version bump.
 
-The current userscript metadata and in-panel version are `1.17.2`. On each
+The current userscript metadata and in-panel version are `1.17.3`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.

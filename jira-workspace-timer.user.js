@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.17.2
+// @version      1.17.3
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -16,7 +16,7 @@
     const KEY = 'jira-direct-timer-v1';
     const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
     const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
-    const VERSION = '1.17.2';
+    const VERSION = '1.17.3';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -715,13 +715,16 @@
         } catch (e) {
             return false;
         }
-        return url.origin === location.origin && /\/rest\/api\/(?:2|latest)\/issue\/?$/.test(url.pathname);
+        return url.origin === location.origin && (
+            /\/rest\/api\/(?:2|latest)\/issue\/?$/.test(url.pathname) ||
+            /\/secure\/(?:QuickCreateIssue|Create(?:SubTask)?IssueDetails)\.jspa$/.test(url.pathname)
+        );
     }
 
     function captureCreatedIssue(body) {
-        const key = body && (body.key || body.issue && body.issue.key);
-        if (!/^[A-Z][A-Z0-9_]*-\d+$/.test(key || '')) {
-            throw new Error('Jira potvrdila vytvoreni issue, ale nevratila jeji klic. Worklog nebyl odeslan.');
+        const key = body && (body.key || body.issueKey || body.issue && body.issue.key);
+        if (typeof key !== 'string' || !/^[A-Z][A-Z0-9_]*-\d+$/.test(key)) {
+            throw new Error('Odpoved na vytvoreni issue nevratila jeji klic. Worklog nebyl odeslan; over vysledek v Jire.');
         }
         return automaticIssueCreated(key);
     }
