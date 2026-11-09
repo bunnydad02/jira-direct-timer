@@ -126,6 +126,26 @@ CI also runs these browser regressions and retains failure traces/screenshots.
 Do not add production test hooks or enable the userscript on localhost.
 Test-only changes do not require a userscript version bump.
 
+### Screenshots
+
+`docs/screenshots/` holds committed PNGs of every timer state (idle, running,
+other issue, toasts, errors, totals, ADD MINUTES, AUTO, lock/corrupt state)
+plus a generated `README.md` gallery. `npm test` ends with
+`npm run screenshots` (`playwright.screenshots.config.cjs`,
+`tests/screenshots.visual.cjs`), which renders the playground with a fixed
+clock, Prague timezone, reduced motion and the version label hidden, and
+rewrites only images that changed visually. Removed states delete their PNG.
+For every change, commit the updated PNGs; add a state for any new or changed
+UI so the PR shows GitHub's before/after image diff. Past looks remain in Git
+history and release tags. Images are rendered on Windows; CI renders a Linux
+set as the `screenshots-linux` artifact without failing on font differences.
+
+Release notes from `1.17.4` must contain a `## Screenshots` section embedding
+the relevant images as `![popis](../docs/screenshots/<name>.png)`; the files
+must exist. Publishing rewrites these links to the release tag
+(`raw.githubusercontent.com/<owner>/<repo>/v<version>/...`), so each Release
+permanently shows that version's look.
+
 The current userscript metadata and in-panel version are `1.17.3`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to

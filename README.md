@@ -30,6 +30,9 @@ Pri vydani zvys `@version` i `VERSION` a ve stejnem PR pridej
 `releases/v<verze>.md` podle [v1.16.7](./releases/v1.16.7.md).
 Poznamky popisuji skutecne zmeny pro uzivatele, aktualizaci a provedene overeni.
 CI vyzaduje soubor pro aktualni verzi, odpovidajici nadpis a sekci `Changes`.
+Od verze 1.17.4 musi poznamky obsahovat i sekci `## Screenshots` s relevantnimi
+obrazky ve tvaru `![popis](../docs/screenshots/<stav>.png)`. Pri publikaci se
+odkazy pripnou na tag verze, takze kazdy Release trvale ukazuje svou podobu.
 Po mergi do `main` a uspesnych regresich automaticky publikuje tag a Release
 s timto textem. Zmeny pouze dokumentace nebo testu novou verzi nevyzaduji
 a jiz publikovany Release neprepisuji.
@@ -138,3 +141,13 @@ verze a odkaz na GitHub, aktualizaci nadale zajistuje Tampermonkey.
 
 CI spousti Node i browserove kontroly pri pull requestu a zmenach v `main`.
 Pri chybe browseroveho testu prilozi screenshot a Playwright trace jako artefakt.
+
+### Screenshoty stavu
+
+[Galerie screenshotu](./docs/screenshots/README.md) ukazuje vsechny stavy
+pocitadla a hlavni funkce. `npm test` je na konci pregeneruje
+(`npm run screenshots`) z lokalniho hriste s mocky a pevnym casem; prepise jen
+obrazky, ktere se vizualne zmenily. Zmenene PNG se commituji, takze PR na
+GitHubu ukaze porovnani pred/po a historie souboru i tagy uchovavaji starsi
+podoby. Novy stav pridas do [tests/screenshots.visual.cjs](./tests/screenshots.visual.cjs).
+CI navic prilozi Linuxovou sadu jako artefakt `screenshots-linux`.

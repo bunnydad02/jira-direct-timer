@@ -129,3 +129,36 @@ test('surface API errors without creating a fallback release', async () => {
         assert.equal(github.calls.length, 0);
     }
 });
+
+const newSource = source.replaceAll('1.16.7', '1.17.4');
+const newNotes = '# Jira Local Workspace - Worklog timer v1.17.4\n\n## Changes\n\n- Change.\n\n' +
+    '## Screenshots\n\n![Bezi](../docs/screenshots/running.png)\n![Toast](../docs/screenshots/saved-toast.png)\n';
+
+function newFixture(body = newNotes, existing = ['running.png', 'saved-toast.png']) {
+    return loadRelease(file => (path.basename(file) === 'jira-workspace-timer.user.js' ? newSource : body),
+        file => {
+            assert.equal(path.basename(path.dirname(file)), 'screenshots');
+            return existing.includes(path.basename(file));
+        });
+}
+
+test('releases from 1.17.4 must embed existing screenshots', () => {
+    assert.equal(newFixture().tag, 'v1.17.4');
+    assert.throws(() => newFixture(newNotes.replace('## Screenshots', '## Obrazky')), /Screenshots section/);
+    assert.throws(() => newFixture(newNotes.split('## Screenshots')[0] + '## Screenshots\n\nZadne.\n'), /embed relevant images/);
+    assert.throws(() => newFixture(newNotes, ['running.png']), /Missing release screenshot: docs\/screenshots\/saved-toast\.png/);
+    for (const version of ['1.17.10', '1.18.0', '2.0.0']) {
+        assert.throws(() => loadRelease(file => (path.basename(file) === 'jira-workspace-timer.user.js'
+            ? source.replaceAll('1.16.7', version) : `# Jira Local Workspace - Worklog timer v${version}\n\n## Changes\n\n- Change.\n`)),
+        /Screenshots section/);
+    }
+});
+
+test('published release pins screenshots to the release tag', async () => {
+    const github = mockGithub();
+    await publishRelease(github, repo, sha, newFixture());
+    const body = github.calls[0].body;
+    assert.match(body, /!\[Bezi\]\(https:\/\/raw\.githubusercontent\.com\/example\/timer\/v1\.17\.4\/docs\/screenshots\/running\.png\)/);
+    assert.match(body, /\/v1\.17\.4\/docs\/screenshots\/saved-toast\.png\)/);
+    assert.doesNotMatch(body, /\.\.\/docs/);
+});
