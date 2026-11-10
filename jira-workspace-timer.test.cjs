@@ -198,6 +198,9 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(legacyPanel.nodes['[data-release-notes]'], undefined,
         'do not render release notes next to the GitHub version link');
     const autoOff = setup(null);
+    assert.equal(autoOff.nodes['[data-auto-open]'].dataset.state, 'off', 'show disabled AUTO by default');
+    assert.equal(autoOff.nodes['[data-auto-open]'].textContent, 'auto');
+    assert.match(autoOff.nodes['[data-auto-open]'].attributes['aria-label'], /^AUTO vypnuto\./);
     autoOff.click('auto-open');
     assert.equal(autoOff.nodes['[data-auto-enabled]'].checked, false);
     assert.equal(autoOff.nodes['[data-auto-minutes]'].disabled, true,
@@ -207,12 +210,30 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     autoOff.nodes['[data-auto-minutes]'].value = '25';
     autoOff.click('auto-close');
     assert.equal(autoOff.settings(), null, 'closing settings must discard unsaved changes');
+    assert.equal(autoOff.nodes['[data-auto-open]'].dataset.state, 'off', 'unsaved changes must not change the indicator');
     await autoOff.createIssue();
     assert.equal(autoOff.posts.length, 0, 'new issues must not create worklogs by default');
     assert.equal(autoOff.state(), null);
     const configuredAuto = setup(null);
     configuredAuto.configureAuto(true, 10);
     assert.deepEqual(configuredAuto.settings(), {enabled: true, minutes: 10});
+    assert.equal(configuredAuto.nodes['[data-auto-open]'].dataset.state, 'on',
+        'show enabled AUTO in the panel without opening settings');
+    assert.equal(configuredAuto.nodes['[data-auto-open]'].textContent, 'auto', 'keep the compact label to preserve layout');
+    assert.match(configuredAuto.nodes['[data-auto-open]'].attributes.title, /AUTO zapnuto: 10 min/);
+    configuredAuto.configureAuto(false);
+    assert.equal(configuredAuto.nodes['[data-auto-open]'].dataset.state, 'off');
+    assert.equal(configuredAuto.nodes['[data-auto-open]'].attributes.title, 'AUTO vypnuto');
+    assert.match(setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 25}})
+        .nodes['[data-auto-open]'].attributes['aria-label'], /^AUTO zapnuto: 25 min/, 'show saved AUTO minutes after reload');
+    const brokenAuto = setup(null, 0, '30', false, 0, {autoSettings: {enabled: 'yes', minutes: 10}});
+    assert.equal(brokenAuto.nodes['[data-auto-open]'].dataset.state, 'error',
+        'corrupted AUTO settings must not look like a normal disabled state');
+    assert.equal(brokenAuto.nodes['[data-auto-open]'].textContent, 'auto !');
+    brokenAuto.configureAuto(true, 15);
+    assert.equal(brokenAuto.nodes['[data-auto-open]'].dataset.state, 'on', 'saving valid settings clears the error indicator');
+    assert.equal(brokenAuto.nodes['[data-auto-open]'].textContent, 'auto');
+    assert.match(brokenAuto.nodes['[data-auto-open]'].attributes.title, /AUTO zapnuto: 15 min/);
     const invalidAuto = setup(null);
     invalidAuto.click('auto-open');
     invalidAuto.nodes['[data-auto-enabled]'].checked = true;

@@ -73,6 +73,12 @@ const groups = [
             await p.reset();
             await p.manual('0');
         }},
+        {name: 'auto-enabled', title: 'AUTO zapnuto: indikator v panelu', run: async p => {
+            await p.reset({autoSettings: {enabled: true, minutes: 10}});
+        }},
+        {name: 'auto-settings-error', title: 'AUTO: poskozene nastaveni v panelu', run: async p => {
+            await p.reset({autoSettings: {enabled: 'yes', minutes: 10}});
+        }},
         {name: 'auto-settings', title: 'AUTO: nastaveni automatickeho vykazovani', run: async p => {
             await p.reset({autoSettings: {enabled: true, minutes: 10}});
             await p.click('auto-open');

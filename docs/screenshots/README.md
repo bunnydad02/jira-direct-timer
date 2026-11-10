@@ -31,6 +31,8 @@ Zmeny vzhledu ukazuje diff PR, starsi podoby historie souboru a Git tagy vydani.
 | --- | --- |
 | ADD MINUTES: rucni zapis 15 minut (`manual-saved`) | ![ADD MINUTES: rucni zapis 15 minut](./manual-saved.png) |
 | ADD MINUTES: neplatna hodnota (`manual-invalid`) | ![ADD MINUTES: neplatna hodnota](./manual-invalid.png) |
+| AUTO zapnuto: indikator v panelu (`auto-enabled`) | ![AUTO zapnuto: indikator v panelu](./auto-enabled.png) |
+| AUTO: poskozene nastaveni v panelu (`auto-settings-error`) | ![AUTO: poskozene nastaveni v panelu](./auto-settings-error.png) |
 | AUTO: nastaveni automatickeho vykazovani (`auto-settings`) | ![AUTO: nastaveni automatickeho vykazovani](./auto-settings.png) |
 | AUTO: vykazani pri zalozeni Sub-task Bugu (`auto-worklog`) | ![AUTO: vykazani pri zalozeni Sub-task Bugu](./auto-worklog.png) |
 

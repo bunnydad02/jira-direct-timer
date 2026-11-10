@@ -259,6 +259,8 @@
         }},
         {title: 'AUTO: nove issue vykazuje jen po zapnuti a zachova stopky', async run(p) {
             await p.reset();
+            equal(p.node('auto-open').dataset.state, 'off');
+            equal(p.node('auto-open').textContent, 'auto');
             await p.createIssue();
             equal(p.posts().length, 0, 'automatic reporting must be off by default');
             await p.click('auto-open');
@@ -269,6 +271,9 @@
             equal(p.node('auto-minutes').disabled, false);
             p.node('auto-minutes').value = '10';
             await p.click('auto-save');
+            equal(p.node('auto-open').dataset.state, 'on', 'the panel must show enabled AUTO without opening settings');
+            equal(p.node('auto-open').textContent, 'auto');
+            includes(p.node('auto-open').title, 'AUTO zapnuto: 10 min');
             await p.click('start');
             const timer = p.state();
             await p.createIssue();

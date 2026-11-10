@@ -59,7 +59,9 @@ prehled vydanych verzi a jejich zmen.
   nastaveny pocet minut (vychozi hodnota 10), vcetne Sub-task Bugu pres Jira
   formular i REST API. Vyzaduje platny klic v odpovedi na vytvoreni. Vypnuto je
   vychozi stav; automatika nemeni bezici stopky. Vytvoreni mimo tuto stranku
-  nezachyti.
+  nezachyti. Stav je videt primo v panelu: zapnute AUTO je zelene tucne se
+  zelenou teckou (minuty ukaze tooltip), vypnute sede s prazdnym krouzkem a
+  poskozene nastaveni cervene jako `auto !`.
 - Panel zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu podle
   prihlaseneho Jira uctu, nikoli vykazy kolegu. Pokud mas vlastni vykazy i na
   subtaskech, nasleduje v zavorce tvuj soucet vcetne subtasku (napr.
