@@ -32,7 +32,9 @@ Pouziti:
   formular i REST API. Vyzaduje platny klic v odpovedi na vytvoreni. Automatika je
   ve vychozim stavu vypnuta a nemeni bezici stopky. Vytvoreni mimo tuto stranku
   nezachyti. Pri nejistem vysledku zapis neodesila opakovane; pouzij
-  Zpracovat cekajici zapisy pro overeni znacky.
+  Zpracovat cekajici zapisy pro overeni znacky. Stav AUTO je videt v panelu:
+  zelene auto se zelenou teckou = zapnuto (minuty v tooltipu), sedy krouzek =
+  vypnuto, cervene auto ! = poskozene nastaveni.
 - Rucni zapis nemeni bezici casovac. Intervaly se mohou prekryvat; zapisuj jen
   cas, ktery jeste neni vykazany.
 - Pod casovacem se zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu

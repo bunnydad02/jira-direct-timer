@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.17.3
+// @version      1.17.4
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -16,7 +16,7 @@
     const KEY = 'jira-direct-timer-v1';
     const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
     const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
-    const VERSION = '1.17.3';
+    const VERSION = '1.17.4';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -58,7 +58,12 @@
         #jira-direct-timer label {display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;font-weight:700;letter-spacing:.4px}
         #jira-direct-timer input {box-sizing:border-box;width:70px;min-width:0;padding:6px;border:1px solid #b9c4d2;border-radius:6px;background:#fff;color:#253249;font-family:inherit;font-size:13px}
         #jira-direct-timer [data-manual] {width:100%;margin-top:7px}
-        #jira-direct-timer [data-auto-open] {padding:2px 5px;border:0;background:transparent;color:#526078;font-size:9px;font-weight:500}
+        #jira-direct-timer [data-auto-open] {display:inline-flex;align-items:center;gap:4px;padding:2px 5px;border:0;background:transparent;color:#526078;font-size:9px;font-weight:500;white-space:nowrap}
+        #jira-direct-timer [data-auto-open]::before {content:'';width:6px;height:6px;flex-shrink:0;box-sizing:border-box;border:1px solid currentColor;border-radius:50%}
+        #jira-direct-timer [data-auto-open][data-state="on"] {color:#176538;font-weight:700}
+        #jira-direct-timer [data-auto-open][data-state="on"]::before {background:currentColor}
+        #jira-direct-timer [data-auto-open][data-state="error"] {color:#ae2a19;font-weight:700}
+        #jira-direct-timer [data-auto-open][data-state="error"]::before {background:currentColor}
         #jira-direct-timer [data-auto-settings] {position:absolute;left:8px;right:8px;bottom:8px;z-index:2;padding:12px;border:1px solid #b9c4d2;border-radius:8px;background:#fff;box-shadow:0 4px 16px #172b4d30}
         #jira-direct-timer [data-auto-settings] header {display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;font-weight:700}
         #jira-direct-timer [data-auto-settings] header button {padding:1px 5px;border:0;font-size:14px}
@@ -148,16 +153,35 @@
     const worklogTotals = new Map();
     let notifications = [];
     let autoSettingsValue;
+    let autoSettingsBroken = false;
     let autoBusy = false;
 
+    function renderAutoIndicator() {
+        const state = autoSettingsBroken ? 'error' : autoSettingsValue.enabled ? 'on' : 'off';
+        const label = {
+            on: `AUTO zapnuto: ${autoSettingsValue.minutes} min na novou issue`,
+            off: 'AUTO vypnuto',
+            error: 'Nastaveni AUTO je poskozene'
+        }[state];
+        autoOpen.dataset.state = state;
+        autoOpen.textContent = state === 'error' ? 'auto !' : 'auto';
+        autoOpen.setAttribute('aria-label', `${label}. Otevrit nastaveni AUTO`);
+        autoOpen.setAttribute('title', label);
+    }
+
     function readAutoSettings() {
+        autoSettingsBroken = true;
         const raw = localStorage.getItem(AUTO_SETTINGS_KEY);
-        if (!raw) return {enabled: false, minutes: 10};
+        if (!raw) {
+            autoSettingsBroken = false;
+            return {enabled: false, minutes: 10};
+        }
         const value = JSON.parse(raw);
         if (!value || typeof value.enabled !== 'boolean' || !Number.isSafeInteger(value.minutes) || value.minutes < 1 ||
             !Number.isSafeInteger(value.minutes * 60000) || !Number.isFinite(new Date(Date.now() - value.minutes * 60000).getTime())) {
             throw new Error('Nastaveni automatickeho vykazovani je poskozene. Oprav ho v nastaveni AUTO.');
         }
+        autoSettingsBroken = false;
         return value;
     }
 
@@ -394,6 +418,7 @@
     }
     function render() {
         try {
+            renderAutoIndicator();
             renderToasts();
             const value = busy ? actionDisplay : read();
             const currentIssue = issue();
@@ -619,6 +644,7 @@
         try {
             localStorage.setItem(AUTO_SETTINGS_KEY, JSON.stringify(value));
             autoSettingsValue = value;
+            autoSettingsBroken = false;
             notice = '';
             autoSettingsDialog.hidden = true;
             render();

@@ -43,7 +43,11 @@ for compatibility with installed copies and saved timer state.
   Only POST submission is observed, not form initialization; require a valid
   returned key before queuing a worklog. Issue creation
   outside this Jira page is not observed. Automatic worklogs must not overwrite
-  or alter the active timer.
+  or alter the active timer. The `auto` button shows the saved state without
+  opening settings (`data-state` `on` in bold green with a filled dot, `off`
+  with a hollow grey dot, `error` in red as `auto !` for corrupted settings).
+  Keep the label compact so the ADD MINUTES row does not wrap; minutes appear
+  only in its title/aria-label. Unsaved dialog changes do not affect it.
 - Elapsed time is based on wall-clock timestamps and refreshes every 100ms.
   Jira worklogs have a one-minute minimum; longer durations are rounded down
   to whole minutes.
@@ -146,7 +150,7 @@ must exist. Publishing rewrites these links to the release tag
 (`raw.githubusercontent.com/<owner>/<repo>/v<version>/...`), so each Release
 permanently shows that version's look.
 
-The current userscript metadata and in-panel version are `1.17.3`. On each
+The current userscript metadata and in-panel version are `1.17.4`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.
