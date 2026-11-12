@@ -4,11 +4,15 @@
     const KEY = 'jira-direct-timer-v1';
     const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
     const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
+    const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
     const titles = {
         'DEMO-101': 'Testovaci task: implementace <bezpecny text>',
         'DEMO-102': 'Testovaci task: kontrola a opravy',
         'DEMO-103': 'Testovaci task: dokumentace',
-        'DEMO-104': 'Testovaci task: automaticke vykazani'
+        'DEMO-104': 'Testovaci task: automaticke vykazani',
+        'OPS-12': 'Porady a komunikace',
+        'OPS-140': 'Review pristupu',
+        'ARCH-3': 'Architecture review board'
     };
     const nativeDate = Date;
     let model;
@@ -40,7 +44,7 @@
         document.querySelectorAll('body > style').forEach(node => node.remove());
         events = new EventTarget();
         const current = model;
-        const fakeWindow = {addEventListener: events.addEventListener.bind(events)};
+        const fakeWindow = {addEventListener: events.addEventListener.bind(events), matchMedia: query => window.matchMedia(query)};
         fakeWindow.top = fakeWindow;
         class Clock extends nativeDate {
             static now() { return nativeDate.now() + current.offset; }
@@ -50,12 +54,14 @@
                 if (key === KEY) return current.raw;
                 if (key === AUTO_SETTINGS_KEY) return current.autoSettingsRaw;
                 if (key === AUTO_QUEUE_KEY) return current.autoQueueRaw;
+                if (key === FAVORITES_KEY) return current.favoritesRaw;
                 throw new Error(`Unexpected storage key: ${key}`);
             },
             setItem(key, value) {
                 if (key === KEY) current.raw = value;
                 else if (key === AUTO_SETTINGS_KEY) current.autoSettingsRaw = value;
                 else if (key === AUTO_QUEUE_KEY) current.autoQueueRaw = value;
+                else if (key === FAVORITES_KEY) current.favoritesRaw = value;
                 else throw new Error(`Unexpected storage key: ${key}`);
                 inspect();
             },
@@ -63,6 +69,7 @@
                 if (key === KEY) current.raw = null;
                 else if (key === AUTO_SETTINGS_KEY) current.autoSettingsRaw = null;
                 else if (key === AUTO_QUEUE_KEY) current.autoQueueRaw = null;
+                else if (key === FAVORITES_KEY) current.favoritesRaw = null;
                 else throw new Error(`Unexpected storage key: ${key}`);
                 inspect();
             }
@@ -72,8 +79,10 @@
             const myself = path === '/rest/api/2/myself' && method === 'GET';
             const createForm = path === '/secure/QuickCreateIssue.jspa';
             const createIssue = (path === '/rest/api/2/issue' || createForm) && method === 'POST';
-            const match = /^\/rest\/api\/2\/issue\/(DEMO-10[1-4])(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
-            if ((!match && !myself && !createIssue) || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
+            const picker = path.startsWith('/rest/api/2/issue/picker?') && method === 'GET';
+            const fixture = /^\/rest\/api\/2\/issue\/([A-Z][A-Z0-9_]*-\d+)(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
+            const match = fixture && Object.hasOwn(titles, fixture[1]) ? fixture : null;
+            if ((!match && !myself && !createIssue && !picker) || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
             current.requests.push({method, path});
             current.active++;
             inspect();
@@ -82,6 +91,13 @@
                 if (myself) {
                     if (current.identityError) throw new Error('Simulovana chyba identity uzivatele');
                     return {ok: true, json: async () => clone(current.user)};
+                }
+                if (picker) {
+                    if (current.pickerError) throw new Error('Simulovana chyba hledani');
+                    const query = new URLSearchParams(path.split('?')[1]).get('query').toLowerCase();
+                    const issues = Object.entries(titles).filter(([key, title]) => `${key} ${title}`.toLowerCase().includes(query))
+                        .map(([key, title]) => ({key, summaryText: title, summary: title}));
+                    return {ok: true, json: async () => ({sections: [{id: 'cs', issues}]})};
                 }
                 if (createIssue) {
                     const body = createForm ? {issueKey: 'DEMO-104', issueId: '104'} : {key: 'DEMO-104'};
@@ -151,6 +167,8 @@
             raw: options.raw ?? (options.state ? JSON.stringify(options.state) : null),
             autoSettingsRaw: options.autoSettings ? JSON.stringify(options.autoSettings) : null,
             autoQueueRaw: options.autoQueue ? JSON.stringify(options.autoQueue) : null,
+            favoritesRaw: typeof options.favorites === 'string' ? options.favorites : options.favorites ? JSON.stringify(options.favorites) : null,
+            pickerError: options.pickerError || false,
             logs: clone(options.logs || []).map(log => ({author: clone(user), ...log})), requests: [], posts: [], offset: 0, active: 0,
             latency: options.latency ?? 30, failure: 'none', lock: options.lock || 'available',
             totalError: options.totalError || false, location: {pathname: '', search: '', origin: 'https://jira.alza.cz',
@@ -171,6 +189,8 @@
         node: name => $(`[data-${name}]`),
         panel: () => $('#jira-direct-timer'),
         state: () => model.raw ? JSON.parse(model.raw) : null,
+        favorites: () => model.favoritesRaw ? JSON.parse(model.favoritesRaw) : null,
+        favoritesRaw: () => model.favoritesRaw,
         logs: () => clone(model.logs),
         posts: () => clone(model.posts),
         requests: () => clone(model.requests),
@@ -198,6 +218,10 @@
             else this.node('manual').click();
             await idle();
         },
+        externalFavorites(value) {
+            model.favoritesRaw = JSON.stringify(value);
+            events.dispatchEvent(new StorageEvent('storage', {key: FAVORITES_KEY}));
+        },
         externalState(value) {
             model.raw = JSON.stringify(value);
             events.dispatchEvent(new StorageEvent('storage', {key: KEY}));
@@ -214,7 +238,8 @@
         const link = event.target.closest('#jira-direct-timer a');
         if (!link) return;
         event.preventDefault();
-        $('#link-info').textContent = `Odkaz (bez externi navigace): ${link.href}`;
+        $('#link-info').textContent = `Odkaz${link.target === '_blank' ? ' do nove karty' : ''} (bez externi navigace): ${link.href}`;
+        if (link.target === '_blank') return;
         const issue = new URL(link.href).pathname.match(/^\/browse\/(DEMO-10[123])$/)?.[1];
         if (issue) navigate(issue);
     });

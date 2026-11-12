@@ -13,6 +13,13 @@
         id: 'legacy-timer', issue, started: p.now() - 125000, ended: null, phase: 'running'
     });
     const color = p => getComputedStyle(p.panel()).backgroundColor;
+    const waitFor = async (check, timeout = 2000) => {
+        const deadline = Date.now() + timeout;
+        while (!check()) {
+            if (Date.now() > deadline) throw new Error('Condition not met in time');
+            await new Promise(resolve => setTimeout(resolve, 20));
+        }
+    };
     const toast = (p, kind, duration, issue) => {
         const node = p.node(`toast="${kind}"`);
         if (!node) throw new Error(`Missing ${kind} toast`);
@@ -547,6 +554,76 @@
             equal(p.node('stop').disabled, false);
             await p.click('stop');
             equal(p.posts()[0].issue, 'DEMO-101');
+        }},
+        {title: 'Oblibene: stitek, hledani, odkaz do nove karty, pridani a odebrani', async run(p) {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}]});
+            equal(p.node('fav-count').textContent, '1');
+            equal(p.node('favorites').hidden, true);
+            await p.click('fav-open');
+            equal(p.node('fav-open').hidden, true, 'chip hidden while open');
+            const section = p.node('favorites').getBoundingClientRect();
+            if (section.bottom > p.node('header').getBoundingClientRect().top + 1) throw new Error('Favorites must sit above the timer header');
+            await p.click('fav-add');
+            const search = p.node('fav-search');
+            equal(document.activeElement, search, 'search focused');
+            search.value = 'review';
+            search.dispatchEvent(new Event('input'));
+            await waitFor(() => p.node('fav-results').querySelectorAll('[data-fav-issue]').length === 2);
+            const link = p.node('fav-issue="OPS-140"').querySelector('a');
+            equal([link.target, link.rel, link.href], ['_blank', 'noopener noreferrer', 'https://jira.alza.cz/browse/OPS-140']);
+            link.click();
+            includes(document.querySelector('#link-info').textContent, 'do nove karty');
+            equal(search.value, 'review', 'opening a result keeps the search');
+            equal(p.favorites().length, 1, 'opening a result does not save it');
+            p.node('fav-issue="OPS-140"').querySelector('[data-fav-pin]').click();
+            equal(p.favorites().map(value => value.issue), ['OPS-12', 'OPS-140']);
+            equal([search.hidden, search.value, p.node('fav-results').hidden], [true, '', true]);
+            const added = p.node('fav-list').querySelector('[data-fav-issue="OPS-140"]');
+            if (!added.hasAttribute('data-fresh')) throw new Error('New favorite must be highlighted');
+            added.querySelector('[data-fav-remove]').click();
+            equal(p.favorites().map(value => value.issue), ['OPS-12']);
+            equal(p.posts().length, 0);
+        }},
+        {title: 'Oblibene: START prepne z bezicich stopek a plynule se zavre', async run(p) {
+            await p.reset({state: running(p, 'DEMO-102'), favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}]});
+            await p.click('fav-open');
+            const row = p.node('fav-list').querySelector('[data-fav-issue="OPS-12"]');
+            row.querySelector('[data-fav-start]').click();
+            await p.idle();
+            equal(p.posts()[0].issue, 'DEMO-102');
+            equal([p.state().issue, p.state().phase], ['OPS-12', 'running']);
+            equal(p.node('favorites').hasAttribute('data-closing'), true, 'collapse is animated');
+            await waitFor(() => p.node('favorites').hidden);
+            equal(p.node('fav-open').hidden, false);
+            includes(p.node('measuring').textContent, 'OPS-12');
+            toast(p, 'saved', '00:02:00', 'DEMO-102');
+        }},
+        {title: 'Oblibene: +min do vybraneho tasku, limit a poskozeny seznam', async run(p) {
+            const state = running(p, 'DEMO-102');
+            await p.reset({state, favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}]});
+            await p.click('fav-open');
+            p.node('fav-list').querySelector('[data-fav-minutes]').click();
+            equal(document.activeElement, p.node('fav-minutes-input'));
+            [...p.node('fav-editor').querySelectorAll('[data-fav-quick]')].find(node => node.textContent === '30').click();
+            equal(p.node('fav-minutes-input').value, '30');
+            equal(p.posts().length, 0, 'quick buttons only prefill');
+            p.node('fav-minutes-save').click();
+            await p.idle();
+            equal([p.posts()[0].issue, p.posts()[0].body.timeSpentSeconds], ['OPS-12', 1800]);
+            equal(p.state(), state, 'running timer unchanged');
+            equal(p.node('fav-editor'), null);
+            await p.reset({favorites: Array.from({length: 10}, (_, index) => ({issue: `FULL-${index + 1}`, title: 'Plny seznam'}))});
+            await p.click('fav-open');
+            await p.click('fav-add');
+            equal(p.node('fav-search').disabled, true);
+            includes(p.node('fav-error').textContent, 'maximum 10');
+            await p.reset({favorites: '{broken'});
+            equal(p.node('fav-count').textContent, '!');
+            await p.click('fav-open');
+            includes(p.node('fav-error').textContent, 'poskozeny');
+            equal(p.node('fav-add').disabled, true);
+            equal(p.favoritesRaw(), '{broken', 'corrupted favorites are never overwritten');
+            equal(p.posts().length, 0);
         }}
     ];
     const regression = {

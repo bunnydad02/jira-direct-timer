@@ -6,6 +6,7 @@ const source = fs.readFileSync(path.join(__dirname, 'jira-workspace-timer.user.j
 const metadata = source.split('// ==/UserScript==')[0];
 const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
 const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
+const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
 const currentUser = {key: 'demo-user', name: 'demo', displayName: 'Demo User'};
 const ownLog = timeSpentSeconds => ({timeSpentSeconds, author: currentUser});
 for (const directive of ['updateURL', 'downloadURL']) {
@@ -17,6 +18,11 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let state = initial;
     let autoSettings = extra.autoSettings || null;
     let autoQueue = extra.autoQueue || [];
+    let favorites = extra.favorites === undefined ? null : typeof extra.favorites === 'string' ? extra.favorites : JSON.stringify(extra.favorites);
+    const pickerQueries = [];
+    let onPicker = query => ({sections: [{id: 'cs', issues: [
+        {key: 'OPS-140', summaryText: 'Review pristupu', summary: 'Review <b>pristupu</b>'},
+        {key: 'DEMO-102', summaryText: 'Code review'}]}]});
     let confirmations = 0;
     const posts = [];
     const persisted = [];
@@ -42,6 +48,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
             },
             querySelector: s => nodes[s] ||= element(),
             appendChild(child) { this.children.push(child); child.parent = this; },
+            replaceChildren(...items) { this.children = []; items.forEach(child => this.appendChild(child)); },
             setAttribute(name, value) { this.attributes[name] = value; },
             focus() {},
             remove() { this.parent.children.splice(this.parent.children.indexOf(this), 1); },
@@ -80,6 +87,11 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
                 active--;
             }
         }
+        if (path.startsWith('/rest/api/2/issue/picker?')) {
+            const query = new URLSearchParams(path.split('?')[1]).get('query');
+            pickerQueries.push(query);
+            return {ok: true, json: async () => onPicker(query)};
+        }
         if (path === '/rest/api/2/myself') return {ok: true, json: async () => onIdentity()};
         const match = /^\/rest\/api\/2\/issue\/(DEMO-10[1-9])(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
         if (match && match[2] === '?fields=summary') {
@@ -114,11 +126,13 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
         localStorage: {
             getItem: key => key === 'jira-direct-timer-v1' ? state ? JSON.stringify(state) : null :
                 key === AUTO_SETTINGS_KEY ? autoSettings ? JSON.stringify(autoSettings) : null :
-                    key === AUTO_QUEUE_KEY ? autoQueue.length ? JSON.stringify(autoQueue) : null : null,
+                    key === AUTO_QUEUE_KEY ? autoQueue.length ? JSON.stringify(autoQueue) : null :
+                        key === FAVORITES_KEY ? favorites : null,
             setItem: (key, value) => {
                 if (key === 'jira-direct-timer-v1') state = JSON.parse(value);
                 else if (key === AUTO_SETTINGS_KEY) autoSettings = JSON.parse(value);
                 else if (key === AUTO_QUEUE_KEY) autoQueue = JSON.parse(value);
+                else if (key === FAVORITES_KEY) favorites = value;
                 else throw new Error(`Unexpected storage key: ${key}`);
             },
             removeItem: key => {
@@ -129,7 +143,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
             }
         },
         Date: Clock, crypto: {randomUUID: () => `manual-${++id}`}, confirm: () => { confirmations++; return true; }, setInterval: (callback, ms) => { render = callback; interval = ms; },
-        navigator: {locks: {request: async (k, o, f) => f({})}},
+        navigator: {locks: {request: async (k, o, f) => f({})}}, setTimeout, clearTimeout,
         fetch: mockFetch
     };
     vm.runInNewContext(source, context);
@@ -137,6 +151,9 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     return {nodes, panel, posts, styles: context.document.body.children[0].textContent,
         state: () => state, confirmations: () => confirmations, click: name => nodes[`[data-${name}]`].onclick(),
         settings: () => autoSettings, autoQueue: () => autoQueue,
+        favorites: () => favorites === null ? null : JSON.parse(favorites), pickerQueries,
+        onPicker: callback => { onPicker = callback; },
+        externalFavorites: value => { favorites = value === null ? null : JSON.stringify(value); render(); },
         configureAuto: (enabled, value = 10) => {
             nodes['[data-auto-open]'].onclick();
             nodes['[data-auto-enabled]'].checked = enabled;
@@ -194,7 +211,9 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(legacyPanel.nodes['[data-version]'].attributes.rel, 'noopener noreferrer');
     assert.equal(legacyPanel.nodes['[data-version]'].attributes['aria-label'],
         `Timer version ${version}; open GitHub repository`);
-    assert.match(legacyPanel.styles, /\[data-version-wrap\] \{position:absolute;top:14px;right:14px;font-size:9px/);
+    assert.match(legacyPanel.styles, /\[data-header\] \{display:flex;align-items:center;gap:6px;margin-bottom:10px\}/);
+    assert.match(legacyPanel.styles, /\[data-version-wrap\] \{margin-left:auto;font-size:9px/,
+        'keep the version in the header row so the favorites section can sit above it');
     assert.equal(legacyPanel.nodes['[data-release-notes]'], undefined,
         'do not render release notes next to the GitHub version link');
     const autoOff = setup(null);
@@ -510,7 +529,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     }
     for (const initial of [null, running(), {...running(), issue: 'DEMO-101'}]) {
         const h = setup(initial);
-        assert.match(h.panel.innerHTML, /^<strong>Jira stopky<\/strong>/);
+        assert.match(h.panel.innerHTML, /^<div data-favorites hidden>.*<div data-header><strong>Jira stopky<\/strong>/);
         await h.click('manual');
         assert.equal(h.confirmations(), 0, 'manual entry must save without a dialog');
         assert.equal(h.posts.length, 1);
@@ -867,5 +886,133 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         await crossOrigin[via]('https://jira.alza.cz/rest/api/2/issue');
         assert.equal(crossOrigin.posts.length, 1, `${via}: accept absolute same-origin issue creation`);
     }
+    const favRows = h => h.nodes['[data-fav-list]'].children.filter(child => 'favIssue' in child.dataset);
+    const favRow = (h, key) => favRows(h).find(row => row.dataset.favIssue === key);
+    const favResultRows = h => h.nodes['[data-fav-results]'].children.filter(child => 'favIssue' in child.dataset);
+    const typeSearch = async (h, value) => {
+        h.nodes['[data-fav-search]'].value = value;
+        h.nodes['[data-fav-search]'].oninput();
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setImmediate(resolve));
+    };
+    const favorites = setup(null, 0, '30', false, 0, {favorites: [{issue: 'DEMO-102', title: 'Code review'}]});
+    assert.equal(favorites.nodes['[data-fav-count]'].textContent, '1', 'the header chip shows how many favorites exist');
+    assert.equal(favorites.nodes['[data-favorites]'].hidden, true);
+    favorites.click('fav-open');
+    assert.equal(favorites.nodes['[data-favorites]'].hidden, false);
+    assert.equal(favorites.nodes['[data-fav-open]'].hidden, true, 'hide the chip while favorites are open');
+    assert.equal(favRow(favorites, 'DEMO-102').children[0].attributes.target, '_blank');
+    favorites.click('fav-add');
+    assert.equal(favorites.nodes['[data-fav-search]'].hidden, false);
+    await typeSearch(favorites, 'r');
+    assert.equal(favorites.pickerQueries.length, 0, 'do not search Jira for a single character');
+    await typeSearch(favorites, 'review');
+    assert.deepEqual(favorites.pickerQueries, ['review']);
+    const [opsResult, savedResult] = favResultRows(favorites);
+    assert.equal(opsResult.children[0].href, 'https://jira.alza.cz/browse/OPS-140');
+    assert.equal(opsResult.children[0].attributes.rel, 'noopener noreferrer');
+    assert.equal(opsResult.children[0].children[1].textContent, 'Review pristupu');
+    assert.ok('favSaved' in savedResult.children[1].dataset, 'already saved results are marked instead of offering +');
+    assert.equal(favorites.favorites().length, 1, 'searching or opening a result never changes favorites');
+    opsResult.children[1].onclick();
+    assert.deepEqual(favorites.favorites(), [{issue: 'DEMO-102', title: 'Code review'}, {issue: 'OPS-140', title: 'Review pristupu'}]);
+    assert.equal(favorites.nodes['[data-fav-search]'].value, '', 'adding clears the search field');
+    assert.equal(favorites.nodes['[data-fav-search]'].hidden, true);
+    assert.equal(favResultRows(favorites).length, 0, 'adding clears the results');
+    assert.ok('fresh' in favRow(favorites, 'OPS-140').dataset, 'highlight the newly added favorite');
+    favRow(favorites, 'OPS-140').children[3].onclick();
+    assert.deepEqual(favorites.favorites(), [{issue: 'DEMO-102', title: 'Code review'}]);
+    assert.equal(favorites.posts.length, 0);
+    await favRow(favorites, 'DEMO-102').children[2].onclick();
+    assert.equal(favorites.state().issue, 'DEMO-102', 'play starts the favorite even when another issue is open');
+    assert.equal(favorites.state().phase, 'running');
+    assert.equal(favorites.nodes['[data-favorites]'].hidden, true, 'a successful start collapses favorites');
+    assert.equal(favorites.nodes['[data-fav-open]'].hidden, false);
+
+    const stale = setup(null, 0, '30', false, 0, {favorites: []});
+    const answers = {};
+    stale.onPicker(query => new Promise(resolve => { answers[query] = resolve; }));
+    stale.click('fav-open');
+    stale.click('fav-add');
+    await typeSearch(stale, 'old');
+    await typeSearch(stale, 'new');
+    answers.new({sections: [{issues: [{key: 'NEW-1', summaryText: 'New result'}]}]});
+    await new Promise(resolve => setImmediate(resolve));
+    answers.old({sections: [{issues: [{key: 'OLD-1', summaryText: 'Old result'}]}]});
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(favResultRows(stale).map(row => row.dataset.favIssue), ['NEW-1'], 'ignore stale search responses');
+    stale.onPicker(() => { throw new Error('Picker offline'); });
+    await typeSearch(stale, 'broken');
+    assert.match(stale.nodes['[data-fav-error]'].textContent, /Hled\u00e1n\u00ed selhalo: .*Picker offline/);
+    stale.onPicker(() => ({sections: 'invalid'}));
+    await typeSearch(stale, 'invalid');
+    assert.match(stale.nodes['[data-fav-error]'].textContent, /neocekavanou odpoved/);
+
+    const favoriteSwitch = setup(running(), 0, '30', false, 0, {favorites: [{issue: 'DEMO-103', title: 'Third'}]});
+    favoriteSwitch.click('fav-open');
+    await favRow(favoriteSwitch, 'DEMO-103').children[2].onclick();
+    assert.match(favoriteSwitch.posts[0].path, /DEMO-102\/worklog/, 'switching from a favorite saves the running issue first');
+    assert.equal(favoriteSwitch.state().issue, 'DEMO-103');
+    assert.equal(favoriteSwitch.state().started, 200000000, 'the favorite timer starts where the previous one ended');
+
+    const runningFavorite = setup(running(), 0, '30', false, 0, {favorites: [{issue: 'DEMO-102', title: 'Second'}]});
+    runningFavorite.click('fav-open');
+    const runningPlay = favRow(runningFavorite, 'DEMO-102').children[2];
+    assert.ok('favStop' in runningPlay.dataset, 'the running favorite offers stop instead of play');
+    assert.equal(favRow(runningFavorite, 'DEMO-102').children[0].children[0].children[0].textContent, '\u25cf');
+    await runningPlay.onclick();
+    assert.equal(runningFavorite.state().phase, 'saved');
+    assert.equal(runningFavorite.nodes['[data-favorites]'].hidden, false, 'stop keeps favorites open');
+
+    const failedStart = setup(running(), 1, '30', false, 0, {favorites: [{issue: 'DEMO-103', title: 'Third'}]});
+    failedStart.click('fav-open');
+    await favRow(failedStart, 'DEMO-103').children[2].onclick();
+    assert.match(failedStart.nodes['[data-error]'].textContent, /Network failure/);
+    assert.equal(failedStart.nodes['[data-favorites]'].hidden, false, 'a failed start keeps favorites open');
+    assert.equal(failedStart.state().issue, 'DEMO-102');
+
+    const favoriteMinutes = setup(running(), 0, '30', false, 0, {favorites: [{issue: 'DEMO-103', title: 'Third'}]});
+    favoriteMinutes.click('fav-open');
+    assert.equal(favRow(favoriteMinutes, 'DEMO-101'), undefined);
+    favRow(favoriteMinutes, 'DEMO-103').children[1].onclick();
+    const editor = favoriteMinutes.nodes['[data-fav-list]'].children.find(child => 'favEditor' in child.dataset);
+    await editor.children[2].children[1].onclick();
+    assert.equal(favoriteMinutes.posts.length, 0, 'empty favorite minutes must not write');
+    assert.match(favoriteMinutes.nodes['[data-error]'].textContent, /kladny/);
+    editor.children[1].children[1].onclick();
+    assert.equal(editor.children[2].children[0].value, '30', 'quick buttons only prefill the minutes');
+    assert.equal(favoriteMinutes.posts.length, 0);
+    await editor.children[2].children[1].onclick();
+    assert.match(favoriteMinutes.posts[0].path, /DEMO-103\/worklog/);
+    assert.equal(favoriteMinutes.posts[0].body.timeSpentSeconds, 1800);
+    assert.deepEqual(favoriteMinutes.state(), running(), 'favorite minutes keep the running timer untouched');
+    assert.equal(favoriteMinutes.nodes['[data-fav-list]'].children.some(child => 'favEditor' in child.dataset), false);
+
+    const openFavorite = setup(null, 0, '30', false, 0, {favorites: [{issue: 'DEMO-101', title: ''}]});
+    openFavorite.click('fav-open');
+    const openKey = favRow(openFavorite, 'DEMO-101').children[0].children[0];
+    assert.equal(openKey.children.at(-1).textContent, 'otev\u0159en\u00fd', 'mark the favorite of the open issue');
+    assert.equal(favRow(openFavorite, 'DEMO-101').children[0].children[1].textContent, 'Full issue title <safe text>');
+    openFavorite.externalFavorites([]);
+    assert.equal(openFavorite.nodes['[data-fav-count]'].textContent, '0', 'reflect favorites changed in another tab');
+    assert.match(openFavorite.nodes['[data-fav-list]'].children[0].textContent, /Zat\u00edm tu nic nen\u00ed/);
+
+    for (const raw of ['{broken', JSON.stringify([{issue: 'bad'}]), JSON.stringify([{issue: 'A-1', title: ''}, {issue: 'A-1', title: ''}])]) {
+        const broken = setup(null, 0, '30', false, 0, {favorites: raw});
+        assert.equal(broken.nodes['[data-fav-count]'].textContent, '!');
+        assert.equal(broken.nodes['[data-fav-open]'].dataset.state, 'error');
+        broken.click('fav-open');
+        assert.match(broken.nodes['[data-fav-error]'].textContent, /poskozeny/);
+        assert.equal(broken.nodes['[data-fav-add]'].disabled, true, 'corrupted favorites must not be overwritten');
+        assert.equal(favRows(broken).length, 0);
+    }
+
+    const full = setup(null, 0, '30', false, 0, {favorites: Array.from({length: 10}, (_, index) => ({issue: `FULL-${index + 1}`, title: 'Full'}))});
+    full.click('fav-open');
+    full.click('fav-add');
+    assert.equal(full.nodes['[data-fav-search]'].disabled, true, 'block the search field when the limit is reached');
+    assert.match(full.nodes['[data-fav-error]'].textContent, /maximum 10 obl\u00edben\u00fdch/);
+    assert.match(full.nodes['[data-fav-add]'].attributes.title, /maximum 10/);
+    console.log('PASS: favorites chip, search/add/remove, stale and failed searches, start/stop/switch, collapse, minutes, cross-tab sync, corruption and limit');
     console.log('PASS: Enter/manual minutes, uninterrupted timer, second boundaries, slow API, failures, legacy recovery, deduplication, switching, cancellation, minimum duration, titles, immediate idle and save/discard toasts, write target, worklog ownership and same-origin issue creation');
 })().catch(e => { console.error(e); process.exitCode = 1; });

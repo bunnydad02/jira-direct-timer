@@ -88,6 +88,43 @@ const groups = [
             await p.createIssue(true);
         }}
     ]},
+    {title: 'Oblibene tasky', states: [
+        {name: 'favorites-chip', title: 'Stitek oblibene s poctem', run: async p => {
+            await p.reset({favorites: [
+                {issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'},
+                {issue: 'DEMO-101', title: 'Testovaci task: implementace'}]});
+        }},
+        {name: 'favorites-open', title: 'Otevrene oblibene nad stopkami', run: async p => {
+            await p.reset({favorites: [
+                {issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'},
+                {issue: 'DEMO-101', title: 'Testovaci task: implementace'}]});
+            await p.click('fav-open');
+        }},
+        {name: 'favorites-search', title: 'Naseptavac: odkaz do nove karty, + prida', run: async p => {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'ARCH-3', title: 'Architecture review board'}]});
+            await p.click('fav-open');
+            await p.click('fav-add');
+            p.node('fav-search').value = 'review';
+            p.node('fav-search').dispatchEvent(new Event('input'));
+            while (p.node('fav-results').querySelectorAll('[data-fav-issue]').length < 2) await p.sleep(20);
+        }},
+        {name: 'favorites-minutes', title: '+min do oblibeneho tasku', run: async p => {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'}]});
+            await p.click('fav-open');
+            p.node('fav-list').querySelector('[data-fav-minutes]').click();
+            p.node('fav-quick').click();
+        }},
+        {name: 'favorites-running', title: 'Bezici oblibeny task: stop misto startu', run: async (p, ms) => {
+            await p.reset({issue: 'DEMO-101', state: {id: 'shot', issue: 'DEMO-102', started: p.now() - ms, ended: null, phase: 'running'},
+                favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'}]});
+            await p.click('fav-open');
+        }},
+        {name: 'favorites-limit', title: 'Plny seznam: hledani je zablokovane', run: async p => {
+            await p.reset({favorites: Array.from({length: 10}, (_, index) => ({issue: `OPS-${index + 1}`, title: 'Opakovana schuzka'}))});
+            await p.click('fav-open');
+            await p.click('fav-add');
+        }}
+    ]},
     {title: 'Ochrana stavu', states: [
         {name: 'lock-busy', title: 'Zamek drzi jina karta', run: async p => {
             await p.reset({lock: 'busy'});

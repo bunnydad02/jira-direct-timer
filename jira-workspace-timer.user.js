@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.17.4
+// @version      1.18.0
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -16,7 +16,10 @@
     const KEY = 'jira-direct-timer-v1';
     const AUTO_SETTINGS_KEY = 'jira-direct-timer-auto-settings-v1';
     const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
-    const VERSION = '1.17.4';
+    const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
+    const FAVORITES_LIMIT = 10;
+    const ISSUE_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
+    const VERSION = '1.18.0';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -26,8 +29,55 @@
         #jira-direct-timer[data-running="true"] {background:#effaf2;border-color:#a6d8b4}
         #jira-direct-timer[data-other="true"] {background:#edf4ff;border-color:#9abce8}
         #jira-direct-timer strong {display:block;font-size:12px;font-weight:600;color:#526078;margin-bottom:10px}
-        #jira-direct-timer > strong {padding-right:50px}
-        #jira-direct-timer [data-version-wrap] {position:absolute;top:14px;right:14px;font-size:9px;font-weight:400;line-height:1.45;color:inherit}
+        #jira-direct-timer [data-header] {display:flex;align-items:center;gap:6px;margin-bottom:10px}
+        #jira-direct-timer [data-header] strong {margin:0}
+        #jira-direct-timer [data-version-wrap] {margin-left:auto;font-size:9px;font-weight:400;line-height:1.45;color:inherit}
+        #jira-direct-timer [data-fav-open] {display:inline-flex;align-items:center;gap:3px;padding:1px 6px;border:1px solid #b9c4d2;border-radius:9px;background:#ffffffa0;color:#526078;font-size:9px;font-weight:600;line-height:1.45;white-space:nowrap}
+        #jira-direct-timer [data-fav-open] b {color:#253249}
+        #jira-direct-timer [data-fav-open][data-state="error"],#jira-direct-timer [data-fav-open][data-state="error"] b {color:#ae2a19}
+        #jira-direct-timer [data-favorites] {display:grid;grid-template-rows:1fr;margin:-4px 0 9px;padding-bottom:7px;border-bottom:1px solid #172b4d20;transition:grid-template-rows .45s ease,opacity .45s ease,margin .45s ease,padding .45s ease,border-color .45s ease}
+        #jira-direct-timer [data-fav-body] {min-width:0;min-height:0}
+        #jira-direct-timer [data-favorites][data-closing] {grid-template-rows:0fr;opacity:0;margin-bottom:0;padding-bottom:0;border-bottom-color:transparent}
+        #jira-direct-timer [data-favorites][data-closing] [data-fav-body] {overflow:hidden}
+        #jira-direct-timer [data-fav-header] {display:flex;align-items:center;gap:4px;min-height:18px;margin-bottom:2px}
+        #jira-direct-timer [data-fav-heading] {color:#526078;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
+        #jira-direct-timer [data-fav-total] {flex:1;color:#526078;font-size:9px;opacity:.7}
+        #jira-direct-timer [data-fav-header] button,#jira-direct-timer [data-fav-remove] {display:inline-flex;flex-shrink:0;width:18px;height:18px;align-items:center;justify-content:center;padding:0;border:0;background:transparent;color:#526078;font-size:14px;font-weight:400;line-height:1}
+        #jira-direct-timer [data-fav-row] {display:flex;align-items:center;gap:3px;padding:3px 0;border-top:1px solid #172b4d12;border-radius:3px;transition:background-color .6s ease}
+        #jira-direct-timer [data-fav-row][data-fresh] {background:#e3f4e8}
+        #jira-direct-timer a[data-fav-info] {display:block;flex:1;min-width:0;line-height:1.25;color:inherit;text-decoration:none}
+        #jira-direct-timer a[data-fav-info]:hover [data-fav-key] {text-decoration:underline}
+        #jira-direct-timer [data-fav-key] {display:block;overflow:hidden;color:#253249;font-size:10px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+        #jira-direct-timer [data-fav-dot] {margin-right:3px;color:#20559a}
+        #jira-direct-timer [data-fav-mark] {margin-left:3px;color:#526078;font-size:8px;font-weight:400}
+        #jira-direct-timer [data-fav-summary] {display:block;overflow:hidden;color:#526078;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
+        #jira-direct-timer [data-fav-minutes] {flex-shrink:0;height:19px;padding:0 4px;font-size:9px}
+        #jira-direct-timer [data-fav-start],#jira-direct-timer [data-fav-stop] {flex-shrink:0;width:20px;height:19px;padding:0;font-size:8px;color:#fff}
+        #jira-direct-timer [data-fav-start] {background:#176538;border-color:#176538}
+        #jira-direct-timer [data-fav-stop] {background:#a73434;border-color:#a73434}
+        #jira-direct-timer [data-fav-remove] svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+        #jira-direct-timer [data-fav-editor] {margin:1px 0 4px;padding:6px;border:1px solid #dfe3e8;border-radius:6px;background:#ffffffb0}
+        #jira-direct-timer [data-fav-editor-label] {display:block;margin-bottom:4px;color:#526078;font-size:9px;font-weight:600}
+        #jira-direct-timer [data-fav-editor-row] {display:flex;align-items:center;gap:4px}
+        #jira-direct-timer [data-fav-quick] {padding:2px 6px;font-size:9px}
+        #jira-direct-timer [data-fav-minutes-input] {flex:1;width:auto;padding:3px 5px;font-size:11px}
+        #jira-direct-timer [data-fav-minutes-save] {padding:3px 7px;border-color:#176538;background:#176538;color:#fff;font-size:9px}
+        #jira-direct-timer [data-fav-search] {display:block;width:100%;margin-top:2px;padding:4px 6px;border-color:#4c8be0;font-size:11px}
+        #jira-direct-timer [data-fav-search]:disabled {border-color:#b9c4d2;background:#f4f5f7;cursor:not-allowed}
+        #jira-direct-timer [data-fav-results] {margin-top:4px;overflow:hidden;border:1px solid #dfe3e8;border-radius:5px;background:#fff}
+        #jira-direct-timer [data-fav-result] {display:flex;align-items:center;gap:4px;padding:3px 4px 3px 6px;font-size:9px;line-height:1.35}
+        #jira-direct-timer [data-fav-result] + [data-fav-result] {border-top:1px solid #172b4d10}
+        #jira-direct-timer [data-fav-result] a {display:flex;flex:1;min-width:0;gap:4px;color:#253249;text-decoration:none}
+        #jira-direct-timer [data-fav-result] a:hover {color:#0052cc;text-decoration:underline}
+        #jira-direct-timer [data-fav-result] b {white-space:nowrap}
+        #jira-direct-timer [data-fav-result] a span {overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        #jira-direct-timer [data-fav-result] i {color:#8993a4;font-size:8px;font-style:normal}
+        #jira-direct-timer [data-fav-pin] {flex-shrink:0;width:18px;height:17px;padding:0;border-color:#176538;color:#176538;font-size:12px;line-height:1}
+        #jira-direct-timer [data-fav-saved] {flex-shrink:0;color:#526078;font-size:8px;font-style:normal}
+        #jira-direct-timer [data-fav-message] {padding:3px 6px;color:#526078;font-size:9px}
+        #jira-direct-timer [data-fav-empty] {padding:3px 0;color:#526078;font-size:9px}
+        #jira-direct-timer [data-fav-error] {color:#ae2a19;font-size:9px;white-space:pre-wrap;overflow-wrap:anywhere}
+        #jira-direct-timer [data-fav-error]:not(:empty) {margin-top:4px}
         #jira-direct-timer [data-version] {color:inherit;text-decoration:none;opacity:.55}
         #jira-direct-timer [data-version]:hover,#jira-direct-timer [data-version]:focus-visible {opacity:1;text-decoration:underline}
         #jira-direct-timer [data-clock] {display:block;font-size:34px;line-height:1.2;font-weight:750;letter-spacing:1px;font-variant-numeric:tabular-nums;color:#8d3030;margin:4px 0 8px}
@@ -91,10 +141,11 @@
         }
         @media (prefers-reduced-motion:reduce) {
             #jira-direct-timer [data-toast] {animation:none}
+            #jira-direct-timer [data-favorites],#jira-direct-timer [data-fav-row] {transition:none}
         }
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<strong>Jira stopky</strong><span data-version-wrap><a data-version></a></span><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<div data-favorites hidden><div data-fav-body><div data-fav-header><span data-fav-heading></span><span data-fav-total></span><button data-fav-add>+</button><button data-fav-close></button></div><input data-fav-search type="text" autocomplete="off" hidden><div data-fav-results hidden></div><div data-fav-list></div><div data-fav-error role="alert"></div></div></div><div data-header><strong>Jira stopky</strong><button data-fav-open><span data-fav-label></span><b data-fav-count></b></button><span data-version-wrap><a data-version></a></span></div><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     const versionLink = panel.querySelector('[data-version]');
     versionLink.textContent = `v${VERSION}`;
     versionLink.setAttribute('href', 'https://github.com/bunnydad02/jira-direct-timer');
@@ -144,6 +195,38 @@
     const autoSave = autoSettingsDialog.querySelector('[data-auto-save]');
     const autoRetry = autoSettingsDialog.querySelector('[data-auto-retry]');
     const autoError = autoSettingsDialog.querySelector('[data-auto-error]');
+    const favoritesSection = panel.querySelector('[data-favorites]');
+    const favOpen = panel.querySelector('[data-fav-open]');
+    const favCount = panel.querySelector('[data-fav-count]');
+    const favTotal = panel.querySelector('[data-fav-total]');
+    const favAdd = panel.querySelector('[data-fav-add]');
+    const favClose = panel.querySelector('[data-fav-close]');
+    const favSearch = panel.querySelector('[data-fav-search]');
+    const favResults = panel.querySelector('[data-fav-results]');
+    const favList = panel.querySelector('[data-fav-list]');
+    const favError = panel.querySelector('[data-fav-error]');
+    panel.querySelector('[data-fav-label]').textContent = 'obl\u00edben\u00e9';
+    panel.querySelector('[data-fav-heading]').textContent = 'Obl\u00edben\u00e9';
+    favAdd.setAttribute('aria-label', 'P\u0159idat task do obl\u00edben\u00fdch');
+    favAdd.setAttribute('title', 'P\u0159idat task do obl\u00edben\u00fdch');
+    favClose.textContent = '\u00d7';
+    favClose.setAttribute('aria-label', 'Zav\u0159\u00edt obl\u00edben\u00e9');
+    favClose.setAttribute('title', 'Zav\u0159\u00edt obl\u00edben\u00e9');
+    favSearch.setAttribute('placeholder', 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
+    favSearch.setAttribute('aria-label', 'Hledat task pro obl\u00edben\u00e9');
+    let favoritesOpen = false;
+    let favoritesClosing = false;
+    let favoritesSignature = '';
+    let favMessage = '';
+    let favSearchOpen = false;
+    let favSearchState = 'idle';
+    let favSearchItems = [];
+    let favSearchSeq = 0;
+    let favSearchTimer = null;
+    let favEditKey = null;
+    let favEditValue = '';
+    let favFocusEditor = false;
+    let favHighlight = null;
     let busy = false;
     let actionDisplay = null;
     let displayedIssue = null;
@@ -460,6 +543,7 @@
             manual.disabled = busy || !currentIssue || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending');
             minutes.disabled = busy;
             error.textContent = notice;
+            renderFavorites(value, currentIssue, false);
         } catch (e) {
             panel.dataset.running = 'false';
             panel.dataset.other = 'false';
@@ -468,6 +552,7 @@
             cancel.hidden = true;
             cancel.disabled = true;
             error.textContent = e.message;
+            renderFavorites(null, issue(), true);
         }
     }
     async function request(path, options) {
@@ -507,9 +592,10 @@
         }
     }
     async function act(action) {
-        if (busy) return;
+        if (busy) return false;
         busy = true;
         notice = '';
+        let completed = false;
         try {
             actionDisplay = read();
             render();
@@ -518,6 +604,7 @@
                 if (!lock) throw new Error('Stopky prave meni jina karta. Zkus pozdeji.');
                 await action();
             });
+            completed = true;
         } catch (e) {
             notice = `${e.message}\nCas zustava ulozeny v tomto prohlizeci. Neopakuj zapis jinym zpusobem bez kontroly duplicit.`;
         } finally {
@@ -525,10 +612,10 @@
             actionDisplay = null;
             render();
         }
+        return completed;
     }
-    start.onclick = () => act(async () => {
+    async function startTimer(key) {
         const old = read();
-        const key = issue();
         if (!key) throw new Error('Otevri konkretni ukol Jiry.');
         if (old && old.manualEntry) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.');
         if (old && old.manualNext) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit.');
@@ -545,7 +632,8 @@
             return;
         }
         write(newTimer(key, Date.now()));
-    });
+    }
+    start.onclick = () => act(() => startTimer(issue()));
     stop.onclick = () => act(async () => {
         const value = read();
         if (!value || value.phase !== 'running') throw new Error('Stopky uz nebezi.');
@@ -575,11 +663,10 @@
         write(value);
         minutes.value = '';
     }
-    manual.onclick = () => act(async () => {
-        const key = issue();
-        const count = Number(minutes.value);
+    async function addMinutes(key, raw) {
+        const count = Number(raw);
         if (!key) throw new Error('Otevri konkretni ukol Jiry.');
-        if (!/^\d+$/.test(minutes.value) || !Number.isSafeInteger(count) || count < 1 ||
+        if (!/^\d+$/.test(raw) || !Number.isSafeInteger(count) || count < 1 ||
             !Number.isSafeInteger(count * 60000) || !Number.isFinite(new Date(Date.now() - count * 60000).getTime())) {
             throw new Error('Zadej kladny cely pocet minut.');
         }
@@ -601,6 +688,9 @@
             write(entry);
             await saveEntry(entry);
         }
+    }
+    manual.onclick = () => act(async () => {
+        await addMinutes(issue(), minutes.value);
         minutes.value = '';
     });
     minutes.onkeydown = event => {
@@ -608,6 +698,344 @@
             event.preventDefault();
             if (!manual.disabled) return manual.onclick();
         }
+    };
+
+    function readFavorites() {
+        const raw = localStorage.getItem(FAVORITES_KEY);
+        if (!raw) return [];
+        let list;
+        try {
+            list = JSON.parse(raw);
+        } catch (e) {
+            list = null;
+        }
+        if (!Array.isArray(list) || list.length > FAVORITES_LIMIT || list.some((value, index) =>
+            !value || !ISSUE_PATTERN.test(value.issue) || typeof value.title !== 'string' || value.title.length > 500 ||
+            list.findIndex(other => other && other.issue === value.issue) !== index)) {
+            throw new Error('Seznam oblibenych tasku je poskozeny. Nemaz data; je nutna kontrola.');
+        }
+        return list;
+    }
+    function changeFavorites(change) {
+        try {
+            const list = readFavorites();
+            const next = change(list);
+            if (next) localStorage.setItem(FAVORITES_KEY, JSON.stringify(next));
+            favMessage = '';
+        } catch (e) {
+            favMessage = e.message;
+        }
+        render();
+    }
+    function addFavorite(item) {
+        changeFavorites(list => {
+            if (list.some(value => value.issue === item.issue)) return null;
+            if (list.length >= FAVORITES_LIMIT) {
+                throw new Error(`Obl\u00edben\u00fdch m\u016f\u017ee b\u00fdt nejv\u00fd\u0161 ${FAVORITES_LIMIT}. Nejprve n\u011bkter\u00fd odeber.`);
+            }
+            return [...list, {issue: item.issue, title: item.title}];
+        });
+        if (favMessage) return;
+        favHighlight = {issue: item.issue, until: Date.now() + 1500};
+        closeFavoriteSearch();
+        render();
+        favAdd.focus();
+    }
+    function removeFavorite(key) {
+        if (favEditKey === key) favEditKey = null;
+        changeFavorites(list => list.filter(value => value.issue !== key));
+    }
+    function closeFavoriteSearch() {
+        favSearchOpen = false;
+        favSearch.value = '';
+        favSearchItems = [];
+        favSearchState = 'idle';
+        favSearchSeq++;
+        clearTimeout(favSearchTimer);
+    }
+    function openFavorites() {
+        favoritesOpen = true;
+        favMessage = '';
+        render();
+        favClose.focus();
+    }
+    function closeFavorites(animate) {
+        closeFavoriteSearch();
+        favEditKey = null;
+        favEditValue = '';
+        favMessage = '';
+        const finish = () => {
+            favoritesOpen = false;
+            favoritesClosing = false;
+            delete favoritesSection.dataset.closing;
+            render();
+        };
+        const reducedMotion = !window.matchMedia || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!animate || reducedMotion) {
+            finish();
+            return;
+        }
+        favoritesClosing = true;
+        favoritesSection.dataset.closing = '';
+        setTimeout(finish, 450);
+    }
+    function pickerIssues(body) {
+        if (!body || !Array.isArray(body.sections)) throw new Error('Jira vratila neocekavanou odpoved hledani.');
+        const found = new Map();
+        for (const section of body.sections) {
+            for (const item of Array.isArray(section?.issues) ? section.issues : []) {
+                if (!ISSUE_PATTERN.test(item?.key) || found.has(item.key)) continue;
+                const title = typeof item.summaryText === 'string' ? item.summaryText :
+                    typeof item.summary === 'string' ? item.summary.replace(/<[^>]*>/g, '') : '';
+                found.set(item.key, {issue: item.key, title: title.trim().slice(0, 500)});
+            }
+        }
+        return [...found.values()].slice(0, 8);
+    }
+    async function searchFavoriteIssues(query, sequence) {
+        try {
+            const body = await request(`/rest/api/2/issue/picker?query=${encodeURIComponent(query)}&showSubTasks=true&showSubTaskParent=true`);
+            if (sequence !== favSearchSeq) return;
+            favSearchItems = pickerIssues(body);
+            favSearchState = 'done';
+            favMessage = '';
+        } catch (e) {
+            if (sequence !== favSearchSeq) return;
+            favSearchItems = [];
+            favSearchState = 'error';
+            favMessage = `Hled\u00e1n\u00ed selhalo: ${e.message}`;
+        }
+        render();
+    }
+    async function startFavorite(key) {
+        if (favoritesClosing) return;
+        if (await act(() => startTimer(key))) closeFavorites(true);
+    }
+    async function saveFavoriteMinutes(key) {
+        if (await act(() => addMinutes(key, favEditValue))) {
+            favEditKey = null;
+            favEditValue = '';
+            render();
+        }
+    }
+    function favoriteNode(tag, name, text) {
+        const node = document.createElement(tag);
+        if (name) node.dataset[name] = '';
+        if (text !== undefined) node.textContent = text;
+        return node;
+    }
+    function issueAnchor(node, key) {
+        node.href = `https://jira.alza.cz/browse/${encodeURIComponent(key)}`;
+        node.setAttribute('target', '_blank');
+        node.setAttribute('rel', 'noopener noreferrer');
+        return node;
+    }
+    function favoriteEditor(key) {
+        const editor = favoriteNode('div', 'favEditor');
+        editor.appendChild(favoriteNode('span', 'favEditorLabel', `Minuty pro ${key}`));
+        const quick = favoriteNode('div', 'favEditorRow');
+        const input = favoriteNode('input', 'favMinutesInput');
+        input.type = 'number';
+        input.min = '1';
+        input.step = '1';
+        input.value = favEditValue;
+        input.setAttribute('aria-label', `Minuty pro ${key}`);
+        input.oninput = () => { favEditValue = input.value; };
+        for (const count of ['15', '30', '60']) {
+            const button = favoriteNode('button', 'favQuick', count);
+            button.setAttribute('aria-label', `Vyplnit ${count} minut`);
+            button.onclick = () => {
+                favEditValue = count;
+                input.value = count;
+                input.focus();
+            };
+            quick.appendChild(button);
+        }
+        const row = favoriteNode('div', 'favEditorRow');
+        const submit = favoriteNode('button', 'favMinutesSave', 'ULO\u017dIT');
+        submit.setAttribute('aria-label', `Ulo\u017eit minuty do ${key}`);
+        submit.disabled = busy;
+        submit.onclick = () => saveFavoriteMinutes(key);
+        input.onkeydown = event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (!submit.disabled) saveFavoriteMinutes(key);
+            } else if (event.key === 'Escape') {
+                favEditKey = null;
+                render();
+            }
+        };
+        row.appendChild(input);
+        row.appendChild(submit);
+        editor.appendChild(quick);
+        editor.appendChild(row);
+        return {editor, input};
+    }
+    function favoriteRow(item) {
+        const row = favoriteNode('div', 'favRow');
+        row.dataset.favIssue = item.issue;
+        if (item.fresh) row.dataset.fresh = '';
+        const info = issueAnchor(favoriteNode('a', 'favInfo'), item.issue);
+        info.setAttribute('title', `Otev\u0159\u00edt ${item.issue} v nov\u00e9 kart\u011b`);
+        const key = favoriteNode('span', 'favKey');
+        if (item.running) key.appendChild(favoriteNode('span', 'favDot', '\u25cf'));
+        key.appendChild(favoriteNode('span', 'favKeyText', item.issue));
+        if (item.open) key.appendChild(favoriteNode('span', 'favMark', 'otev\u0159en\u00fd'));
+        info.appendChild(key);
+        info.appendChild(favoriteNode('span', 'favSummary', item.title));
+        const add = favoriteNode('button', 'favMinutes', '+min');
+        add.setAttribute('aria-label', `P\u0159idat minuty do ${item.issue}`);
+        add.setAttribute('aria-expanded', String(item.editing));
+        add.disabled = item.minutesDisabled;
+        add.onclick = () => {
+            favEditKey = favEditKey === item.issue ? null : item.issue;
+            favEditValue = '';
+            favFocusEditor = !!favEditKey;
+            render();
+        };
+        const play = favoriteNode('button', item.running ? 'favStop' : 'favStart', item.running ? '\u25a0' : '\u25b6');
+        play.setAttribute('aria-label', `${item.running ? 'Zastavit' : 'Spustit'} stopky na ${item.issue}`);
+        play.setAttribute('title', `${item.running ? 'Zastavit' : 'Spustit'} stopky na ${item.issue}`);
+        play.disabled = item.running ? item.stopDisabled : item.startDisabled;
+        play.onclick = () => item.running ? stop.onclick() : startFavorite(item.issue);
+        const remove = favoriteNode('button', 'favRemove');
+        remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 10v7m4-7v7"/></svg>';
+        remove.setAttribute('aria-label', `Odebrat ${item.issue} z obl\u00edben\u00fdch`);
+        remove.setAttribute('title', `Odebrat z obl\u00edben\u00fdch`);
+        remove.onclick = () => removeFavorite(item.issue);
+        row.appendChild(info);
+        row.appendChild(add);
+        row.appendChild(play);
+        row.appendChild(remove);
+        return row;
+    }
+    function favoriteResult(item, saved, full) {
+        const row = favoriteNode('div', 'favResult');
+        row.dataset.favIssue = item.issue;
+        const link = issueAnchor(favoriteNode('a', 'favResultLink'), item.issue);
+        link.setAttribute('title', `Otev\u0159\u00edt ${item.issue} v nov\u00e9 kart\u011b`);
+        link.appendChild(favoriteNode('b', '', item.issue));
+        link.appendChild(favoriteNode('span', '', item.title));
+        link.appendChild(favoriteNode('i', '', '\u2197'));
+        row.appendChild(link);
+        if (saved) {
+            row.appendChild(favoriteNode('em', 'favSaved', 'ulo\u017eeno'));
+        } else {
+            const pin = favoriteNode('button', 'favPin', '+');
+            pin.setAttribute('aria-label', `P\u0159idat ${item.issue} do obl\u00edben\u00fdch`);
+            pin.setAttribute('title', 'P\u0159idat do obl\u00edben\u00fdch');
+            pin.disabled = full;
+            pin.onclick = () => addFavorite(item);
+            row.appendChild(pin);
+        }
+        return row;
+    }
+    function renderFavorites(value, currentIssue, timerBroken) {
+        let list = [];
+        let storageError = '';
+        try {
+            list = readFavorites();
+        } catch (e) {
+            storageError = e.message;
+        }
+        favOpen.hidden = favoritesOpen;
+        favOpen.dataset.state = storageError ? 'error' : 'ok';
+        favCount.textContent = storageError ? '!' : String(list.length);
+        favOpen.setAttribute('aria-label', storageError ? 'Obl\u00edben\u00e9 tasky: seznam je po\u0161kozen\u00fd. Otev\u0159\u00edt' :
+            `Obl\u00edben\u00e9 tasky (${list.length}). Otev\u0159\u00edt`);
+        favOpen.setAttribute('title', storageError ? 'Seznam obl\u00edben\u00fdch je po\u0161kozen\u00fd' : 'Obl\u00edben\u00e9 tasky');
+        favOpen.setAttribute('aria-expanded', String(favoritesOpen));
+        favoritesSection.hidden = !favoritesOpen;
+        favTotal.textContent = storageError ? '' : String(list.length);
+        favAdd.hidden = favSearchOpen;
+        favAdd.disabled = !!storageError || favoritesClosing;
+        const full = !storageError && list.length >= FAVORITES_LIMIT;
+        const limitText = `M\u00e1\u0161 maximum ${FAVORITES_LIMIT} obl\u00edben\u00fdch. Dal\u0161\u00ed task p\u0159id\u00e1\u0161, a\u017e n\u011bkter\u00fd odebere\u0161 (ikona ko\u0161e).`;
+        favSearch.hidden = !favSearchOpen;
+        favSearch.disabled = full;
+        favSearch.setAttribute('placeholder', full ? `Limit ${FAVORITES_LIMIT} obl\u00edben\u00fdch je pln\u00fd` : 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
+        favAdd.setAttribute('title', full ? limitText : 'P\u0159idat task do obl\u00edben\u00fdch');
+        favList.hidden = favSearchOpen;
+        favError.textContent = [storageError, full && favSearchOpen ? limitText : favMessage].filter(Boolean).join('\n');
+        if (!favoritesOpen) {
+            favoritesSignature = '';
+            return;
+        }
+        const runningIssue = value && value.phase === 'running' ? value.issue : null;
+        const waiting = !!(value && (value.manualNext || value.manualEntry));
+        const active = !!(value && (value.phase !== 'saved' || value.manualNext));
+        const blocked = timerBroken || busy || waiting || favoritesClosing;
+        const fresh = favHighlight && Date.now() < favHighlight.until ? favHighlight.issue : '';
+        for (const favorite of list) {
+            if (favorite.title && !titles.has(favorite.issue)) titles.set(favorite.issue, favorite.title);
+        }
+        const items = list.map(favorite => ({
+            issue: favorite.issue,
+            title: favorite.title || titleFor({issue: favorite.issue}),
+            open: favorite.issue === currentIssue,
+            running: favorite.issue === runningIssue,
+            fresh: favorite.issue === fresh,
+            editing: favorite.issue === favEditKey,
+            startDisabled: blocked || (active && value.issue === favorite.issue),
+            stopDisabled: timerBroken || busy || !!(value && value.manualEntry) || favoritesClosing,
+            minutesDisabled: blocked || !!(value && value.phase === 'pending')
+        }));
+        const saved = new Set(list.map(favorite => favorite.issue));
+        const signature = JSON.stringify([items, storageError, favSearchOpen, favSearchState, favSearchItems, favEditKey, busy, full]);
+        if (signature === favoritesSignature) return;
+        favoritesSignature = signature;
+        const rows = [];
+        let editorInput = null;
+        for (const item of items) {
+            rows.push(favoriteRow(item));
+            if (item.editing) {
+                const {editor, input} = favoriteEditor(item.issue);
+                rows.push(editor);
+                editorInput = input;
+            }
+        }
+        if (!items.length && !storageError) {
+            rows.push(favoriteNode('div', 'favEmpty', 'Zat\u00edm tu nic nen\u00ed. P\u0159idej task tla\u010d\u00edtkem +.'));
+        }
+        favList.replaceChildren(...rows);
+        if (editorInput && favFocusEditor) editorInput.focus();
+        favFocusEditor = false;
+        const results = favSearchState === 'loading' ? [favoriteNode('div', 'favMessage', 'Hled\u00e1m\u2026')] :
+            favSearchState === 'done' && !favSearchItems.length ? [favoriteNode('div', 'favMessage', 'Nic nenalezeno.')] :
+                favSearchItems.map(item => favoriteResult(item, saved.has(item.issue), full));
+        favResults.replaceChildren(...results);
+        favResults.hidden = !favSearchOpen || favSearchState === 'idle' || favSearchState === 'error';
+    }
+    favOpen.onclick = openFavorites;
+    favClose.onclick = () => {
+        if (favoritesClosing) return;
+        closeFavorites(false);
+        favOpen.focus();
+    };
+    favAdd.onclick = () => {
+        favSearchOpen = true;
+        favEditKey = null;
+        favMessage = '';
+        render();
+        favSearch.focus();
+    };
+    favSearch.oninput = () => {
+        const query = favSearch.value.trim();
+        const sequence = ++favSearchSeq;
+        clearTimeout(favSearchTimer);
+        favSearchItems = [];
+        favMessage = '';
+        favSearchState = query.length < 2 ? 'idle' : 'loading';
+        if (query.length >= 2) favSearchTimer = setTimeout(() => searchFavoriteIssues(query, sequence), 250);
+        render();
+    };
+    favSearch.onkeydown = event => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        closeFavoriteSearch();
+        favMessage = '';
+        render();
+        favAdd.focus();
     };
 
     function openAutoSettings() {
@@ -818,7 +1246,7 @@
         notice = e.message;
     }
     installIssueCreationObserver();
-    window.addEventListener('storage', event => { if (event.key === KEY) render(); });
+    window.addEventListener('storage', event => { if (event.key === KEY || event.key === FAVORITES_KEY) render(); });
     window.addEventListener('storage', event => {
         if (event.key !== AUTO_SETTINGS_KEY) return;
         try {

@@ -36,6 +36,17 @@ Zmeny vzhledu ukazuje diff PR, starsi podoby historie souboru a Git tagy vydani.
 | AUTO: nastaveni automatickeho vykazovani (`auto-settings`) | ![AUTO: nastaveni automatickeho vykazovani](./auto-settings.png) |
 | AUTO: vykazani pri zalozeni Sub-task Bugu (`auto-worklog`) | ![AUTO: vykazani pri zalozeni Sub-task Bugu](./auto-worklog.png) |
 
+## Oblibene tasky
+
+| Stav | Screenshot |
+| --- | --- |
+| Stitek oblibene s poctem (`favorites-chip`) | ![Stitek oblibene s poctem](./favorites-chip.png) |
+| Otevrene oblibene nad stopkami (`favorites-open`) | ![Otevrene oblibene nad stopkami](./favorites-open.png) |
+| Naseptavac: odkaz do nove karty, + prida (`favorites-search`) | ![Naseptavac: odkaz do nove karty, + prida](./favorites-search.png) |
+| +min do oblibeneho tasku (`favorites-minutes`) | ![+min do oblibeneho tasku](./favorites-minutes.png) |
+| Bezici oblibeny task: stop misto startu (`favorites-running`) | ![Bezici oblibeny task: stop misto startu](./favorites-running.png) |
+| Plny seznam: hledani je zablokovane (`favorites-limit`) | ![Plny seznam: hledani je zablokovane](./favorites-limit.png) |
+
 ## Ochrana stavu
 
 | Stav | Screenshot |

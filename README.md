@@ -62,6 +62,12 @@ prehled vydanych verzi a jejich zmen.
   nezachyti. Stav je videt primo v panelu: zapnute AUTO je zelene tucne se
   zelenou teckou (minuty ukaze tooltip), vypnute sede s prazdnym krouzkem a
   poskozene nastaveni cervene jako `auto !`.
+- Stitek `oblibene N` vedle nadpisu otevre seznam oblibenych tasku (max 10).
+  U kazdeho je `+min` (zapis minut primo do nej), `▶` (spusti stopky stejne
+  jako START, i kdyz task neni otevreny, a seznam se zavre), `■` u
+  bezici polozky a kos pro odebrani. `+` otevre hledani: klik na nazev
+  otevre task v nove karte, jen `+` u vysledku ho ulozi. Pri plnem seznamu
+  je hledani zablokovane s vysvetlenim.
 - Panel zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu podle
   prihlaseneho Jira uctu, nikoli vykazy kolegu. Pokud mas vlastni vykazy i na
   subtaskech, nasleduje v zavorce tvuj soucet vcetne subtasku (napr.
