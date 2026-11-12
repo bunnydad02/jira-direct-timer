@@ -62,6 +62,19 @@ for compatibility with installed copies and saved timer state.
   the same author filter; Jira's aggregate time fields include other users
   and must not supply personal totals. Missing identities, malformed subtask
   lists, or unreadable worklogs are visible errors, not zero/partial totals.
+- Favorites (1.18.0): the `oblíbené N` chip next to "Jira stopky" opens a
+  compact section above the timer (the chip hides while open; × closes it).
+  It is the only path that acts on a non-open issue, and only on an explicit
+  click: per-row `+min` (15/30/60 prefill only; ULOZIT/Enter writes, same
+  rules as ADD MINUTES, never alters a running timer), `▶` (same switch rules
+  as START, then collapse with a 0.45s animation, immediate under reduced
+  motion; on failure stay open with the error), `■` on the tracked row
+  (same as STOP) and the trash icon (removes the favorite only). `+` opens a
+  search via `/rest/api/2/issue/picker` (>= 2 chars, 250ms debounce, stale
+  responses dropped, response shape verified only against mocks). Result
+  names open `/browse/<KEY>` in a new tab and store nothing; only the result's
+  `+` stores it and clears the search. Limit is 10: when full, the search
+  input is disabled with a visible explanation and `addFavorite` still throws.
 - Save/discard confirmations are transient, separate toasts. Saved toasts show
   recorded duration; discarded toasts show measured duration. Do not replay
   toasts from persisted data after reload.
@@ -79,6 +92,9 @@ for compatibility with installed copies and saved timer state.
   before POST, verify its exact marker after an uncertain result, and never
   retry an uncertain POST when no marker is found. Surface malformed state and
   errors; do not silently discard queued entries.
+- `jira-direct-timer-favorites-v1` stores an array of `{issue, title}`
+  (max 10, unique valid keys). Storage events re-render other tabs. A
+  malformed list is reported (chip shows `!`) and never overwritten.
 - The base record contains `id`, `issue`, `started`, `ended`, and `phase`.
   Preserve compatibility with optional legacy fields including `title`,
   `nextIssue`, `manualNext`, `manual`, `worklogId`, `recordedSeconds`,
@@ -133,7 +149,7 @@ Test-only changes do not require a userscript version bump.
 ### Screenshots
 
 `docs/screenshots/` holds committed PNGs of every timer state (idle, running,
-other issue, toasts, errors, totals, ADD MINUTES, AUTO, lock/corrupt state)
+other issue, toasts, errors, totals, ADD MINUTES, AUTO, favorites, lock/corrupt state)
 plus a generated `README.md` gallery. `npm test` ends with
 `npm run screenshots` (`playwright.screenshots.config.cjs`,
 `tests/screenshots.visual.cjs`), which renders the playground with a fixed
@@ -150,7 +166,7 @@ must exist. Publishing rewrites these links to the release tag
 (`raw.githubusercontent.com/<owner>/<repo>/v<version>/...`), so each Release
 permanently shows that version's look.
 
-The current userscript metadata and in-panel version are `1.17.4`. On each
+The current userscript metadata and in-panel version are `1.18.0`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.

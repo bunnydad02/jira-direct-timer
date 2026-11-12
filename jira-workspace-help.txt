@@ -35,6 +35,14 @@ Pouziti:
   Zpracovat cekajici zapisy pro overeni znacky. Stav AUTO je videt v panelu:
   zelene auto se zelenou teckou = zapnuto (minuty v tooltipu), sedy krouzek =
   vypnuto, cervene auto ! = poskozene nastaveni.
+- Stitek oblibene N vedle nadpisu otevre seznam oblibenych tasku (max 10),
+  krizek ho zavre. U kazdeho tasku: +min zapise minuty primo do nej
+  (15/30/60 jen predvyplni, zapis az ULOZIT nebo Enter), zelene tlacitko
+  spusti stopky jako START i na neotevrenem tasku a seznam se zavre, cervene
+  u bezici polozky stopky ulozi a kos task z oblibenych odebere (worklogy
+  nemeni). Tlacitko + otevre hledani: klik na nazev otevre task v nove
+  karte, teprve + u vysledku ho ulozi. Pri plnem seznamu je hledani
+  zablokovane, nejdriv nektery task odeber.
 - Rucni zapis nemeni bezici casovac. Intervaly se mohou prekryvat; zapisuj jen
   cas, ktery jeste neni vykazany.
 - Pod casovacem se zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu
@@ -62,6 +70,8 @@ Trvalost, chyby a obnova:
   Jsou sdilene mezi kartami stejneho profilu, ne mezi profily nebo zarizenimi.
 - Nastaveni AUTO a fronta automatickych zapisu jsou ulozeny oddelene od stavu
   stopek; nemaz jejich polozky, dokud neni worklog overen.
+- Oblibene tasky jsou ulozene samostatne a sdilene mezi kartami. Poskozeny
+  seznam se neprepise; stitek ukaze ! a chyba je videt po otevreni.
 - Nemaz data webu a behem nedokonceneho zapisu nemen prihlaseneho uzivatele.
 - Chyby API zustavaji viditelne. Pri nejistem vysledku se POST automaticky
   neopakuje.
