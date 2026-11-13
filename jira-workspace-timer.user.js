@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.18.1
+// @version      1.18.2
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -19,7 +19,7 @@
     const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
     const FAVORITES_LIMIT = 10;
     const ISSUE_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
-    const VERSION = '1.18.1';
+    const VERSION = '1.18.2';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -241,6 +241,25 @@
     let autoSettingsValue;
     let autoSettingsBroken = false;
     let autoBusy = false;
+    const MANUAL_PENDING = 'Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.';
+
+    // render() runs every 100ms; writing unchanged values would still emit DOM mutations that wake Jira's observers.
+    function update(target, key, value) {
+        if (target[key] !== value) target[key] = value;
+    }
+    function updateAttr(node, name, value) {
+        if (node.getAttribute(name) !== value) node.setAttribute(name, value);
+    }
+    function browseUrl(key) {
+        return `https://jira.alza.cz/browse/${encodeURIComponent(key)}`;
+    }
+    function validMinuteCount(count) {
+        return Number.isSafeInteger(count) && count >= 1 && Number.isSafeInteger(count * 60000) &&
+            Number.isFinite(new Date(Date.now() - count * 60000).getTime());
+    }
+    function parseMinutes(raw) {
+        return /^\d+$/.test(raw) && validMinuteCount(Number(raw)) ? Number(raw) : null;
+    }
 
     function renderAutoIndicator() {
         const state = autoSettingsBroken ? 'error' : autoSettingsValue.enabled ? 'on' : 'off';
@@ -249,10 +268,10 @@
             off: 'AUTO vypnuto',
             error: 'Nastaveni AUTO je poskozene'
         }[state];
-        autoOpen.dataset.state = state;
-        autoOpen.textContent = state === 'error' ? 'auto !' : 'auto';
-        autoOpen.setAttribute('aria-label', `${label}. Otevrit nastaveni AUTO`);
-        autoOpen.setAttribute('title', label);
+        update(autoOpen.dataset, 'state', state);
+        update(autoOpen, 'textContent', state === 'error' ? 'auto !' : 'auto');
+        updateAttr(autoOpen, 'aria-label', `${label}. Otevrit nastaveni AUTO`);
+        updateAttr(autoOpen, 'title', label);
     }
 
     function readAutoSettings() {
@@ -263,8 +282,7 @@
             return {enabled: false, minutes: 10};
         }
         const value = JSON.parse(raw);
-        if (!value || typeof value.enabled !== 'boolean' || !Number.isSafeInteger(value.minutes) || value.minutes < 1 ||
-            !Number.isSafeInteger(value.minutes * 60000) || !Number.isFinite(new Date(Date.now() - value.minutes * 60000).getTime())) {
+        if (!value || typeof value.enabled !== 'boolean' || !validMinuteCount(value.minutes)) {
             throw new Error('Nastaveni automatickeho vykazovani je poskozene. Oprav ho v nastaveni AUTO.');
         }
         autoSettingsBroken = false;
@@ -277,7 +295,7 @@
         const entries = JSON.parse(raw);
         if (!Array.isArray(entries) || entries.some(value =>
             !value || value.automatic !== true || typeof value.id !== 'string' ||
-            !/^[A-Z][A-Z0-9_]*-\d+$/.test(value.issue) || value.id !== `auto-${value.issue}` ||
+            !ISSUE_PATTERN.test(value.issue) || value.id !== `auto-${value.issue}` ||
             !Number.isFinite(value.started) || !Number.isFinite(value.ended) || value.ended < value.started ||
             !['stopped', 'pending', 'saved'].includes(value.phase))) {
             throw new Error('Fronta automatickych worklogu je poskozena. Nemaz data; je nutna kontrola.');
@@ -310,13 +328,17 @@
         const decimal = tenths % 10;
         return `${hours}${decimal ? `,${decimal}` : ''}h`;
     }
-    function showToast(value, discarded = false) {
+    function addToast(kind, heading, ...children) {
         const node = document.createElement('div');
-        node.dataset.toast = discarded ? 'discarded' : 'saved';
-        const heading = document.createElement('strong');
-        heading.textContent = discarded ? 'Zahozeno' : 'Zaznamen\u00e1no';
+        node.dataset.toast = kind;
+        node.appendChild(favoriteNode('strong', '', heading));
+        for (const child of children) node.appendChild(child);
+        toasts.appendChild(node);
+        return node;
+    }
+    function showToast(value, discarded = false) {
         const details = document.createElement('a');
-        details.href = `https://jira.alza.cz/browse/${encodeURIComponent(value.issue)}`;
+        details.href = browseUrl(value.issue);
         const seconds = discarded ? duration(value) : value.recordedSeconds;
         details.setAttribute('aria-label', `${formatDuration(seconds)} ${discarded ? 'z' : 'do'} tasku ${value.issue}`);
         const elapsed = document.createElement('span');
@@ -330,10 +352,7 @@
         const title = document.createElement('a');
         title.href = details.href;
         title.textContent = titleFor(value);
-        node.appendChild(heading);
-        node.appendChild(details);
-        node.appendChild(title);
-        toasts.appendChild(node);
+        const node = addToast(discarded ? 'discarded' : 'saved', discarded ? 'Zahozeno' : 'Zaznamen\u00e1no', details, title);
         notifications.push({node, title, value, expiresAt: Date.now() + 5000});
     }
     function renderToasts() {
@@ -413,11 +432,15 @@
         } while (offset < total);
         return seconds;
     }
-    async function loggedTime(key) {
+    async function currentUser(consequence = '') {
         const user = await request('/rest/api/2/myself');
         if (!userIdentifiers.some(field => hasIdentifier(user, field))) {
-            throw new Error('Jira nevratila identitu prihlaseneho uzivatele.');
+            throw new Error(`Jira nevratila identitu prihlaseneho uzivatele.${consequence}`);
         }
+        return user;
+    }
+    async function loggedTime(key) {
+        const user = await currentUser();
         const seconds = await totalLoggedSeconds(key, user);
         const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=subtasks`);
         if (!Array.isArray(body.fields?.subtasks)) {
@@ -426,7 +449,7 @@
         let secondsWithSubtasks = seconds;
         const seen = new Set([key]);
         for (const subtask of body.fields.subtasks) {
-            if (!/^[A-Z][A-Z0-9_]*-\d+$/.test(subtask?.key) || seen.has(subtask.key)) {
+            if (!ISSUE_PATTERN.test(subtask?.key) || seen.has(subtask.key)) {
                 throw new Error('Jira vratila neplatny seznam subtasku.');
             }
             seen.add(subtask.key);
@@ -438,12 +461,11 @@
         return {seconds, secondsWithSubtasks};
     }
     function renderWorklogTotal(key) {
+        update(worklogTotal, 'hidden', !key);
         if (!key) {
-            worklogTotal.hidden = true;
-            worklogTotal.textContent = '';
+            update(worklogTotal, 'textContent', '');
             return;
         }
-        worklogTotal.hidden = false;
         let state = worklogTotals.get(key);
         if (!state) {
             state = {status: 'loading'};
@@ -460,24 +482,24 @@
                 render();
             });
         }
-        worklogTotal.dataset.state = state.status;
+        update(worklogTotal.dataset, 'state', state.status);
+        let text = 'Dosud vykaz\u00e1no: nac\u00edt\u00e1m...';
         if (state.status === 'loaded') {
-            worklogTotal.textContent = `Dosud vykaz\u00e1no: ${formatLoggedHours(state.seconds)}`;
+            text = `Dosud vykaz\u00e1no: ${formatLoggedHours(state.seconds)}`;
             if (state.secondsWithSubtasks !== state.seconds) {
-                worklogTotal.textContent += ` (${formatLoggedHours(state.secondsWithSubtasks)})`;
+                text += ` (${formatLoggedHours(state.secondsWithSubtasks)})`;
             }
         } else if (state.status === 'error') {
-            worklogTotal.textContent = `Vyk\u00e1zan\u00fd \u010das se nepoda\u0159ilo na\u010d\u00edst: ${state.message}`;
-        } else {
-            worklogTotal.textContent = 'Dosud vykaz\u00e1no: nac\u00edt\u00e1m...';
+            text = `Vyk\u00e1zan\u00fd \u010das se nepoda\u0159ilo na\u010d\u00edst: ${state.message}`;
         }
+        update(worklogTotal, 'textContent', text);
     }
 
     function read() {
         const raw = localStorage.getItem(KEY);
         if (!raw) return null;
         const value = JSON.parse(raw);
-        if (!value || !/^[A-Z][A-Z0-9_]*-\d+$/.test(value.issue) ||
+        if (!value || !ISSUE_PATTERN.test(value.issue) ||
             typeof value.id !== 'string' || !Number.isFinite(value.started) ||
             (value.ended !== null && (!Number.isFinite(value.ended) || value.ended < value.started)) ||
             !['running', 'stopped', 'pending', 'saved'].includes(value.phase)) {
@@ -493,7 +515,7 @@
         const browsed = (location.pathname.match(/\/browse\/([A-Z][A-Z0-9_]*-\d+)/) || [])[1];
         // An issue page always targets its own key; selectedIssue applies only to boards and backlogs.
         const value = browsed || new URLSearchParams(location.search).get('selectedIssue') || meta && meta.content;
-        return /^[A-Z][A-Z0-9_]*-\d+$/.test(value || '') ? value : null;
+        return ISSUE_PATTERN.test(value || '') ? value : null;
     }
     function duration(value) {
         return Math.max(0, Math.floor(((value.ended === null ? Date.now() : value.ended) - value.started) / 1000));
@@ -521,41 +543,42 @@
             const seconds = displayValue ? duration(displayValue) : 0;
             const title = displayValue ? titleFor(displayValue) : '';
             const stateText = displayValue ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.'}[displayValue.phase] : '';
-            panel.dataset.running = String(!!value && value.phase === 'running');
-            const other = !!value && value.phase === 'running' && value.issue !== currentIssue;
-            panel.dataset.other = String(other);
-            measuring.hidden = !other;
-            measuring.textContent = other ? `Nyn\u00ed se m\u011b\u0159\u00ed: ${value.issue}` : '';
-            issueLink.textContent = displayValue ? displayValue.issue : '';
-            issueLink.hidden = other || !displayValue;
-            clock.textContent = formatDuration(seconds);
-            titleLink.textContent = title;
+            const running = !!value && value.phase === 'running';
+            update(panel.dataset, 'running', String(running));
+            const other = running && value.issue !== currentIssue;
+            update(panel.dataset, 'other', String(other));
+            update(measuring, 'hidden', !other);
+            update(measuring, 'textContent', other ? `Nyn\u00ed se m\u011b\u0159\u00ed: ${value.issue}` : '');
+            update(issueLink, 'textContent', displayValue ? displayValue.issue : '');
+            update(issueLink, 'hidden', other || !displayValue);
+            update(clock, 'textContent', formatDuration(seconds));
+            update(titleLink, 'textContent', title);
+            const href = displayValue ? browseUrl(displayValue.issue) : '';
             for (const link of [issueLink, titleLink, measuring]) {
-                link.href = displayValue ? `https://jira.alza.cz/browse/${encodeURIComponent(displayValue.issue)}` : '';
+                if (link.getAttribute('href') !== href) link.href = href;
             }
-            status.textContent = displayValue ? stateText : 'Nyn\u00ed se nic nem\u011b\u0159\u00ed.';
-            if (queuedManual) status.textContent += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
-            if (independentManual) status.textContent += `\nCeka rucni zapis do ${independentManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
+            let statusText = displayValue ? stateText : 'Nyn\u00ed se nic nem\u011b\u0159\u00ed.';
+            if (queuedManual) statusText += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
+            if (independentManual) statusText += `\nCeka rucni zapis do ${independentManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
+            update(status, 'textContent', statusText);
             const switching = active && value.issue !== currentIssue;
-            start.disabled = busy || !currentIssue || !!queuedManual || !!independentManual || (!!active && !switching);
-            stop.disabled = busy || !!independentManual || !value || value.phase !== 'running';
-            cancel.hidden = !value || value.phase !== 'running';
-            cancel.disabled = busy || !!independentManual || cancel.hidden;
-            save.disabled = busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual) && !independentManual);
-            saveRow.hidden = !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual && !independentManual);
-            save.textContent = value && (value.phase === 'pending' || independentManual?.phase === 'pending') ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu';
-            manual.disabled = busy || !currentIssue || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending');
-            minutes.disabled = busy;
-            error.textContent = notice;
+            update(start, 'disabled', busy || !currentIssue || !!queuedManual || !!independentManual || (!!active && !switching));
+            update(stop, 'disabled', busy || !!independentManual || !running);
+            update(cancel, 'hidden', !running);
+            update(cancel, 'disabled', busy || !!independentManual || !running);
+            update(save, 'disabled', busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual) && !independentManual));
+            update(saveRow, 'hidden', !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual && !independentManual));
+            update(save, 'textContent', value && (value.phase === 'pending' || independentManual?.phase === 'pending') ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu');
+            update(manual, 'disabled', busy || !currentIssue || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending'));
+            update(minutes, 'disabled', busy);
+            update(error, 'textContent', notice);
             renderFavorites(value, currentIssue, false);
         } catch (e) {
-            panel.dataset.running = 'false';
-            panel.dataset.other = 'false';
-            start.disabled = stop.disabled = save.disabled = true;
-            manual.disabled = true;
-            cancel.hidden = true;
-            cancel.disabled = true;
-            error.textContent = e.message;
+            update(panel.dataset, 'running', 'false');
+            update(panel.dataset, 'other', 'false');
+            for (const control of [start, stop, save, manual, cancel]) update(control, 'disabled', true);
+            update(cancel, 'hidden', true);
+            update(error, 'textContent', e.message);
             renderFavorites(null, issue(), true);
         }
     }
@@ -582,12 +605,7 @@
             for (const worklog of body.worklogs) {
                 if (typeof worklog.comment !== 'string' || !worklog.comment.includes(marker)) continue;
                 // Another user's worklog carrying our marker must not count as our saved entry.
-                if (!user) {
-                    user = await request('/rest/api/2/myself');
-                    if (!userIdentifiers.some(field => hasIdentifier(user, field))) {
-                        throw new Error('Jira nevratila identitu prihlaseneho uzivatele. Zapis nebyl odeslan.');
-                    }
-                }
+                if (!user) user = await currentUser(' Zapis nebyl odeslan.');
                 if (isOwnWorklog(worklog, user)) return worklog;
             }
             offset += body.worklogs.length;
@@ -621,7 +639,7 @@
     async function startTimer(key) {
         const old = read();
         if (!key) throw new Error('Otevri konkretni ukol Jiry.');
-        if (old && old.manualEntry) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.');
+        if (old && old.manualEntry) throw new Error(MANUAL_PENDING);
         if (old && old.manualNext) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit.');
         if (old && old.phase !== 'saved') {
             if (old.issue === key) throw new Error('Tento ukol uz ma rozpracovane stopky.');
@@ -638,19 +656,21 @@
         write(newTimer(key, Date.now()));
     }
     start.onclick = () => act(() => startTimer(issue()));
-    stop.onclick = () => act(async () => {
+    function readRunning() {
         const value = read();
         if (!value || value.phase !== 'running') throw new Error('Stopky uz nebezi.');
-        if (value.manualEntry) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.');
+        if (value.manualEntry) throw new Error(MANUAL_PENDING);
+        return value;
+    }
+    stop.onclick = () => act(async () => {
+        const value = readRunning();
         value.ended = Date.now();
         value.phase = 'stopped';
         write(value);
         await saveEntry(value);
     });
     cancel.onclick = () => act(async () => {
-        const value = read();
-        if (!value || value.phase !== 'running') throw new Error('Stopky uz nebezi.');
-        if (value.manualEntry) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.');
+        const value = readRunning();
         localStorage.removeItem(KEY);
         showToast(value, true);
     });
@@ -673,15 +693,7 @@
         return !badInput && /^0*$/.test(String(raw).trim());
     }
     function showEmptyToast() {
-        const node = document.createElement('div');
-        node.dataset.toast = 'empty';
-        const heading = document.createElement('strong');
-        heading.textContent = 'P\u0159id\u00e1no 0 minut';
-        const details = document.createElement('span');
-        details.textContent = 'Nic se nezapsalo.';
-        node.appendChild(heading);
-        node.appendChild(details);
-        toasts.appendChild(node);
+        const node = addToast('empty', 'P\u0159id\u00e1no 0 minut', favoriteNode('span', '', 'Nic se nezapsalo.'));
         notifications.push({node, expiresAt: Date.now() + 5000});
     }
     function skipEmptyMinutes(raw, badInput) {
@@ -691,12 +703,9 @@
         return true;
     }
     async function addMinutes(key, raw) {
-        const count = Number(raw);
         if (!key) throw new Error('Otevri konkretni ukol Jiry.');
-        if (!/^\d+$/.test(raw) || !Number.isSafeInteger(count) || count < 1 ||
-            !Number.isSafeInteger(count * 60000) || !Number.isFinite(new Date(Date.now() - count * 60000).getTime())) {
-            throw new InputError('Zadej kladny cely pocet minut.');
-        }
+        const count = parseMinutes(raw);
+        if (count === null) throw new InputError('Zadej kladny cely pocet minut.');
         const old = read();
         if (old && (old.phase === 'pending' || old.manualNext || old.manualEntry)) throw new Error('Nejprve over predchozi zapis.');
         const end = Date.now();
@@ -860,7 +869,7 @@
         return node;
     }
     function issueAnchor(node, key) {
-        node.href = `https://jira.alza.cz/browse/${encodeURIComponent(key)}`;
+        node.href = browseUrl(key);
         node.setAttribute('target', '_blank');
         node.setAttribute('rel', 'noopener noreferrer');
         return node;
@@ -978,25 +987,25 @@
         } catch (e) {
             storageError = e.message;
         }
-        favOpen.hidden = favoritesOpen;
-        favOpen.dataset.state = storageError ? 'error' : 'ok';
-        favCount.textContent = storageError ? '!' : String(list.length);
-        favOpen.setAttribute('aria-label', storageError ? 'Obl\u00edben\u00e9 tasky: seznam je po\u0161kozen\u00fd. Otev\u0159\u00edt' :
+        update(favOpen, 'hidden', favoritesOpen);
+        update(favOpen.dataset, 'state', storageError ? 'error' : 'ok');
+        update(favCount, 'textContent', storageError ? '!' : String(list.length));
+        updateAttr(favOpen, 'aria-label', storageError ? 'Obl\u00edben\u00e9 tasky: seznam je po\u0161kozen\u00fd. Otev\u0159\u00edt' :
             `Obl\u00edben\u00e9 tasky (${list.length}). Otev\u0159\u00edt`);
-        favOpen.setAttribute('title', storageError ? 'Seznam obl\u00edben\u00fdch je po\u0161kozen\u00fd' : 'Obl\u00edben\u00e9 tasky');
-        favOpen.setAttribute('aria-expanded', String(favoritesOpen));
-        favoritesSection.hidden = !favoritesOpen;
-        favTotal.textContent = storageError ? '' : String(list.length);
-        favAdd.hidden = favSearchOpen;
-        favAdd.disabled = !!storageError || favoritesClosing;
+        updateAttr(favOpen, 'title', storageError ? 'Seznam obl\u00edben\u00fdch je po\u0161kozen\u00fd' : 'Obl\u00edben\u00e9 tasky');
+        updateAttr(favOpen, 'aria-expanded', String(favoritesOpen));
+        update(favoritesSection, 'hidden', !favoritesOpen);
+        update(favTotal, 'textContent', storageError ? '' : String(list.length));
+        update(favAdd, 'hidden', favSearchOpen);
+        update(favAdd, 'disabled', !!storageError || favoritesClosing);
         const full = !storageError && list.length >= FAVORITES_LIMIT;
         const limitText = `M\u00e1\u0161 maximum ${FAVORITES_LIMIT} obl\u00edben\u00fdch. Dal\u0161\u00ed task p\u0159id\u00e1\u0161, a\u017e n\u011bkter\u00fd odebere\u0161 (ikona ko\u0161e).`;
-        favSearch.hidden = !favSearchOpen;
-        favSearch.disabled = full;
-        favSearch.setAttribute('placeholder', full ? `Limit ${FAVORITES_LIMIT} obl\u00edben\u00fdch je pln\u00fd` : 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
-        favAdd.setAttribute('title', full ? limitText : 'P\u0159idat task do obl\u00edben\u00fdch');
-        favList.hidden = favSearchOpen;
-        favError.textContent = [storageError, full && favSearchOpen ? limitText : favMessage].filter(Boolean).join('\n');
+        update(favSearch, 'hidden', !favSearchOpen);
+        update(favSearch, 'disabled', full);
+        updateAttr(favSearch, 'placeholder', full ? `Limit ${FAVORITES_LIMIT} obl\u00edben\u00fdch je pln\u00fd` : 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
+        updateAttr(favAdd, 'title', full ? limitText : 'P\u0159idat task do obl\u00edben\u00fdch');
+        update(favList, 'hidden', favSearchOpen);
+        update(favError, 'textContent', [storageError, full && favSearchOpen ? limitText : favMessage].filter(Boolean).join('\n'));
         if (!favoritesOpen) {
             favoritesSignature = '';
             return;
@@ -1098,10 +1107,8 @@
     autoClose.onclick = () => { autoSettingsDialog.hidden = true; };
     autoEnabled.onchange = () => { autoMinutes.disabled = !autoEnabled.checked; };
     autoSave.onclick = () => {
-        const minutesValue = Number(autoMinutes.value);
-        if (autoEnabled.checked && (!/^\d+$/.test(autoMinutes.value) || !Number.isSafeInteger(minutesValue) ||
-            minutesValue < 1 || !Number.isSafeInteger(minutesValue * 60000) ||
-            !Number.isFinite(new Date(Date.now() - minutesValue * 60000).getTime()))) {
+        const minutesValue = parseMinutes(autoMinutes.value);
+        if (autoEnabled.checked && minutesValue === null) {
             autoError.textContent = 'Zadej kladny cely pocet minut.';
             return;
         }
@@ -1217,7 +1224,7 @@
 
     function captureCreatedIssue(body) {
         const key = body && (body.key || body.issueKey || body.issue && body.issue.key);
-        if (typeof key !== 'string' || !/^[A-Z][A-Z0-9_]*-\d+$/.test(key)) {
+        if (typeof key !== 'string' || !ISSUE_PATTERN.test(key)) {
             throw new Error('Odpoved na vytvoreni issue nevratila jeji klic. Worklog nebyl odeslan; over vysledek v Jire.');
         }
         return automaticIssueCreated(key);
@@ -1286,8 +1293,8 @@
         notice = e.message;
     }
     installIssueCreationObserver();
-    window.addEventListener('storage', event => { if (event.key === KEY || event.key === FAVORITES_KEY) render(); });
     window.addEventListener('storage', event => {
+        if (event.key === KEY || event.key === FAVORITES_KEY) render();
         if (event.key !== AUTO_SETTINGS_KEY) return;
         try {
             autoSettingsValue = readAutoSettings();
