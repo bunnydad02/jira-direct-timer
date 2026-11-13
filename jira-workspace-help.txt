@@ -42,7 +42,7 @@ Pouziti:
   spusti stopky jako START i na neotevrenem tasku a seznam se zavre, cervene
   u bezici polozky stopky ulozi a kos task z oblibenych odebere (worklogy
   nemeni). Tlacitko + otevre hledani: klik na nazev otevre task v nove
-  karte, teprve + u vysledku ho ulozi. Pri plnem seznamu je hledani
+  karte, teprve + u vysledku ho ulozi. Krizek v poli hledani zavre jen hledani. Pri plnem seznamu je hledani
   zablokovane, nejdriv nektery task odeber.
 - Rucni zapis nemeni bezici casovac. Intervaly se mohou prekryvat; zapisuj jen
   cas, ktery jeste neni vykazany.

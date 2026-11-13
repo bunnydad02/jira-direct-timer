@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.18.2
+// @version      1.18.3
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -19,7 +19,7 @@
     const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
     const FAVORITES_LIMIT = 10;
     const ISSUE_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
-    const VERSION = '1.18.2';
+    const VERSION = '1.18.3';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -40,8 +40,7 @@
         #jira-direct-timer [data-favorites][data-closing] {grid-template-rows:0fr;opacity:0;margin-bottom:0;padding-bottom:0;border-bottom-color:transparent}
         #jira-direct-timer [data-favorites][data-closing] [data-fav-body] {overflow:hidden}
         #jira-direct-timer [data-fav-header] {display:flex;align-items:center;gap:4px;min-height:18px;margin-bottom:2px}
-        #jira-direct-timer [data-fav-heading] {color:#526078;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
-        #jira-direct-timer [data-fav-total] {flex:1;color:#526078;font-size:9px;opacity:.7}
+        #jira-direct-timer [data-fav-heading] {flex:1;color:#526078;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
         #jira-direct-timer [data-fav-header] button,#jira-direct-timer [data-fav-remove] {display:inline-flex;flex-shrink:0;width:18px;height:18px;align-items:center;justify-content:center;padding:0;border:0;background:transparent;color:#526078;font-size:14px;font-weight:400;line-height:1}
         #jira-direct-timer [data-fav-row] {display:flex;align-items:center;gap:3px;padding:3px 0;border-top:1px solid #172b4d12;border-radius:3px;transition:background-color .6s ease}
         #jira-direct-timer [data-fav-row][data-fresh] {background:#e3f4e8}
@@ -56,15 +55,19 @@
         #jira-direct-timer [data-fav-start] {background:#176538;border-color:#176538}
         #jira-direct-timer [data-fav-stop] {background:#a73434;border-color:#a73434}
         #jira-direct-timer [data-fav-remove] svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-        #jira-direct-timer [data-fav-editor] {margin:1px 0 4px;padding:6px;border:1px solid #dfe3e8;border-radius:6px;background:#ffffffb0}
-        #jira-direct-timer [data-fav-editor-label] {display:block;margin-bottom:4px;color:#526078;font-size:9px;font-weight:600}
-        #jira-direct-timer [data-fav-editor-row] {display:flex;align-items:center;gap:4px}
-        #jira-direct-timer [data-fav-quick] {padding:2px 6px;font-size:9px}
-        #jira-direct-timer [data-fav-minutes-input] {flex:1;width:auto;padding:3px 5px;font-size:11px}
-        #jira-direct-timer [data-fav-minutes-save] {padding:3px 7px;border-color:#176538;background:#176538;color:#fff;font-size:9px}
-        #jira-direct-timer [data-fav-search] {display:block;width:100%;margin-top:2px;padding:4px 6px;border-color:#4c8be0;font-size:11px}
+        #jira-direct-timer [data-fav-editor] {display:grid;grid-template-columns:minmax(0,1fr);gap:7px;margin:2px 0 6px;padding:8px;border:1px solid #dfe3e8;border-radius:7px;background:#fff}
+        #jira-direct-timer [data-fav-editor-row] {display:flex;align-items:center;gap:6px}
+        #jira-direct-timer [data-fav-quick] {flex:1;height:24px;padding:0 6px;font-size:10px}
+        #jira-direct-timer [data-fav-minutes-input] {flex:1;width:0;height:26px;padding:0 8px;font-size:12px;-moz-appearance:textfield}
+        #jira-direct-timer [data-fav-minutes-input]::-webkit-inner-spin-button,#jira-direct-timer [data-fav-minutes-input]::-webkit-outer-spin-button {margin:0;-webkit-appearance:none}
+        #jira-direct-timer [data-fav-minutes-save] {height:26px;padding:0 10px;border-color:#176538;background:#176538;color:#fff;font-size:10px}
+        #jira-direct-timer [data-fav-body] input:focus-visible {outline:0;border-color:#0052cc;box-shadow:0 0 0 2px #0052cc33}
+        #jira-direct-timer [data-fav-search-wrap] {position:relative;margin-top:2px}
+        #jira-direct-timer [data-fav-search] {display:block;width:100%;height:26px;padding:0 24px 0 7px;border-color:#4c8be0;font-size:11px}
         #jira-direct-timer [data-fav-search]:disabled {border-color:#b9c4d2;background:#f4f5f7;cursor:not-allowed}
-        #jira-direct-timer [data-fav-results] {margin-top:4px;overflow:hidden;border:1px solid #dfe3e8;border-radius:5px;background:#fff}
+        #jira-direct-timer [data-fav-search-close] {position:absolute;top:4px;right:4px;display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;padding:0;border:0;border-radius:50%;background:transparent;color:#526078;font-size:13px;font-weight:400;line-height:1}
+        #jira-direct-timer [data-fav-search-close]:not(:disabled):hover {background:#172b4d14;filter:none}
+        #jira-direct-timer [data-fav-results] {position:absolute;top:calc(100% + 3px);left:0;right:0;z-index:3;max-height:200px;overflow:auto;border:1px solid #dfe3e8;border-radius:6px;background:#fff;box-shadow:0 6px 18px #172b4d2e}
         #jira-direct-timer [data-fav-result] {display:flex;align-items:center;gap:4px;padding:3px 4px 3px 6px;font-size:9px;line-height:1.35}
         #jira-direct-timer [data-fav-result] + [data-fav-result] {border-top:1px solid #172b4d10}
         #jira-direct-timer [data-fav-result] a {display:flex;flex:1;min-width:0;gap:4px;color:#253249;text-decoration:none}
@@ -74,7 +77,9 @@
         #jira-direct-timer [data-fav-result] i {color:#8993a4;font-size:8px;font-style:normal}
         #jira-direct-timer [data-fav-pin] {flex-shrink:0;width:18px;height:17px;padding:0;border-color:#176538;color:#176538;font-size:12px;line-height:1}
         #jira-direct-timer [data-fav-saved] {flex-shrink:0;color:#526078;font-size:8px;font-style:normal}
-        #jira-direct-timer [data-fav-message] {padding:3px 6px;color:#526078;font-size:9px}
+        #jira-direct-timer [data-fav-message] {padding:5px 7px;color:#526078;font-size:9px}
+        #jira-direct-timer [data-fav-message][data-state="error"] {color:#ae2a19;white-space:pre-wrap;overflow-wrap:anywhere}
+        #jira-direct-timer [data-fav-limit] {margin-top:4px;color:#ae2a19;font-size:9px;line-height:1.35}
         #jira-direct-timer [data-fav-empty] {padding:3px 0;color:#526078;font-size:9px}
         #jira-direct-timer [data-fav-error] {color:#ae2a19;font-size:9px;white-space:pre-wrap;overflow-wrap:anywhere}
         #jira-direct-timer [data-fav-error]:not(:empty) {margin-top:4px}
@@ -147,7 +152,7 @@
         }
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<div data-favorites hidden><div data-fav-body><div data-fav-header><span data-fav-heading></span><span data-fav-total></span><button data-fav-add>+</button><button data-fav-close></button></div><input data-fav-search type="text" autocomplete="off" hidden><div data-fav-results hidden></div><div data-fav-list></div><div data-fav-error role="alert"></div></div></div><div data-header><strong>Jira stopky</strong><button data-fav-open><span data-fav-label></span><b data-fav-count></b></button><span data-version-wrap><a data-version></a></span></div><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<div data-favorites hidden><div data-fav-body><div data-fav-header><span data-fav-heading></span><button data-fav-add>+</button><button data-fav-close></button></div><div data-fav-search-wrap hidden><input data-fav-search type="text" autocomplete="off"><button data-fav-search-close></button><div data-fav-results hidden></div></div><div data-fav-limit hidden role="status"></div><div data-fav-list></div><div data-fav-error role="alert"></div></div></div><div data-header><strong>Jira stopky</strong><button data-fav-open><span data-fav-label></span><b data-fav-count></b></button><span data-version-wrap><a data-version></a></span></div><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
     const versionLink = panel.querySelector('[data-version]');
     versionLink.textContent = `v${VERSION}`;
     versionLink.setAttribute('href', 'https://github.com/bunnydad02/jira-direct-timer');
@@ -200,11 +205,13 @@
     const favoritesSection = panel.querySelector('[data-favorites]');
     const favOpen = panel.querySelector('[data-fav-open]');
     const favCount = panel.querySelector('[data-fav-count]');
-    const favTotal = panel.querySelector('[data-fav-total]');
     const favAdd = panel.querySelector('[data-fav-add]');
     const favClose = panel.querySelector('[data-fav-close]');
+    const favSearchWrap = panel.querySelector('[data-fav-search-wrap]');
     const favSearch = panel.querySelector('[data-fav-search]');
+    const favSearchClose = panel.querySelector('[data-fav-search-close]');
     const favResults = panel.querySelector('[data-fav-results]');
+    const favLimit = panel.querySelector('[data-fav-limit]');
     const favList = panel.querySelector('[data-fav-list]');
     const favError = panel.querySelector('[data-fav-error]');
     panel.querySelector('[data-fav-label]').textContent = 'obl\u00edben\u00e9';
@@ -216,6 +223,9 @@
     favClose.setAttribute('title', 'Zav\u0159\u00edt obl\u00edben\u00e9');
     favSearch.setAttribute('placeholder', 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
     favSearch.setAttribute('aria-label', 'Hledat task pro obl\u00edben\u00e9');
+    favSearchClose.textContent = '\u00d7';
+    favSearchClose.setAttribute('aria-label', 'Zav\u0159\u00edt hled\u00e1n\u00ed');
+    favSearchClose.setAttribute('title', 'Zav\u0159\u00edt hled\u00e1n\u00ed');
     let favoritesOpen = false;
     let favoritesClosing = false;
     let favoritesSignature = '';
@@ -876,13 +886,13 @@
     }
     function favoriteEditor(key) {
         const editor = favoriteNode('div', 'favEditor');
-        editor.appendChild(favoriteNode('span', 'favEditorLabel', `Minuty pro ${key}`));
         const quick = favoriteNode('div', 'favEditorRow');
         const input = favoriteNode('input', 'favMinutesInput');
         input.type = 'number';
         input.min = '1';
         input.step = '1';
         input.value = favEditValue;
+        input.placeholder = 'minuty';
         input.setAttribute('aria-label', `Minuty pro ${key}`);
         input.oninput = () => {
             favEditValue = input.value;
@@ -995,17 +1005,17 @@
         updateAttr(favOpen, 'title', storageError ? 'Seznam obl\u00edben\u00fdch je po\u0161kozen\u00fd' : 'Obl\u00edben\u00e9 tasky');
         updateAttr(favOpen, 'aria-expanded', String(favoritesOpen));
         update(favoritesSection, 'hidden', !favoritesOpen);
-        update(favTotal, 'textContent', storageError ? '' : String(list.length));
         update(favAdd, 'hidden', favSearchOpen);
         update(favAdd, 'disabled', !!storageError || favoritesClosing);
         const full = !storageError && list.length >= FAVORITES_LIMIT;
         const limitText = `M\u00e1\u0161 maximum ${FAVORITES_LIMIT} obl\u00edben\u00fdch. Dal\u0161\u00ed task p\u0159id\u00e1\u0161, a\u017e n\u011bkter\u00fd odebere\u0161 (ikona ko\u0161e).`;
-        update(favSearch, 'hidden', !favSearchOpen);
+        update(favSearchWrap, 'hidden', !favSearchOpen);
         update(favSearch, 'disabled', full);
         updateAttr(favSearch, 'placeholder', full ? `Limit ${FAVORITES_LIMIT} obl\u00edben\u00fdch je pln\u00fd` : 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
         updateAttr(favAdd, 'title', full ? limitText : 'P\u0159idat task do obl\u00edben\u00fdch');
-        update(favList, 'hidden', favSearchOpen);
-        update(favError, 'textContent', [storageError, full && favSearchOpen ? limitText : favMessage].filter(Boolean).join('\n'));
+        update(favLimit, 'hidden', !(full && favSearchOpen));
+        update(favLimit, 'textContent', full ? limitText : '');
+        update(favError, 'textContent', [storageError, favSearchState === 'error' ? '' : favMessage].filter(Boolean).join('\n'));
         if (!favoritesOpen) {
             favoritesSignature = '';
             return;
@@ -1030,7 +1040,7 @@
             minutesDisabled: blocked || !!(value && value.phase === 'pending')
         }));
         const saved = new Set(list.map(favorite => favorite.issue));
-        const signature = JSON.stringify([items, storageError, favSearchOpen, favSearchState, favSearchItems, favEditKey, busy, full]);
+        const signature = JSON.stringify([items, storageError, favSearchOpen, favSearchState, favSearchItems, favMessage, favEditKey, busy, full]);
         if (signature === favoritesSignature) return;
         favoritesSignature = signature;
         const rows = [];
@@ -1049,11 +1059,13 @@
         favList.replaceChildren(...rows);
         if (editorInput && favFocusEditor) editorInput.focus();
         favFocusEditor = false;
-        const results = favSearchState === 'loading' ? [favoriteNode('div', 'favMessage', 'Hled\u00e1m\u2026')] :
+        const searchError = favoriteNode('div', 'favMessage', favMessage);
+        searchError.dataset.state = 'error';
+        const results = favSearchState === 'error' ? [searchError] : favSearchState === 'loading' ? [favoriteNode('div', 'favMessage', 'Hled\u00e1m\u2026')] :
             favSearchState === 'done' && !favSearchItems.length ? [favoriteNode('div', 'favMessage', 'Nic nenalezeno.')] :
                 favSearchItems.map(item => favoriteResult(item, saved.has(item.issue), full));
         favResults.replaceChildren(...results);
-        favResults.hidden = !favSearchOpen || favSearchState === 'idle' || favSearchState === 'error';
+        favResults.hidden = !favSearchOpen || favSearchState === 'idle';
     }
     favOpen.onclick = openFavorites;
     favClose.onclick = () => {
@@ -1078,13 +1090,17 @@
         if (query.length >= 2) favSearchTimer = setTimeout(() => searchFavoriteIssues(query, sequence), 250);
         render();
     };
-    favSearch.onkeydown = event => {
-        if (event.key !== 'Escape') return;
-        event.preventDefault();
+    function dismissFavoriteSearch() {
         closeFavoriteSearch();
         favMessage = '';
         render();
         favAdd.focus();
+    }
+    favSearchClose.onclick = dismissFavoriteSearch;
+    favSearch.onkeydown = event => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        dismissFavoriteSearch();
     };
 
     function openAutoSettings() {
