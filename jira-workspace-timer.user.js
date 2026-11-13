@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.18.0
+// @version      1.18.1
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -19,7 +19,7 @@
     const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
     const FAVORITES_LIMIT = 10;
     const ISSUE_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
-    const VERSION = '1.18.0';
+    const VERSION = '1.18.1';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -129,6 +129,8 @@
         #jira-direct-timer [data-toast] strong {display:flex;align-items:center;gap:7px;margin-bottom:8px;color:#23734a;font-size:12px;font-weight:600;letter-spacing:0}
         #jira-direct-timer [data-toast] strong::before {content:'';width:7px;height:7px;flex-shrink:0;border-radius:50%;background:currentColor}
         #jira-direct-timer [data-toast="discarded"] strong {color:#8a6150}
+        #jira-direct-timer [data-toast="empty"] strong {color:#526078}
+        #jira-direct-timer [data-toast="empty"] span {display:block;color:#667085}
         #jira-direct-timer [data-toast] a {display:block;color:inherit;text-decoration:none}
         #jira-direct-timer [data-toast] strong + a {display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin-bottom:5px;font-variant-numeric:tabular-nums}
         #jira-direct-timer [data-toast-duration] {font-size:20px;font-weight:600;line-height:1.3;letter-spacing:-.4px;white-space:nowrap}
@@ -225,6 +227,7 @@
     let favSearchTimer = null;
     let favEditKey = null;
     let favEditValue = '';
+    let favEditInvalid = false;
     let favFocusEditor = false;
     let favHighlight = null;
     let busy = false;
@@ -339,6 +342,7 @@
                 notification.node.remove();
                 return false;
             }
+            if (!notification.value) return true;
             const title = titleFor(notification.value);
             if (notification.title.textContent !== title) notification.title.textContent = title;
             return true;
@@ -606,7 +610,7 @@
             });
             completed = true;
         } catch (e) {
-            notice = `${e.message}\nCas zustava ulozeny v tomto prohlizeci. Neopakuj zapis jinym zpusobem bez kontroly duplicit.`;
+            notice = e instanceof InputError ? e.message : `${e.message}\nCas zustava ulozeny v tomto prohlizeci. Neopakuj zapis jinym zpusobem bez kontroly duplicit.`;
         } finally {
             busy = false;
             actionDisplay = null;
@@ -663,12 +667,35 @@
         write(value);
         minutes.value = '';
     }
+    class InputError extends Error {}
+    // A number input reports typed text as '' with validity.badInput, so only a truly blank or zero value means "write nothing".
+    function emptyMinutes(raw, badInput) {
+        return !badInput && /^0*$/.test(String(raw).trim());
+    }
+    function showEmptyToast() {
+        const node = document.createElement('div');
+        node.dataset.toast = 'empty';
+        const heading = document.createElement('strong');
+        heading.textContent = 'P\u0159id\u00e1no 0 minut';
+        const details = document.createElement('span');
+        details.textContent = 'Nic se nezapsalo.';
+        node.appendChild(heading);
+        node.appendChild(details);
+        toasts.appendChild(node);
+        notifications.push({node, expiresAt: Date.now() + 5000});
+    }
+    function skipEmptyMinutes(raw, badInput) {
+        if (busy || !emptyMinutes(raw, badInput)) return false;
+        notice = '';
+        showEmptyToast();
+        return true;
+    }
     async function addMinutes(key, raw) {
         const count = Number(raw);
         if (!key) throw new Error('Otevri konkretni ukol Jiry.');
         if (!/^\d+$/.test(raw) || !Number.isSafeInteger(count) || count < 1 ||
             !Number.isSafeInteger(count * 60000) || !Number.isFinite(new Date(Date.now() - count * 60000).getTime())) {
-            throw new Error('Zadej kladny cely pocet minut.');
+            throw new InputError('Zadej kladny cely pocet minut.');
         }
         const old = read();
         if (old && (old.phase === 'pending' || old.manualNext || old.manualEntry)) throw new Error('Nejprve over predchozi zapis.');
@@ -689,10 +716,17 @@
             await saveEntry(entry);
         }
     }
-    manual.onclick = () => act(async () => {
-        await addMinutes(issue(), minutes.value);
-        minutes.value = '';
-    });
+    manual.onclick = () => {
+        if (skipEmptyMinutes(minutes.value, minutes.validity && minutes.validity.badInput)) {
+            minutes.value = '';
+            render();
+            return;
+        }
+        return act(async () => {
+            await addMinutes(issue(), minutes.value);
+            minutes.value = '';
+        });
+    };
     minutes.onkeydown = event => {
         if (event.key === 'Enter') {
             event.preventDefault();
@@ -812,9 +846,10 @@
         if (await act(() => startTimer(key))) closeFavorites(true);
     }
     async function saveFavoriteMinutes(key) {
-        if (await act(() => addMinutes(key, favEditValue))) {
+        if (skipEmptyMinutes(favEditValue, favEditInvalid) || await act(() => addMinutes(key, favEditValue))) {
             favEditKey = null;
             favEditValue = '';
+            favEditInvalid = false;
             render();
         }
     }
@@ -840,12 +875,16 @@
         input.step = '1';
         input.value = favEditValue;
         input.setAttribute('aria-label', `Minuty pro ${key}`);
-        input.oninput = () => { favEditValue = input.value; };
+        input.oninput = () => {
+            favEditValue = input.value;
+            favEditInvalid = !!(input.validity && input.validity.badInput);
+        };
         for (const count of ['15', '30', '60']) {
             const button = favoriteNode('button', 'favQuick', count);
             button.setAttribute('aria-label', `Vyplnit ${count} minut`);
             button.onclick = () => {
                 favEditValue = count;
+                favEditInvalid = false;
                 input.value = count;
                 input.focus();
             };
@@ -890,6 +929,7 @@
         add.onclick = () => {
             favEditKey = favEditKey === item.issue ? null : item.issue;
             favEditValue = '';
+            favEditInvalid = false;
             favFocusEditor = !!favEditKey;
             render();
         };

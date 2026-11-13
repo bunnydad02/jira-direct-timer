@@ -71,6 +71,10 @@ const groups = [
         }},
         {name: 'manual-invalid', title: 'ADD MINUTES: neplatna hodnota', run: async p => {
             await p.reset();
+            await p.manual('-5');
+        }},
+        {name: 'manual-zero', title: 'ADD MINUTES: 0 minut nic nezapise', run: async p => {
+            await p.reset();
             await p.manual('0');
         }},
         {name: 'auto-enabled', title: 'AUTO zapnuto: indikator v panelu', run: async p => {

@@ -264,6 +264,34 @@
             equal(p.posts()[1].body.timeSpentSeconds, 1200);
             equal(p.node('worklog-total').textContent, 'Dosud vykaz\u00e1no: 0,8h');
         }},
+        {title: 'ADD MINUTES i +min: 0 nebo prazdne pole nic nezapise a ukaze toast', async run(p) {
+            const state = running(p, 'DEMO-102');
+            await p.reset({state, favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}]});
+            for (const value of ['0', '']) {
+                await p.manual(value);
+                equal(p.posts().length, 0, `${JSON.stringify(value)} must not write`);
+                equal(p.state(), state, 'running timer unchanged');
+                equal(p.node('error').textContent, '');
+                equal(p.node('minutes').value, '');
+                includes(p.node('toast="empty"').textContent, 'Nic se nezapsalo');
+            }
+            await p.click('fav-open');
+            for (const value of ['0', '']) {
+                p.node('fav-list').querySelector('[data-fav-minutes]').click();
+                p.node('fav-minutes-input').value = value;
+                p.node('fav-minutes-input').dispatchEvent(new Event('input'));
+                p.node('fav-minutes-save').click();
+                await p.idle();
+                equal(p.posts().length, 0);
+                equal(p.node('fav-editor'), null, 'zero minutes close the editor');
+                equal(p.node('error').textContent, '');
+            }
+            equal(p.node('toasts').querySelectorAll('[data-toast="empty"]').length, 4);
+            equal(p.state(), state);
+            await p.manual('-5');
+            includes(p.node('error').textContent, 'kladny');
+            equal(p.node('error').textContent.includes('duplicit'), false, 'validation omits the duplicate warning');
+        }},
         {title: 'AUTO: nove issue vykazuje jen po zapnuti a zachova stopky', async run(p) {
             await p.reset();
             equal(p.node('auto-open').dataset.state, 'off');
@@ -326,9 +354,10 @@
             await p.reset();
             await p.click('start');
             const before = p.state();
-            for (const value of ['', '0', '-1', '1.5', '9999999999999999999']) {
+            for (const value of ['-1', '1.5', '9999999999999999999']) {
                 await p.manual(value);
                 includes(p.node('error').textContent, 'kladny');
+                equal(p.node('error').textContent.includes('duplicit'), false);
                 equal(p.state(), before);
                 equal(p.posts().length, 0);
                 equal(p.node('toast'), null);
