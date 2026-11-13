@@ -50,6 +50,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
             appendChild(child) { this.children.push(child); child.parent = this; },
             replaceChildren(...items) { this.children = []; items.forEach(child => this.appendChild(child)); },
             setAttribute(name, value) { this.attributes[name] = value; },
+            getAttribute(name) { return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null; },
             focus() {},
             remove() { this.parent.children.splice(this.parent.children.indexOf(this), 1); },
             after(child) { if ('cancel' in child.dataset) nodes['[data-cancel]'] = child; }};

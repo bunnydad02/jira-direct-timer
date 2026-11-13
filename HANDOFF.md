@@ -56,7 +56,10 @@ for compatibility with installed copies and saved timer state.
   only in its title/aria-label. Unsaved dialog changes do not affect it.
 - Elapsed time is based on wall-clock timestamps and refreshes every 100ms.
   Jira worklogs have a one-minute minimum; longer durations are rounded down
-  to whole minutes.
+  to whole minutes. Because `render()` runs on every tick, write DOM text,
+  properties and attributes through `update()`/`updateAttr()` so unchanged
+  values emit no DOM mutations (Chromium test "Unchanged renders do not
+  mutate the DOM"); only the clock text changes once per second.
 - The 240px panel uses green for the open tracked issue, blue for a different
   tracked issue, and red when idle. Issue and title link to the tracked issue.
   The current issue's all-pages worklog total for the signed-in user appears
@@ -172,7 +175,7 @@ must exist. Publishing rewrites these links to the release tag
 (`raw.githubusercontent.com/<owner>/<repo>/v<version>/...`), so each Release
 permanently shows that version's look.
 
-The current userscript metadata and in-panel version are `1.18.1`. On each
+The current userscript metadata and in-panel version are `1.18.2`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.

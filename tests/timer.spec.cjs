@@ -59,6 +59,37 @@ test('Real controls navigate, advance, reload, fail and recover locally', async 
     expect(await page.evaluate(() => window.playground.posts().length)).toBe(1);
 });
 
+test('Unchanged renders do not mutate the DOM', async ({page}) => {
+    await page.goto('/');
+    const mutations = await page.evaluate(async () => {
+        const {playground} = window;
+        await playground.ready;
+        const count = async (options, prepare = async () => {}) => {
+            await playground.reset(options);
+            await prepare();
+            playground.advance(0);
+            const panel = playground.panel();
+            const observer = new MutationObserver(() => {});
+            observer.observe(panel, {subtree: true, childList: true, attributes: true, characterData: true});
+            for (let i = 0; i < 20; i++) playground.advance(0);
+            const records = observer.takeRecords().filter(record => !panel.querySelector('[data-clock]').contains(record.target));
+            observer.disconnect();
+            return records.map(record => `${record.type}:${record.attributeName || ''}:${record.target.nodeName}`);
+        };
+        const started = playground.now() - 65000;
+        return {
+            idle: await count({}),
+            running: await count({state: {id: 'r', issue: 'DEMO-101', started, ended: null, phase: 'running'}}),
+            other: await count({issue: 'DEMO-102', state: {id: 'o', issue: 'DEMO-101', started, ended: null, phase: 'running'}}),
+            corrupted: await count({raw: '{broken'}),
+            favorites: await count({favorites: [{issue: 'DEMO-101', title: 'A'}, {issue: 'OPS-12', title: 'B'}],
+                state: {id: 'f', issue: 'DEMO-101', started, ended: null, phase: 'running'}},
+            async () => { playground.node('fav-open').click(); await playground.idle(); })
+        };
+    });
+    expect(mutations).toEqual({idle: [], running: [], other: [], corrupted: [], favorites: []});
+});
+
 test('Safety: actual storage untouched, network blocked, server rejects writes', async ({page, request}) => {
     await page.addInitScript(() => localStorage.setItem('jira-direct-timer-v1', 'untouched sentinel'));
     await page.goto('/');
