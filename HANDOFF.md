@@ -82,7 +82,11 @@ for compatibility with installed copies and saved timer state.
   search via `/rest/api/2/issue/picker` (>= 2 chars, 250ms debounce, stale
   responses dropped, response shape verified only against mocks). Result
   names open `/browse/<KEY>` in a new tab and store nothing; only the result's
-  `+` stores it and clears the search. Limit is 10: when full, the search
+  `+` stores it and clears the search. Results float as an absolute dropdown
+  over the list (the panel is bottom-anchored, so inline results would move
+  the search field); the list stays visible. Search errors render inside the
+  dropdown and the limit note sits directly under the field. The search field's own × closes
+  only the search (as does Escape). Limit is 10: when full, the search
   input is disabled with a visible explanation and `addFavorite` still throws.
 - Save/discard confirmations are transient, separate toasts. Saved toasts show
   recorded duration; discarded toasts show measured duration. Do not replay
@@ -175,7 +179,7 @@ must exist. Publishing rewrites these links to the release tag
 (`raw.githubusercontent.com/<owner>/<repo>/v<version>/...`), so each Release
 permanently shows that version's look.
 
-The current userscript metadata and in-panel version are `1.18.2`. On each
+The current userscript metadata and in-panel version are `1.18.3`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.

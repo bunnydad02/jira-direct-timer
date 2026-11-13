@@ -922,7 +922,16 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(favorites.nodes['[data-fav-open]'].hidden, true, 'hide the chip while favorites are open');
     assert.equal(favRow(favorites, 'DEMO-102').children[0].attributes.target, '_blank');
     favorites.click('fav-add');
-    assert.equal(favorites.nodes['[data-fav-search]'].hidden, false);
+    assert.equal(favorites.nodes['[data-fav-search-wrap]'].hidden, false);
+    assert.equal(favorites.nodes['[data-fav-list]'].hidden, false, 'keep the list in place while searching; results float over it');
+    await typeSearch(favorites, 're');
+    favorites.click('fav-search-close');
+    assert.equal(favorites.nodes['[data-fav-search-wrap]'].hidden, true, 'the cross in the search field closes only the search');
+    assert.equal(favorites.nodes['[data-fav-search]'].value, '');
+    assert.equal(favorites.nodes['[data-fav-results]'].hidden, true);
+    assert.equal(favorites.nodes['[data-favorites]'].hidden, false, 'closing the search keeps favorites open');
+    favorites.click('fav-add');
+    favorites.pickerQueries.length = 0;
     await typeSearch(favorites, 'r');
     assert.equal(favorites.pickerQueries.length, 0, 'do not search Jira for a single character');
     await typeSearch(favorites, 'review');
@@ -936,7 +945,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     opsResult.children[1].onclick();
     assert.deepEqual(favorites.favorites(), [{issue: 'DEMO-102', title: 'Code review'}, {issue: 'OPS-140', title: 'Review pristupu'}]);
     assert.equal(favorites.nodes['[data-fav-search]'].value, '', 'adding clears the search field');
-    assert.equal(favorites.nodes['[data-fav-search]'].hidden, true);
+    assert.equal(favorites.nodes['[data-fav-search-wrap]'].hidden, true);
     assert.equal(favResultRows(favorites).length, 0, 'adding clears the results');
     assert.ok('fresh' in favRow(favorites, 'OPS-140').dataset, 'highlight the newly added favorite');
     favRow(favorites, 'OPS-140').children[3].onclick();
@@ -962,10 +971,10 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.deepEqual(favResultRows(stale).map(row => row.dataset.favIssue), ['NEW-1'], 'ignore stale search responses');
     stale.onPicker(() => { throw new Error('Picker offline'); });
     await typeSearch(stale, 'broken');
-    assert.match(stale.nodes['[data-fav-error]'].textContent, /Hled\u00e1n\u00ed selhalo: .*Picker offline/);
+    assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /Hled\u00e1n\u00ed selhalo: .*Picker offline/);
     stale.onPicker(() => ({sections: 'invalid'}));
     await typeSearch(stale, 'invalid');
-    assert.match(stale.nodes['[data-fav-error]'].textContent, /neocekavanou odpoved/);
+    assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /neocekavanou odpoved/);
 
     const favoriteSwitch = setup(running(), 0, '30', false, 0, {favorites: [{issue: 'DEMO-103', title: 'Third'}]});
     favoriteSwitch.click('fav-open');
@@ -998,10 +1007,10 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         favRow(favoriteMinutes, 'DEMO-103').children[1].onclick();
         const zeroEditor = favEditor(favoriteMinutes);
         if (typed !== null) {
-            zeroEditor.children[2].children[0].value = typed;
-            zeroEditor.children[2].children[0].oninput();
+            zeroEditor.children[1].children[0].value = typed;
+            zeroEditor.children[1].children[0].oninput();
         }
-        await zeroEditor.children[2].children[1].onclick();
+        await zeroEditor.children[1].children[1].onclick();
         assert.equal(favoriteMinutes.posts.length, 0, 'empty or zero favorite minutes must not write');
         assert.equal(favoriteMinutes.nodes['[data-error]'].textContent, '');
         assert.equal(favoriteMinutes.toasts().at(-1).dataset.toast, 'empty');
@@ -1011,17 +1020,18 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(favoriteMinutes.toasts().length, 2);
     favRow(favoriteMinutes, 'DEMO-103').children[1].onclick();
     const editor = favEditor(favoriteMinutes);
-    editor.children[2].children[0].value = '-5';
-    editor.children[2].children[0].oninput();
-    await editor.children[2].children[1].onclick();
+    assert.equal(editor.children.length, 2, 'the editor has no duplicate label: quick buttons, then field and save');
+    editor.children[1].children[0].value = '-5';
+    editor.children[1].children[0].oninput();
+    await editor.children[1].children[1].onclick();
     assert.equal(favoriteMinutes.posts.length, 0);
     assert.match(favoriteMinutes.nodes['[data-error]'].textContent, /kladny/);
     assert.doesNotMatch(favoriteMinutes.nodes['[data-error]'].textContent, /duplicit/);
     assert.ok(favEditor(favoriteMinutes), 'invalid minutes keep the editor open');
-    editor.children[1].children[1].onclick();
-    assert.equal(editor.children[2].children[0].value, '30', 'quick buttons only prefill the minutes');
+    editor.children[0].children[1].onclick();
+    assert.equal(editor.children[1].children[0].value, '30', 'quick buttons only prefill the minutes');
     assert.equal(favoriteMinutes.posts.length, 0);
-    await editor.children[2].children[1].onclick();
+    await editor.children[1].children[1].onclick();
     assert.match(favoriteMinutes.posts[0].path, /DEMO-103\/worklog/);
     assert.equal(favoriteMinutes.posts[0].body.timeSpentSeconds, 1800);
     assert.deepEqual(favoriteMinutes.state(), running(), 'favorite minutes keep the running timer untouched');
@@ -1050,7 +1060,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     full.click('fav-open');
     full.click('fav-add');
     assert.equal(full.nodes['[data-fav-search]'].disabled, true, 'block the search field when the limit is reached');
-    assert.match(full.nodes['[data-fav-error]'].textContent, /maximum 10 obl\u00edben\u00fdch/);
+    assert.match(full.nodes['[data-fav-limit]'].textContent, /maximum 10 obl\u00edben\u00fdch/);
     assert.match(full.nodes['[data-fav-add]'].attributes.title, /maximum 10/);
     console.log('PASS: favorites chip, search/add/remove, stale and failed searches, start/stop/switch, collapse, minutes, cross-tab sync, corruption and limit');
     console.log('PASS: Enter/manual minutes, uninterrupted timer, second boundaries, slow API, failures, legacy recovery, deduplication, switching, cancellation, minimum duration, titles, immediate idle and save/discard toasts, write target, worklog ownership and same-origin issue creation');
