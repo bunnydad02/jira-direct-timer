@@ -52,6 +52,8 @@ prehled vydanych verzi a jejich zmen.
 - `CANCEL` zahodi pouze dosud neulozene mereni.
 - `ADD MINUTES` zapise kladny pocet celych minut na otevrenem ukolu.
   Potvrdit lze tlacitkem nebo klavesou Enter. Rucni zapis nemeni bezici casovac.
+  `0` nebo prazdne pole (i u `+min` v Oblibenych) nic nezapise a jen ukaze
+  toast "Pridano 0 minut".
 - Otevreny ukol se na strance `/browse/<KLIC>` bere vzdy z adresy; parametr
   `selectedIssue` plati jen na boardu / backlogu.
 - Tlacitko `auto` u `ADD MINUTES` otevre nastaveni automatickeho vykazovani.

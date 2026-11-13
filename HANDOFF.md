@@ -32,6 +32,12 @@ for compatibility with installed copies and saved timer state.
   issue, ending at submission time. Enter submits as well as the button.
   Independent manual entry does not change a running timer; intervals can
   overlap, so users must avoid recording the same time twice.
+  `0` or a blank field (also in favorites `+min`) is a deliberate no-op
+  (1.18.1): no lock, no POST, no panel error, unchanged timer; show the
+  `data-toast="empty"` toast, clear the field and close the `+min` editor.
+  A number input reports typed text as blank with `validity.badInput`; that
+  stays a validation error. Validation errors (`InputError`) omit the
+  duplicate-write warning appended to real write failures.
 - `AUTO` is disabled by default and starts at 10 minutes. When enabled, observe
   successful Jira REST issue creation responses from `fetch` and
   `XMLHttpRequest` whose resolved URL has the Jira page's own origin, then
@@ -166,7 +172,7 @@ must exist. Publishing rewrites these links to the release tag
 (`raw.githubusercontent.com/<owner>/<repo>/v<version>/...`), so each Release
 permanently shows that version's look.
 
-The current userscript metadata and in-panel version are `1.18.0`. On each
+The current userscript metadata and in-panel version are `1.18.1`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.

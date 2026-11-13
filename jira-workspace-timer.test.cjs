@@ -560,13 +560,30 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
             assert.equal(h.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
         }
     }
-    for (const input of ['', '0', '-1', '1.5', 'NaN', '9999999999999999999']) {
+    for (const input of ['', '0', '00', ' 0 ']) {
+        const h = setup(running(), 0, input);
+        await h.click('manual');
+        assert.equal(h.posts.length, 0, `${JSON.stringify(input)} minutes must not write`);
+        assert.deepEqual(h.state(), running(), 'zero minutes keep the running timer untouched');
+        assert.equal(h.nodes['[data-error]'].textContent, '');
+        assert.equal(h.nodes['[data-minutes]'].value, '');
+        assert.equal(h.toasts().length, 1);
+        assert.equal(h.toasts()[0].dataset.toast, 'empty');
+        assert.match(h.toasts()[0].children.map(child => child.textContent).join(' '), /0 minut.*Nic se nezapsalo/);
+    }
+    const typedText = setup(running(), 0, '');
+    typedText.nodes['[data-minutes]'].validity = {badInput: true};
+    await typedText.click('manual');
+    assert.equal(typedText.toasts().length, 0, 'text in the number input is not treated as zero');
+    assert.match(typedText.nodes['[data-error]'].textContent, /kladny/);
+    for (const input of ['-1', '1.5', 'NaN', '9999999999999999999']) {
         const h = setup(running(), 0, input);
         await h.click('manual');
         assert.equal(h.posts.length, 0);
         assert.equal(h.toasts().length, 0);
         assert.equal(h.state().phase, 'running');
         assert.match(h.nodes['[data-error]'].textContent, /kladny/);
+        assert.doesNotMatch(h.nodes['[data-error]'].textContent, /duplicit/, 'validation errors omit the duplicate warning');
     }
     const h = setup(running(), 1);
     await h.click('manual');
@@ -813,7 +830,8 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         }
         await enter.keydown();
         assert.equal(enter.posts.length, initial ? 2 : 1, 'empty Enter must not add another worklog');
-        assert.match(enter.nodes['[data-error]'].textContent, /kladny/);
+        assert.equal(enter.nodes['[data-error]'].textContent, '', 'empty Enter is a no-op, not an error');
+        assert.equal(enter.toasts().at(-1).dataset.toast, 'empty');
     }
     const blockedEnter = setup(uncertain);
     await blockedEnter.keydown();
@@ -974,11 +992,31 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     const favoriteMinutes = setup(running(), 0, '30', false, 0, {favorites: [{issue: 'DEMO-103', title: 'Third'}]});
     favoriteMinutes.click('fav-open');
     assert.equal(favRow(favoriteMinutes, 'DEMO-101'), undefined);
+    const favEditor = h => h.nodes['[data-fav-list]'].children.find(child => 'favEditor' in child.dataset);
+    for (const typed of [null, '0']) {
+        favRow(favoriteMinutes, 'DEMO-103').children[1].onclick();
+        const zeroEditor = favEditor(favoriteMinutes);
+        if (typed !== null) {
+            zeroEditor.children[2].children[0].value = typed;
+            zeroEditor.children[2].children[0].oninput();
+        }
+        await zeroEditor.children[2].children[1].onclick();
+        assert.equal(favoriteMinutes.posts.length, 0, 'empty or zero favorite minutes must not write');
+        assert.equal(favoriteMinutes.nodes['[data-error]'].textContent, '');
+        assert.equal(favoriteMinutes.toasts().at(-1).dataset.toast, 'empty');
+        assert.equal(favEditor(favoriteMinutes), undefined, 'zero minutes close the editor');
+        assert.deepEqual(favoriteMinutes.state(), running());
+    }
+    assert.equal(favoriteMinutes.toasts().length, 2);
     favRow(favoriteMinutes, 'DEMO-103').children[1].onclick();
-    const editor = favoriteMinutes.nodes['[data-fav-list]'].children.find(child => 'favEditor' in child.dataset);
+    const editor = favEditor(favoriteMinutes);
+    editor.children[2].children[0].value = '-5';
+    editor.children[2].children[0].oninput();
     await editor.children[2].children[1].onclick();
-    assert.equal(favoriteMinutes.posts.length, 0, 'empty favorite minutes must not write');
+    assert.equal(favoriteMinutes.posts.length, 0);
     assert.match(favoriteMinutes.nodes['[data-error]'].textContent, /kladny/);
+    assert.doesNotMatch(favoriteMinutes.nodes['[data-error]'].textContent, /duplicit/);
+    assert.ok(favEditor(favoriteMinutes), 'invalid minutes keep the editor open');
     editor.children[1].children[1].onclick();
     assert.equal(editor.children[2].children[0].value, '30', 'quick buttons only prefill the minutes');
     assert.equal(favoriteMinutes.posts.length, 0);
