@@ -585,11 +585,12 @@
             equal(p.posts()[0].issue, 'DEMO-101');
         }},
         {title: 'Oblibene: stitek, hledani, odkaz do nove karty, pridani a odebrani', async run(p) {
-            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}]});
+            await p.reset({issue: 'OPS-12', favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}]});
             equal(p.node('fav-count').textContent, '1');
             equal(p.node('favorites').hidden, true);
             await p.click('fav-open');
             equal(p.node('fav-open').hidden, true, 'chip hidden while open');
+            equal(p.node('fav-list').querySelector('[data-fav-mark]'), null, 'open issue has no extra label');
             const section = p.node('favorites').getBoundingClientRect();
             if (section.bottom > p.node('header').getBoundingClientRect().top + 1) throw new Error('Favorites must sit above the timer header');
             await p.click('fav-add');

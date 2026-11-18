@@ -48,7 +48,6 @@
         #jira-direct-timer a[data-fav-info]:hover [data-fav-key] {text-decoration:underline}
         #jira-direct-timer [data-fav-key] {display:block;overflow:hidden;color:#253249;font-size:10px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
         #jira-direct-timer [data-fav-dot] {margin-right:3px;color:#20559a}
-        #jira-direct-timer [data-fav-mark] {margin-left:3px;color:#526078;font-size:8px;font-weight:400}
         #jira-direct-timer [data-fav-summary] {display:block;overflow:hidden;color:#526078;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
         #jira-direct-timer [data-fav-minutes] {flex-shrink:0;height:19px;padding:0 4px;font-size:9px}
         #jira-direct-timer [data-fav-start],#jira-direct-timer [data-fav-stop] {flex-shrink:0;width:20px;height:19px;padding:0;font-size:8px;color:#fff}
@@ -582,14 +581,14 @@
             update(manual, 'disabled', busy || !currentIssue || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending'));
             update(minutes, 'disabled', busy);
             update(error, 'textContent', notice);
-            renderFavorites(value, currentIssue, false);
+            renderFavorites(value, false);
         } catch (e) {
             update(panel.dataset, 'running', 'false');
             update(panel.dataset, 'other', 'false');
             for (const control of [start, stop, save, manual, cancel]) update(control, 'disabled', true);
             update(cancel, 'hidden', true);
             update(error, 'textContent', e.message);
-            renderFavorites(null, issue(), true);
+            renderFavorites(null, true);
         }
     }
     async function request(path, options) {
@@ -938,7 +937,6 @@
         const key = favoriteNode('span', 'favKey');
         if (item.running) key.appendChild(favoriteNode('span', 'favDot', '\u25cf'));
         key.appendChild(favoriteNode('span', 'favKeyText', item.issue));
-        if (item.open) key.appendChild(favoriteNode('span', 'favMark', 'otev\u0159en\u00fd'));
         info.appendChild(key);
         info.appendChild(favoriteNode('span', 'favSummary', item.title));
         const add = favoriteNode('button', 'favMinutes', '+min');
@@ -989,7 +987,7 @@
         }
         return row;
     }
-    function renderFavorites(value, currentIssue, timerBroken) {
+    function renderFavorites(value, timerBroken) {
         let list = [];
         let storageError = '';
         try {
@@ -1031,7 +1029,6 @@
         const items = list.map(favorite => ({
             issue: favorite.issue,
             title: favorite.title || titleFor({issue: favorite.issue}),
-            open: favorite.issue === currentIssue,
             running: favorite.issue === runningIssue,
             fresh: favorite.issue === fresh,
             editing: favorite.issue === favEditKey,
