@@ -1040,7 +1040,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     const openFavorite = setup(null, 0, '30', false, 0, {favorites: [{issue: 'DEMO-101', title: ''}]});
     openFavorite.click('fav-open');
     const openKey = favRow(openFavorite, 'DEMO-101').children[0].children[0];
-    assert.equal(openKey.children.at(-1).textContent, 'otev\u0159en\u00fd', 'mark the favorite of the open issue');
+    assert.equal(openKey.children.length, 1, 'do not label the favorite of the open issue');
     assert.equal(favRow(openFavorite, 'DEMO-101').children[0].children[1].textContent, 'Full issue title <safe text>');
     openFavorite.externalFavorites([]);
     assert.equal(openFavorite.nodes['[data-fav-count]'].textContent, '0', 'reflect favorites changed in another tab');
