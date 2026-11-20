@@ -261,7 +261,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     invalidAuto.nodes['[data-auto-minutes]'].value = '1.5';
     invalidAuto.click('auto-save');
     assert.equal(invalidAuto.settings(), null);
-    assert.match(invalidAuto.nodes['[data-auto-error]'].textContent, /kladny/);
+    assert.match(invalidAuto.nodes['[data-auto-error]'].textContent, /kladn\u00fd/);
     const activeTimer = running();
     const automatic = setup(activeTimer, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 10}});
     await automatic.createIssue();
@@ -269,7 +269,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.match(automatic.posts[0].path, /DEMO-104\/worklog/);
     assert.equal(automatic.posts[0].body.timeSpentSeconds, 600);
     assert.equal(automatic.posts[0].body.started, new Date(200000000 - 600000).toISOString().replace('Z', '+0000'));
-    assert.match(automatic.posts[0].body.comment, /Automaticky vykaz/);
+    assert.match(automatic.posts[0].body.comment, /Automatick\u00fd v\u00fdkaz/);
     assert.match(automatic.posts[0].body.comment, /\[jira-direct-timer:auto-DEMO-104\]/);
     assert.deepEqual(automatic.state(), activeTimer, 'automatic reporting must preserve a running timer');
     assert.equal(automatic.autoQueue().length, 0);
@@ -310,7 +310,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
             await invalid[via]('/secure/QuickCreateIssue.jspa');
             assert.equal(invalid.posts.length, 0, 'validation failures or invalid keys must not create worklogs');
             assert.equal(invalid.autoQueue().length, 0);
-            assert.match(invalid.nodes['[data-error]'].textContent, /nevratila jeji klic/);
+            assert.match(invalid.nodes['[data-error]'].textContent, /nevr\u00e1tila jej\u00ed kl\u00ed\u010d/);
         }
         const failed = setup(null, 0, '30', false, 0, {
             autoSettings: {enabled: true, minutes: 11}, createStatus: 400
@@ -335,7 +335,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     unrecognizedCreatedIssue.onCreatedIssue(() => ({}));
     await unrecognizedCreatedIssue.createIssue();
     assert.equal(unrecognizedCreatedIssue.posts.length, 0);
-    assert.match(unrecognizedCreatedIssue.nodes['[data-error]'].textContent, /nevratila jeji klic/);
+    assert.match(unrecognizedCreatedIssue.nodes['[data-error]'].textContent, /nevr\u00e1tila jej\u00ed kl\u00ed\u010d/);
     const uncertainAuto = setup(null, 1, '30', false, 0, {
         autoSettings: {enabled: true, minutes: 10}, failureMode: 'after'
     });
@@ -365,6 +365,9 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         assert.equal(formatted.nodes['[data-worklog-total]'].textContent, expected);
     }
     const pagedTotal = setup(null);
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: na\u010d\u00edt\u00e1m...');
+    assert.doesNotMatch(source, /\b(nacitam|nevratila|vratila|zapis|ulozit|overit|poskozen[aeyý]|nastaveni|prohlizec|ukol[u]?|zamykani|tlacitkem|rucni|neni|zatim|ceka|over)\b/i,
+        'user-facing Czech texts keep their diacritics');
     pagedTotal.onFetch(path => {
         const offset = Number(new URLSearchParams(path.split('?')[1]).get('startAt'));
         if (offset === 0) return {total: 3, worklogs: [
@@ -404,7 +407,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         assert.equal(identity.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 1h');
     }
     for (const [user, author, message] of [
-        [{displayName: 'Demo User'}, currentUser, /prihlaseneho/],
+        [{displayName: 'Demo User'}, currentUser, /p\u0159ihl\u00e1\u0161en\u00e9ho/],
         [currentUser, undefined, /autora/],
         [currentUser, {displayName: currentUser.displayName}, /autora/],
         [{key: 'demo-user'}, {name: 'demo'}, /autora/]
@@ -465,7 +468,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         invalid.onTotals(() => ({fields}));
         await new Promise(resolve => setImmediate(resolve));
         assert.equal(invalid.nodes['[data-worklog-total]'].dataset.state, 'error');
-        assert.match(invalid.nodes['[data-worklog-total]'].textContent, /subtasku/);
+        assert.match(invalid.nodes['[data-worklog-total]'].textContent, /subtask\u016f/);
     }
     const failedAggregate = setup(null);
     failedAggregate.onTotals(() => { throw new Error('Aggregate offline'); });
@@ -538,7 +541,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         assert.match(last.path, /DEMO-101/);
         assert.equal(last.body.timeSpentSeconds, 1800);
         assert.equal(last.body.started, new Date(200000000 - 1800000).toISOString().replace('Z', '+0000'));
-        assert.match(last.body.comment, /Rucni vykaz/);
+        assert.match(last.body.comment, /Ru\u010dn\u00ed v\u00fdkaz/);
         assert.equal(h.nodes['[data-minutes]'].value, '');
         assert.equal(h.toasts().length, 1);
         assert.equal(h.toasts()[0].children[0].textContent, 'Zaznamenáno');
@@ -576,14 +579,14 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     typedText.nodes['[data-minutes]'].validity = {badInput: true};
     await typedText.click('manual');
     assert.equal(typedText.toasts().length, 0, 'text in the number input is not treated as zero');
-    assert.match(typedText.nodes['[data-error]'].textContent, /kladny/);
+    assert.match(typedText.nodes['[data-error]'].textContent, /kladn\u00fd/);
     for (const input of ['-1', '1.5', 'NaN', '9999999999999999999']) {
         const h = setup(running(), 0, input);
         await h.click('manual');
         assert.equal(h.posts.length, 0);
         assert.equal(h.toasts().length, 0);
         assert.equal(h.state().phase, 'running');
-        assert.match(h.nodes['[data-error]'].textContent, /kladny/);
+        assert.match(h.nodes['[data-error]'].textContent, /kladn\u00fd/);
         assert.doesNotMatch(h.nodes['[data-error]'].textContent, /duplicit/, 'validation errors omit the duplicate warning');
     }
     const h = setup(running(), 1);
@@ -896,7 +899,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await unknownIdentity.click('save');
     assert.equal(unknownIdentity.posts.length, 0, 'do not write when ownership of an existing marker cannot be verified');
     assert.equal(unknownIdentity.state().phase, 'stopped');
-    assert.match(unknownIdentity.nodes['[data-error]'].textContent, /identitu prihlaseneho uzivatele/);
+    assert.match(unknownIdentity.nodes['[data-error]'].textContent, /identitu p\u0159ihl\u00e1\u0161en\u00e9ho u\u017eivatele/);
     for (const via of ['createIssue', 'createIssueViaXhr']) {
         const crossOrigin = setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 10}});
         await crossOrigin[via]('https://evil.example/rest/api/2/issue');
@@ -974,7 +977,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /Hled\u00e1n\u00ed selhalo: .*Picker offline/);
     stale.onPicker(() => ({sections: 'invalid'}));
     await typeSearch(stale, 'invalid');
-    assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /neocekavanou odpoved/);
+    assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /neo\u010dek\u00e1vanou odpov\u011b\u010f/);
 
     const favoriteSwitch = setup(running(), 0, '30', false, 0, {favorites: [{issue: 'DEMO-103', title: 'Third'}]});
     favoriteSwitch.click('fav-open');
@@ -1025,7 +1028,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     editor.children[1].children[0].oninput();
     await editor.children[1].children[1].onclick();
     assert.equal(favoriteMinutes.posts.length, 0);
-    assert.match(favoriteMinutes.nodes['[data-error]'].textContent, /kladny/);
+    assert.match(favoriteMinutes.nodes['[data-error]'].textContent, /kladn\u00fd/);
     assert.doesNotMatch(favoriteMinutes.nodes['[data-error]'].textContent, /duplicit/);
     assert.ok(favEditor(favoriteMinutes), 'invalid minutes keep the editor open');
     editor.children[0].children[1].onclick();
@@ -1051,7 +1054,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         assert.equal(broken.nodes['[data-fav-count]'].textContent, '!');
         assert.equal(broken.nodes['[data-fav-open]'].dataset.state, 'error');
         broken.click('fav-open');
-        assert.match(broken.nodes['[data-fav-error]'].textContent, /poskozeny/);
+        assert.match(broken.nodes['[data-fav-error]'].textContent, /po\u0161kozen\u00fd/);
         assert.equal(broken.nodes['[data-fav-add]'].disabled, true, 'corrupted favorites must not be overwritten');
         assert.equal(favRows(broken).length, 0);
     }

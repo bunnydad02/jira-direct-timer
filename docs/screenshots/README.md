@@ -24,6 +24,7 @@ Zmeny vzhledu ukazuje diff PR, starsi podoby historie souboru a Git tagy vydani.
 | --- | --- |
 | Vlastni soucet vcetne subtasku (`totals-with-subtasks`) | ![Vlastni soucet vcetne subtasku](./totals-with-subtasks.png) |
 | Chyba nacteni souctu (`totals-error`) | ![Chyba nacteni souctu](./totals-error.png) |
+| Nacitani souctu pred odpovedi Jiry (`totals-loading`) | ![Nacitani souctu pred odpovedi Jiry](./totals-loading.png) |
 
 ## ADD MINUTES a AUTO
 

@@ -62,7 +62,12 @@ const groups = [
                 ]
             });
         }},
-        {name: 'totals-error', title: 'Chyba nacteni souctu', run: async p => { await p.reset({totalError: true}); }}
+        {name: 'totals-error', title: 'Chyba nacteni souctu', run: async p => { await p.reset({totalError: true}); }},
+        {name: 'totals-loading', title: 'Nacitani souctu pred odpovedi Jiry', run: async p => {
+            // Not awaited: the screenshot must capture the state before the mocked Jira responds.
+            p.reset({latency: 4000});
+            await p.sleep(50);
+        }}
     ]},
     {title: 'ADD MINUTES a AUTO', states: [
         {name: 'manual-saved', title: 'ADD MINUTES: rucni zapis 15 minut', run: async p => {
