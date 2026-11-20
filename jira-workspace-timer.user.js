@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.18.4
+// @version      1.18.5
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -19,7 +19,7 @@
     const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
     const FAVORITES_LIMIT = 10;
     const ISSUE_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
-    const VERSION = '1.18.4';
+    const VERSION = '1.18.5';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -151,7 +151,7 @@
         }
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<div data-favorites hidden><div data-fav-body><div data-fav-header><span data-fav-heading></span><button data-fav-add>+</button><button data-fav-close></button></div><div data-fav-search-wrap hidden><input data-fav-search type="text" autocomplete="off"><button data-fav-search-close></button><div data-fav-results hidden></div></div><div data-fav-limit hidden role="status"></div><div data-fav-list></div><div data-fav-error role="alert"></div></div></div><div data-header><strong>Jira stopky</strong><button data-fav-open><span data-fav-label></span><b data-fav-count></b></button><span data-version-wrap><a data-version></a></span></div><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save>Ulozit do Jira worklogu</button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<div data-favorites hidden><div data-fav-body><div data-fav-header><span data-fav-heading></span><button data-fav-add>+</button><button data-fav-close></button></div><div data-fav-search-wrap hidden><input data-fav-search type="text" autocomplete="off"><button data-fav-search-close></button><div data-fav-results hidden></div></div><div data-fav-limit hidden role="status"></div><div data-fav-list></div><div data-fav-error role="alert"></div></div></div><div data-header><strong>Jira stopky</strong><button data-fav-open><span data-fav-label></span><b data-fav-count></b></button><span data-version-wrap><a data-version></a></span></div><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save></button></div><div data-error role="alert"></div>';
     const versionLink = panel.querySelector('[data-version]');
     versionLink.textContent = `v${VERSION}`;
     versionLink.setAttribute('href', 'https://github.com/bunnydad02/jira-direct-timer');
@@ -161,15 +161,15 @@
     document.body.appendChild(panel);
     const manualRow = document.createElement('div');
     manualRow.dataset.manualRow = '';
-    manualRow.innerHTML = '<div data-manual-heading><label>ADD MINUTES <input data-minutes type="number" min="1" step="1"></label><button data-auto-open aria-label="Otevrit nastaveni AUTO">auto</button></div><button data-manual>ADD MINUTES</button>';
+    manualRow.innerHTML = '<div data-manual-heading><label>ADD MINUTES <input data-minutes type="number" min="1" step="1"></label><button data-auto-open>auto</button></div><button data-manual>ADD MINUTES</button>';
     panel.appendChild(manualRow);
     const autoSettingsDialog = document.createElement('div');
     autoSettingsDialog.dataset.autoSettings = '';
     autoSettingsDialog.hidden = true;
     autoSettingsDialog.setAttribute('role', 'dialog');
     autoSettingsDialog.setAttribute('aria-modal', 'true');
-    autoSettingsDialog.setAttribute('aria-label', 'Automaticke vykazovani');
-    autoSettingsDialog.innerHTML = '<header><span>Automaticke vykazovani</span><button data-auto-close aria-label="Zavrit bez ulozeni">x</button></header><label data-auto-enabled-label><input data-auto-enabled type="checkbox">Pri zalozeni nove issue vykazovat</label><label data-auto-minutes-row>Minuty <input data-auto-minutes type="number" min="1" step="1"></label><button data-auto-save>Ulozit</button><button data-auto-retry hidden>Zpracovat cekajici zapisy</button><div data-auto-error role="alert"></div>';
+    autoSettingsDialog.setAttribute('aria-label', 'Automatick\u00e9 vykazov\u00e1n\u00ed');
+    autoSettingsDialog.innerHTML = '<header><span data-auto-heading></span><button data-auto-close>x</button></header><label data-auto-enabled-label><input data-auto-enabled type="checkbox"><span data-auto-enabled-text></span></label><label data-auto-minutes-row>Minuty <input data-auto-minutes type="number" min="1" step="1"></label><button data-auto-save></button><button data-auto-retry hidden></button><div data-auto-error role="alert"></div>';
     panel.appendChild(autoSettingsDialog);
     const toasts = document.createElement('div');
     toasts.dataset.toasts = '';
@@ -201,6 +201,13 @@
     const autoSave = autoSettingsDialog.querySelector('[data-auto-save]');
     const autoRetry = autoSettingsDialog.querySelector('[data-auto-retry]');
     const autoError = autoSettingsDialog.querySelector('[data-auto-error]');
+    save.textContent = 'Ulo\u017eit do Jira worklogu';
+    autoOpen.setAttribute('aria-label', 'Otev\u0159\u00edt nastaven\u00ed AUTO');
+    autoSettingsDialog.querySelector('[data-auto-heading]').textContent = 'Automatick\u00e9 vykazov\u00e1n\u00ed';
+    autoClose.setAttribute('aria-label', 'Zav\u0159\u00edt bez ulo\u017een\u00ed');
+    autoSettingsDialog.querySelector('[data-auto-enabled-text]').textContent = 'P\u0159i zalo\u017een\u00ed nov\u00e9 issue vykazovat';
+    autoSave.textContent = 'Ulo\u017eit';
+    autoRetry.textContent = 'Zpracovat \u010dekaj\u00edc\u00ed z\u00e1pisy';
     const favoritesSection = panel.querySelector('[data-favorites]');
     const favOpen = panel.querySelector('[data-fav-open]');
     const favCount = panel.querySelector('[data-fav-count]');
@@ -250,7 +257,7 @@
     let autoSettingsValue;
     let autoSettingsBroken = false;
     let autoBusy = false;
-    const MANUAL_PENDING = 'Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit / Overit.';
+    const MANUAL_PENDING = 'Nejprve dokon\u010dit rozpracovan\u00fd ru\u010dn\u00ed z\u00e1pis tla\u010d\u00edtkem Ulo\u017eit / Ov\u011b\u0159it.';
 
     // render() runs every 100ms; writing unchanged values would still emit DOM mutations that wake Jira's observers.
     function update(target, key, value) {
@@ -275,11 +282,11 @@
         const label = {
             on: `AUTO zapnuto: ${autoSettingsValue.minutes} min na novou issue`,
             off: 'AUTO vypnuto',
-            error: 'Nastaveni AUTO je poskozene'
+            error: 'Nastaven\u00ed AUTO je po\u0161kozen\u00e9'
         }[state];
         update(autoOpen.dataset, 'state', state);
         update(autoOpen, 'textContent', state === 'error' ? 'auto !' : 'auto');
-        updateAttr(autoOpen, 'aria-label', `${label}. Otevrit nastaveni AUTO`);
+        updateAttr(autoOpen, 'aria-label', `${label}. Otev\u0159\u00edt nastaven\u00ed AUTO`);
         updateAttr(autoOpen, 'title', label);
     }
 
@@ -292,7 +299,7 @@
         }
         const value = JSON.parse(raw);
         if (!value || typeof value.enabled !== 'boolean' || !validMinuteCount(value.minutes)) {
-            throw new Error('Nastaveni automatickeho vykazovani je poskozene. Oprav ho v nastaveni AUTO.');
+            throw new Error('Nastaven\u00ed automatick\u00e9ho vykazov\u00e1n\u00ed je po\u0161kozen\u00e9. Oprav ho v nastaven\u00ed AUTO.');
         }
         autoSettingsBroken = false;
         return value;
@@ -307,7 +314,7 @@
             !ISSUE_PATTERN.test(value.issue) || value.id !== `auto-${value.issue}` ||
             !Number.isFinite(value.started) || !Number.isFinite(value.ended) || value.ended < value.started ||
             !['stopped', 'pending', 'saved'].includes(value.phase))) {
-            throw new Error('Fronta automatickych worklogu je poskozena. Nemaz data; je nutna kontrola.');
+            throw new Error('Fronta automatick\u00fdch worklog\u016f je po\u0161kozen\u00e1. Nema\u017e data; je nutn\u00e1 kontrola.');
         }
         return entries;
     }
@@ -319,7 +326,7 @@
     function persistAutoEntry(value) {
         const entries = readAutoQueue();
         const index = entries.findIndex(entry => entry.id === value.id);
-        if (index < 0) throw new Error('Automaticky worklog zmizel z fronty. Zapis nebyl opakovan.');
+        if (index < 0) throw new Error('Automatick\u00fd worklog zmizel z fronty. Z\u00e1pis nebyl opakov\u00e1n.');
         entries[index] = value;
         writeAutoQueue(entries);
     }
@@ -392,7 +399,7 @@
             titleRequests.add(value.issue);
             request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}?fields=summary`)
                 .then(body => {
-                    if (typeof body.fields?.summary !== 'string') throw new Error('Jira nevratila nazev ukolu.');
+                    if (typeof body.fields?.summary !== 'string') throw new Error('Jira nevr\u00e1tila n\u00e1zev \u00fakolu.');
                     titles.set(value.issue, body.fields.summary);
                     render();
                 })
@@ -412,7 +419,7 @@
     }
     function isOwnWorklog(worklog, user) {
         const field = userIdentifiers.find(field => hasIdentifier(user, field) && hasIdentifier(worklog.author, field));
-        if (!field) throw new Error('Jira nevratila identitu autora worklogu.');
+        if (!field) throw new Error('Jira nevr\u00e1tila identitu autora worklogu.');
         return worklog.author[field] === user[field];
     }
     async function totalLoggedSeconds(key, user) {
@@ -422,21 +429,21 @@
         do {
             const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}/worklog?startAt=${offset}&maxResults=100`);
             if (!Array.isArray(body.worklogs) || !Number.isSafeInteger(body.total) || body.total < 0) {
-                throw new Error('Neocekavana odpoved Jira worklogu.');
+                throw new Error('Neo\u010dek\u00e1van\u00e1 odpov\u011b\u010f Jira worklogu.');
             }
             total = body.total;
             for (const worklog of body.worklogs) {
                 if (!Number.isSafeInteger(worklog.timeSpentSeconds) || worklog.timeSpentSeconds < 0) {
-                    throw new Error('Jira vratila neplatnou delku worklogu.');
+                    throw new Error('Jira vr\u00e1tila neplatnou d\u00e9lku worklogu.');
                 }
                 if (isOwnWorklog(worklog, user)) {
                     seconds += worklog.timeSpentSeconds;
-                    if (!Number.isSafeInteger(seconds)) throw new Error('Jira vratila neplatny soucet worklogu.');
+                    if (!Number.isSafeInteger(seconds)) throw new Error('Jira vr\u00e1tila neplatn\u00fd sou\u010det worklogu.');
                 }
             }
             offset += body.worklogs.length;
             if (offset < total && !body.worklogs.length) {
-                throw new Error('Jira nevratila vsechny zaznamy worklogu.');
+                throw new Error('Jira nevr\u00e1tila v\u0161echny z\u00e1znamy worklogu.');
             }
         } while (offset < total);
         return seconds;
@@ -444,7 +451,7 @@
     async function currentUser(consequence = '') {
         const user = await request('/rest/api/2/myself');
         if (!userIdentifiers.some(field => hasIdentifier(user, field))) {
-            throw new Error(`Jira nevratila identitu prihlaseneho uzivatele.${consequence}`);
+            throw new Error(`Jira nevr\u00e1tila identitu p\u0159ihl\u00e1\u0161en\u00e9ho u\u017eivatele.${consequence}`);
         }
         return user;
     }
@@ -453,18 +460,18 @@
         const seconds = await totalLoggedSeconds(key, user);
         const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=subtasks`);
         if (!Array.isArray(body.fields?.subtasks)) {
-            throw new Error('Jira nevratila seznam subtasku.');
+            throw new Error('Jira nevr\u00e1tila seznam subtask\u016f.');
         }
         let secondsWithSubtasks = seconds;
         const seen = new Set([key]);
         for (const subtask of body.fields.subtasks) {
             if (!ISSUE_PATTERN.test(subtask?.key) || seen.has(subtask.key)) {
-                throw new Error('Jira vratila neplatny seznam subtasku.');
+                throw new Error('Jira vr\u00e1tila neplatn\u00fd seznam subtask\u016f.');
             }
             seen.add(subtask.key);
             secondsWithSubtasks += await totalLoggedSeconds(subtask.key, user);
             if (!Number.isSafeInteger(secondsWithSubtasks)) {
-                throw new Error('Jira vratila neplatny soucet casu subtasku.');
+                throw new Error('Jira vr\u00e1tila neplatn\u00fd sou\u010det \u010dasu subtask\u016f.');
             }
         }
         return {seconds, secondsWithSubtasks};
@@ -492,7 +499,7 @@
             });
         }
         update(worklogTotal.dataset, 'state', state.status);
-        let text = 'Dosud vykaz\u00e1no: nac\u00edt\u00e1m...';
+        let text = 'Dosud vykaz\u00e1no: na\u010d\u00edt\u00e1m...';
         if (state.status === 'loaded') {
             text = `Dosud vykaz\u00e1no: ${formatLoggedHours(state.seconds)}`;
             if (state.secondsWithSubtasks !== state.seconds) {
@@ -512,7 +519,7 @@
             typeof value.id !== 'string' || !Number.isFinite(value.started) ||
             (value.ended !== null && (!Number.isFinite(value.ended) || value.ended < value.started)) ||
             !['running', 'stopped', 'pending', 'saved'].includes(value.phase)) {
-            throw new Error('Ulozeny stav stopek je poskozeny. Nemaz data; je nutna kontrola.');
+            throw new Error('Ulo\u017een\u00fd stav stopek je po\u0161kozen\u00fd. Nema\u017e data; je nutn\u00e1 kontrola.');
         }
         return value;
     }
@@ -531,7 +538,7 @@
     }
     function stamp(ms) {
         const date = new Date(ms);
-        if (!Number.isFinite(date.getTime())) throw new Error('Neplatny cas zacatku.');
+        if (!Number.isFinite(date.getTime())) throw new Error('Neplatn\u00fd \u010das za\u010d\u00e1tku.');
         return date.toISOString().replace('Z', '+0000');
     }
     function render() {
@@ -551,7 +558,7 @@
             const displayValue = value && value.phase !== 'saved' ? value : null;
             const seconds = displayValue ? duration(displayValue) : 0;
             const title = displayValue ? titleFor(displayValue) : '';
-            const stateText = displayValue ? {running: '', stopped: 'Zastaveno, zatim neulozeno', pending: 'Nejisty vysledek zapisu. Over ulozeni tlacitkem nize.'}[displayValue.phase] : '';
+            const stateText = displayValue ? {running: '', stopped: 'Zastaveno, zat\u00edm neulo\u017eeno', pending: 'Nejist\u00fd v\u00fdsledek z\u00e1pisu. Ov\u011b\u0159 ulo\u017een\u00ed tla\u010d\u00edtkem n\u00ed\u017ee.'}[displayValue.phase] : '';
             const running = !!value && value.phase === 'running';
             update(panel.dataset, 'running', String(running));
             const other = running && value.issue !== currentIssue;
@@ -567,8 +574,8 @@
                 if (link.getAttribute('href') !== href) link.href = href;
             }
             let statusText = displayValue ? stateText : 'Nyn\u00ed se nic nem\u011b\u0159\u00ed.';
-            if (queuedManual) statusText += `\nCeka rucni zapis do ${queuedManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
-            if (independentManual) statusText += `\nCeka rucni zapis do ${independentManual.issue}. Dokonci tlacitkem Ulozit / Overit.`;
+            if (queuedManual) statusText += `\n\u010cek\u00e1 ru\u010dn\u00ed z\u00e1pis do ${queuedManual.issue}. Dokon\u010di tla\u010d\u00edtkem Ulo\u017eit / Ov\u011b\u0159it.`;
+            if (independentManual) statusText += `\n\u010cek\u00e1 ru\u010dn\u00ed z\u00e1pis do ${independentManual.issue}. Dokon\u010di tla\u010d\u00edtkem Ulo\u017eit / Ov\u011b\u0159it.`;
             update(status, 'textContent', statusText);
             const switching = active && value.issue !== currentIssue;
             update(start, 'disabled', busy || !currentIssue || !!queuedManual || !!independentManual || (!!active && !switching));
@@ -577,7 +584,7 @@
             update(cancel, 'disabled', busy || !!independentManual || !running);
             update(save, 'disabled', busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual) && !independentManual));
             update(saveRow, 'hidden', !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual && !independentManual));
-            update(save, 'textContent', value && (value.phase === 'pending' || independentManual?.phase === 'pending') ? 'Overit predchozi zapis (bez opakovani)' : 'Ulozit do Jira worklogu');
+            update(save, 'textContent', value && (value.phase === 'pending' || independentManual?.phase === 'pending') ? 'Ov\u011b\u0159it p\u0159edchoz\u00ed z\u00e1pis (bez opakov\u00e1n\u00ed)' : 'Ulo\u017eit do Jira worklogu');
             update(manual, 'disabled', busy || !currentIssue || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending'));
             update(minutes, 'disabled', busy);
             update(error, 'textContent', notice);
@@ -610,16 +617,16 @@
         let offset = 0;
         while (true) {
             const body = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?startAt=${offset}&maxResults=100`);
-            if (!Array.isArray(body.worklogs) || !Number.isFinite(body.total)) throw new Error('Neocekavana odpoved Jira worklogu.');
+            if (!Array.isArray(body.worklogs) || !Number.isFinite(body.total)) throw new Error('Neo\u010dek\u00e1van\u00e1 odpov\u011b\u010f Jira worklogu.');
             for (const worklog of body.worklogs) {
                 if (typeof worklog.comment !== 'string' || !worklog.comment.includes(marker)) continue;
                 // Another user's worklog carrying our marker must not count as our saved entry.
-                if (!user) user = await currentUser(' Zapis nebyl odeslan.');
+                if (!user) user = await currentUser(' Z\u00e1pis nebyl odesl\u00e1n.');
                 if (isOwnWorklog(worklog, user)) return worklog;
             }
             offset += body.worklogs.length;
             if (offset >= body.total) return null;
-            if (!body.worklogs.length) throw new Error('Jira nevratila vsechny zaznamy. Zapis nebyl opakovan.');
+            if (!body.worklogs.length) throw new Error('Jira nevr\u00e1tila v\u0161echny z\u00e1znamy. Z\u00e1pis nebyl opakov\u00e1n.');
         }
     }
     async function act(action) {
@@ -630,14 +637,14 @@
         try {
             actionDisplay = read();
             render();
-            if (!navigator.locks) throw new Error('Prohlizec nepodporuje zamykani mezi kartami. Pouzij standardni Jira Log work.');
+            if (!navigator.locks) throw new Error('Prohl\u00ed\u017ee\u010d nepodporuje zamyk\u00e1n\u00ed mezi kartami. Pou\u017eij standardn\u00ed Jira Log work.');
             await navigator.locks.request(KEY, {ifAvailable: true}, async lock => {
-                if (!lock) throw new Error('Stopky prave meni jina karta. Zkus pozdeji.');
+                if (!lock) throw new Error('Stopky pr\u00e1v\u011b m\u011bn\u00ed jin\u00e1 karta. Zkus pozd\u011bji.');
                 await action();
             });
             completed = true;
         } catch (e) {
-            notice = e instanceof InputError ? e.message : `${e.message}\nCas zustava ulozeny v tomto prohlizeci. Neopakuj zapis jinym zpusobem bez kontroly duplicit.`;
+            notice = e instanceof InputError ? e.message : `${e.message}\n\u010cas z\u016fst\u00e1v\u00e1 ulo\u017een\u00fd v tomto prohl\u00ed\u017ee\u010di. Neopakuj z\u00e1pis jin\u00fdm zp\u016fsobem bez kontroly duplicit.`;
         } finally {
             busy = false;
             actionDisplay = null;
@@ -647,11 +654,11 @@
     }
     async function startTimer(key) {
         const old = read();
-        if (!key) throw new Error('Otevri konkretni ukol Jiry.');
+        if (!key) throw new Error('Otev\u0159i konkr\u00e9tn\u00ed \u00fakol Jiry.');
         if (old && old.manualEntry) throw new Error(MANUAL_PENDING);
-        if (old && old.manualNext) throw new Error('Nejprve dokoncit rozpracovany rucni zapis tlacitkem Ulozit.');
+        if (old && old.manualNext) throw new Error('Nejprve dokon\u010dit rozpracovan\u00fd ru\u010dn\u00ed z\u00e1pis tla\u010d\u00edtkem Ulo\u017eit.');
         if (old && old.phase !== 'saved') {
-            if (old.issue === key) throw new Error('Tento ukol uz ma rozpracovane stopky.');
+            if (old.issue === key) throw new Error('Tento \u00fakol u\u017e m\u00e1 rozpracovan\u00e9 stopky.');
             if (old.phase === 'running') {
                 old.ended = Date.now();
                 old.phase = 'stopped';
@@ -667,7 +674,7 @@
     start.onclick = () => act(() => startTimer(issue()));
     function readRunning() {
         const value = read();
-        if (!value || value.phase !== 'running') throw new Error('Stopky uz nebezi.');
+        if (!value || value.phase !== 'running') throw new Error('Stopky u\u017e neb\u011b\u017e\u00ed.');
         if (value.manualEntry) throw new Error(MANUAL_PENDING);
         return value;
     }
@@ -712,11 +719,11 @@
         return true;
     }
     async function addMinutes(key, raw) {
-        if (!key) throw new Error('Otevri konkretni ukol Jiry.');
+        if (!key) throw new Error('Otev\u0159i konkr\u00e9tn\u00ed \u00fakol Jiry.');
         const count = parseMinutes(raw);
-        if (count === null) throw new InputError('Zadej kladny cely pocet minut.');
+        if (count === null) throw new InputError('Zadej kladn\u00fd cel\u00fd po\u010det minut.');
         const old = read();
-        if (old && (old.phase === 'pending' || old.manualNext || old.manualEntry)) throw new Error('Nejprve over predchozi zapis.');
+        if (old && (old.phase === 'pending' || old.manualNext || old.manualEntry)) throw new Error('Nejprve ov\u011b\u0159 p\u0159edchoz\u00ed z\u00e1pis.');
         const end = Date.now();
         const entry = {...newTimer(key, end - count * 60000), ended: end, phase: 'stopped', manual: true};
         if (old && old.phase === 'running') {
@@ -764,7 +771,7 @@
         if (!Array.isArray(list) || list.length > FAVORITES_LIMIT || list.some((value, index) =>
             !value || !ISSUE_PATTERN.test(value.issue) || typeof value.title !== 'string' || value.title.length > 500 ||
             list.findIndex(other => other && other.issue === value.issue) !== index)) {
-            throw new Error('Seznam oblibenych tasku je poskozeny. Nemaz data; je nutna kontrola.');
+            throw new Error('Seznam obl\u00edben\u00fdch task\u016f je po\u0161kozen\u00fd. Nema\u017e data; je nutn\u00e1 kontrola.');
         }
         return list;
     }
@@ -832,7 +839,7 @@
         setTimeout(finish, 450);
     }
     function pickerIssues(body) {
-        if (!body || !Array.isArray(body.sections)) throw new Error('Jira vratila neocekavanou odpoved hledani.');
+        if (!body || !Array.isArray(body.sections)) throw new Error('Jira vr\u00e1tila neo\u010dek\u00e1vanou odpov\u011b\u010f hled\u00e1n\u00ed.');
         const found = new Map();
         for (const section of body.sections) {
             for (const item of Array.isArray(section?.issues) ? section.issues : []) {
@@ -1122,7 +1129,7 @@
     autoSave.onclick = () => {
         const minutesValue = parseMinutes(autoMinutes.value);
         if (autoEnabled.checked && minutesValue === null) {
-            autoError.textContent = 'Zadej kladny cely pocet minut.';
+            autoError.textContent = 'Zadej kladn\u00fd cel\u00fd po\u010det minut.';
             return;
         }
         const value = {
@@ -1143,25 +1150,25 @@
     autoRetry.onclick = async () => { await processAutomaticEntries(); };
 
     function reportAutomaticError(errorValue) {
-        notice = `Automaticke vykazani: ${errorValue.message}`;
+        notice = `Automatick\u00e9 vyk\u00e1z\u00e1n\u00ed: ${errorValue.message}`;
         autoError.textContent = errorValue.message;
         render();
     }
 
     async function saveEntry(value, persist = write, notify = true) {
-        if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('Neni co ulozit.');
+        if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('Nen\u00ed co ulo\u017eit.');
         let worklog = await findSaved(value);
         if (!worklog) {
-            if (value.phase === 'pending') throw new Error('Zapis zatim nebyl nalezen. Automaticky ho neopakuji; over Work log v Jire.');
+            if (value.phase === 'pending') throw new Error('Z\u00e1pis zat\u00edm nebyl nalezen. Automaticky ho neopakuji; ov\u011b\u0159 Work log v Ji\u0159e.');
             const measuredSeconds = Math.max(1, duration(value));
             const seconds = Math.max(60, Math.floor(measuredSeconds / 60) * 60);
             value.phase = 'pending';
             persist(value);
             worklog = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?adjustEstimate=leave`, {
                 method: 'POST',
-                body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.automatic ? 'Automaticky vykaz (Jira stopky)' : value.manual ? 'Rucni vykaz (Jira stopky)' : 'Prace na ukolu (Jira stopky)'}${measuredSeconds < 60 ? `\nMereno ${measuredSeconds} s; ulozeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
+                body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.automatic ? 'Automatick\u00fd v\u00fdkaz (Jira stopky)' : value.manual ? 'Ru\u010dn\u00ed v\u00fdkaz (Jira stopky)' : 'Pr\u00e1ce na \u00fakolu (Jira stopky)'}${measuredSeconds < 60 ? `\nM\u011b\u0159eno ${measuredSeconds} s; ulo\u017eeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
             });
-            if (!worklog.id) throw new Error('Jira nevratila ID noveho worklogu. Over predchozi zapis.');
+            if (!worklog.id) throw new Error('Jira nevr\u00e1tila ID nov\u00e9ho worklogu. Ov\u011b\u0159 p\u0159edchoz\u00ed z\u00e1pis.');
         }
         value.phase = 'saved';
         value.worklogId = worklog.id;
@@ -1177,9 +1184,9 @@
         autoBusy = true;
         const failures = [];
         try {
-            if (!navigator.locks) throw new Error('Prohlizec nepodporuje zamykani mezi kartami. Automaticky zapis nebyl odeslan.');
+            if (!navigator.locks) throw new Error('Prohl\u00ed\u017ee\u010d nepodporuje zamyk\u00e1n\u00ed mezi kartami. Automatick\u00fd z\u00e1pis nebyl odesl\u00e1n.');
             await navigator.locks.request(KEY, {ifAvailable: true}, async lock => {
-                if (!lock) throw new Error('Stopky prave meni jina karta. Cekajici automaticky zapis zpracuj v nastaveni AUTO.');
+                if (!lock) throw new Error('Stopky pr\u00e1v\u011b m\u011bn\u00ed jin\u00e1 karta. \u010cekaj\u00edc\u00ed automatick\u00fd z\u00e1pis zpracuj v nastaven\u00ed AUTO.');
                 for (const entry of readAutoQueue()) {
                     if (entry.phase === 'saved') {
                         removeAutoEntry(entry.id);
@@ -1238,7 +1245,7 @@
     function captureCreatedIssue(body) {
         const key = body && (body.key || body.issueKey || body.issue && body.issue.key);
         if (typeof key !== 'string' || !ISSUE_PATTERN.test(key)) {
-            throw new Error('Odpoved na vytvoreni issue nevratila jeji klic. Worklog nebyl odeslan; over vysledek v Jire.');
+            throw new Error('Odpov\u011b\u010f na vytvo\u0159en\u00ed issue nevr\u00e1tila jej\u00ed kl\u00ed\u010d. Worklog nebyl odesl\u00e1n; ov\u011b\u0159 v\u00fdsledek v Ji\u0159e.');
         }
         return automaticIssueCreated(key);
     }

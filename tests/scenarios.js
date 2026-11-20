@@ -254,7 +254,7 @@
             await p.manual('30');
             const post = p.posts()[0];
             equal(post.body.timeSpentSeconds, 1800);
-            includes(post.body.comment, 'Rucni vykaz');
+            includes(post.body.comment, 'Ru\u010dn\u00ed v\u00fdkaz');
             const start = new Date(post.body.started).getTime();
             if (Math.abs(start + 1800000 - before) > 200) throw new Error('Manual interval does not end at submission');
             equal(p.node('minutes').value, '');
@@ -289,7 +289,7 @@
             equal(p.node('toasts').querySelectorAll('[data-toast="empty"]').length, 4);
             equal(p.state(), state);
             await p.manual('-5');
-            includes(p.node('error').textContent, 'kladny');
+            includes(p.node('error').textContent, 'kladn\u00fd');
             equal(p.node('error').textContent.includes('duplicit'), false, 'validation omits the duplicate warning');
         }},
         {title: 'AUTO: nove issue vykazuje jen po zapnuti a zachova stopky', async run(p) {
@@ -315,7 +315,7 @@
             equal(p.posts().length, 1);
             equal(p.posts()[0].issue, 'DEMO-104');
             equal(p.posts()[0].body.timeSpentSeconds, 600);
-            includes(p.posts()[0].body.comment, 'Automaticky vykaz');
+            includes(p.posts()[0].body.comment, 'Automatick\u00fd v\u00fdkaz');
             equal(p.state(), timer, 'automatic reporting must not replace the running timer');
         }},
         {title: 'AUTO: Sub-task Bug pres Jira formular vykaze 11 minut, obnova bez duplicit', async run(p) {
@@ -356,7 +356,7 @@
             const before = p.state();
             for (const value of ['-1', '1.5', '9999999999999999999']) {
                 await p.manual(value);
-                includes(p.node('error').textContent, 'kladny');
+                includes(p.node('error').textContent, 'kladn\u00fd');
                 equal(p.node('error').textContent.includes('duplicit'), false);
                 equal(p.state(), before);
                 equal(p.posts().length, 0);
@@ -419,13 +419,13 @@
             equal(p.state().phase, 'pending');
             equal(p.node('toast'), null);
             equal(p.node('save-row').hidden, false);
-            includes(p.node('save').textContent, 'bez opakovani');
+            includes(p.node('save').textContent, 'bez opakov\u00e1n\u00ed');
             includes(p.node('error').textContent, 'Simulovana');
             await p.click('save');
             equal(p.posts().length, 1);
             includes(p.node('error').textContent, 'neopakuji');
             await p.reload();
-            includes(p.node('status').textContent, 'Nejisty');
+            includes(p.node('status').textContent, 'Nejist\u00fd');
             await p.click('save');
             equal(p.posts().length, 1);
         }},
@@ -559,7 +559,7 @@
                 await p.click('start');
                 equal(p.state(), null);
                 equal(p.posts().length, 0);
-                includes(p.node('error').textContent, lock === 'missing' ? 'zamykani' : 'jina karta');
+                includes(p.node('error').textContent, lock === 'missing' ? 'zamyk\u00e1n\u00ed' : 'jin\u00e1 karta');
             }
         }},
         {title: 'Storage event z jine karty prekresli panel bez zapisu', async run(p) {
@@ -662,7 +662,7 @@
             await p.reset({favorites: '{broken'});
             equal(p.node('fav-count').textContent, '!');
             await p.click('fav-open');
-            includes(p.node('fav-error').textContent, 'poskozeny');
+            includes(p.node('fav-error').textContent, 'po\u0161kozen\u00fd');
             equal(p.node('fav-add').disabled, true);
             equal(p.favoritesRaw(), '{broken', 'corrupted favorites are never overwritten');
             equal(p.posts().length, 0);
