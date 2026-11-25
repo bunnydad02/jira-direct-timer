@@ -27,12 +27,12 @@ test('Interactive suite reports every scenario and can be rerun', async ({page})
     test.setTimeout(120000);
     await page.goto('/');
     for (let run = 0; run < 2; run++) {
-        await page.getByRole('button', {name: 'Spustit vsechny regresni scenare'}).click();
-        await expect(page.locator('#test-status')).toHaveText(`Hotovo: ${scenarios.length} OK, 0 chyb.`, {timeout: 55000});
+        await page.getByRole('button', {name: 'Run all regression scenarios'}).click();
+        await expect(page.locator('#test-status')).toHaveText(`Done: ${scenarios.length} OK, 0 errors.`, {timeout: 55000});
         await expect(page.locator('#results li[data-result="passed"]')).toHaveCount(scenarios.length);
         await expect(page.locator('#run')).toBeEnabled();
     }
-    await page.getByRole('button', {name: 'Vynulovat simulaci'}).click();
+    await page.getByRole('button', {name: 'Reset simulation'}).click();
     await expect(page.locator('[data-clock]')).toHaveText('00:00:00');
     await expect(page.locator('[data-start]')).toBeEnabled();
 });
@@ -52,7 +52,7 @@ test('Real controls navigate, advance, reload, fail and recover locally', async 
     await page.locator('#failure').selectOption('after');
     await page.locator('[data-stop]').click();
     await expect(page.locator('[data-save]')).toBeVisible();
-    await expect(page.locator('[data-error]')).toContainText('Simulovana ztrata odpovedi');
+    await expect(page.locator('[data-error]')).toContainText('Simulated response loss');
     await page.locator('#reload').click();
     await page.locator('[data-save]').click();
     await expect(page.locator('[data-toast="saved"]')).toBeVisible();
@@ -88,6 +88,45 @@ test('Unchanged renders do not mutate the DOM', async ({page}) => {
         };
     });
     expect(mutations).toEqual({idle: [], running: [], other: [], corrupted: [], favorites: []});
+});
+
+test('English controls remain inside the panel at normal and narrow widths', async ({page}) => {
+    for (const width of [320, 240]) {
+        await page.setViewportSize({width, height: 900});
+        await page.goto('/');
+        await page.evaluate(async () => {
+            await window.playground.ready;
+            await window.playground.reset({favorites: [{issue: 'OPS-12', title: 'Meetings and communication'}]});
+        });
+        const check = async selectors => {
+            const overflow = await page.evaluate(selectors => {
+                const panel = document.querySelector('#jira-direct-timer').getBoundingClientRect();
+                return selectors.flatMap(selector => [...document.querySelectorAll(selector)])
+                    .filter(node => node.getClientRects().length)
+                    .filter(node => {
+                        const rect = node.getBoundingClientRect();
+                        return rect.left < panel.left - 1 || rect.right > panel.right + 1 ||
+                            (node.tagName !== 'INPUT' && node.scrollWidth > node.clientWidth + 1);
+                    }).map(node => node.outerHTML.slice(0, 160));
+            }, selectors);
+            expect(overflow).toEqual([]);
+        };
+        await check(['[data-header] > *', '[data-manual-heading] > *', '[data-manual]']);
+        const manualRowOverlaps = await page.evaluate(() => {
+            const label = document.querySelector('[data-manual-heading] label').getBoundingClientRect();
+            const auto = document.querySelector('[data-auto-open]').getBoundingClientRect();
+            return label.right > auto.left + 1;
+        });
+        expect(manualRowOverlaps).toBe(false);
+        await page.locator('[data-auto-open]').click();
+        await check(['[data-auto-settings] header', '[data-auto-enabled-label]', '[data-auto-minutes-row]', '[data-auto-save]']);
+        await page.locator('[data-auto-close]').click();
+        await page.locator('[data-fav-open]').click();
+        await page.locator('[data-fav-menu-toggle]').click();
+        await check(['[data-fav-row] button', '[data-fav-menu] button']);
+        await page.locator('[data-fav-rename]').click();
+        await check(['[data-fav-name-editor] input', '[data-fav-name-actions] button']);
+    }
 });
 
 test('Safety: actual storage untouched, network blocked, server rejects writes', async ({page, request}) => {

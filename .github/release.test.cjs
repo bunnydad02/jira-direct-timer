@@ -144,8 +144,8 @@ function newFixture(body = newNotes, existing = ['running.png', 'saved-toast.png
 
 test('releases from 1.17.4 must embed existing screenshots', () => {
     assert.equal(newFixture().tag, 'v1.17.4');
-    assert.throws(() => newFixture(newNotes.replace('## Screenshots', '## Obrazky')), /Screenshots section/);
-    assert.throws(() => newFixture(newNotes.split('## Screenshots')[0] + '## Screenshots\n\nZadne.\n'), /embed relevant images/);
+    assert.throws(() => newFixture(newNotes.replace('## Screenshots', '## Images')), /Screenshots section/);
+    assert.throws(() => newFixture(newNotes.split('## Screenshots')[0] + '## Screenshots\n\nNone.\n'), /embed relevant images/);
     assert.throws(() => newFixture(newNotes, ['running.png']), /Missing release screenshot: docs\/screenshots\/saved-toast\.png/);
     for (const version of ['1.17.10', '1.18.0', '2.0.0']) {
         assert.throws(() => loadRelease(file => (path.basename(file) === 'jira-workspace-timer.user.js'

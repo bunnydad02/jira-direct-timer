@@ -6,15 +6,15 @@
     const AUTO_QUEUE_KEY = 'jira-direct-timer-auto-queue-v1';
     const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
     const titles = {
-        'DEMO-101': 'Testovaci task: implementace <bezpecny text>',
-        'DEMO-102': 'Testovaci task: kontrola a opravy',
-        'DEMO-103': 'Testovaci task: dokumentace',
-        'DEMO-104': 'Testovaci task: automaticke vykazani',
-        'OPS-12': 'Porady a komunikace',
-        'OPS-140': 'Review pristupu',
+        'DEMO-101': 'Test issue: implementation <safe text>',
+        'DEMO-102': 'Test issue: checks and fixes',
+        'DEMO-103': 'Test issue: documentation',
+        'DEMO-104': 'Test issue: automatic work logging',
+        'OPS-12': 'Meetings and communication',
+        'OPS-140': 'Access review',
         'ARCH-3': 'Architecture review board'
     };
-    const projects = {DEMO: 'Demo projekt', OPS: 'Quality Assurance', ARCH: 'Architektura'};
+    const projects = {DEMO: 'Demo project', OPS: 'Quality Assurance', ARCH: 'Architecture'};
     const nativeDate = Date;
     let model;
     let interval;
@@ -26,16 +26,16 @@
     const clone = value => JSON.parse(JSON.stringify(value));
 
     function inspect() {
-        $('#state').textContent = model.raw || '(prazdny stav)';
+        $('#state').textContent = model.raw || '(empty state)';
         $('#worklogs').textContent = JSON.stringify(model.logs, null, 2);
-        $('#requests').textContent = model.requests.map(value => `${value.method} ${value.path}`).join('\n') || '(zadne)';
+        $('#requests').textContent = model.requests.map(value => `${value.method} ${value.path}`).join('\n') || '(none)';
     }
     function navigate(issue) {
         if (issue && !Object.hasOwn(titles, issue)) throw new Error(`Unknown fixture: ${issue}`);
         model.location.pathname = issue ? `/browse/${issue}` : '/dashboard';
         model.location.search = '';
         $('meta[name="ajs-issue-key"]').content = issue;
-        $('#summary-val').textContent = titles[issue] || 'Prehled bez otevreneho tasku';
+        $('#summary-val').textContent = titles[issue] || 'Overview without an open issue';
         $('#issue').value = issue;
         render?.();
     }
@@ -90,11 +90,11 @@
             try {
                 await sleep(current.latency);
                 if (myself) {
-                    if (current.identityError) throw new Error('Simulovana chyba identity uzivatele');
+                    if (current.identityError) throw new Error('Simulated user identity error');
                     return {ok: true, json: async () => clone(current.user)};
                 }
                 if (picker) {
-                    if (current.pickerError) throw new Error('Simulovana chyba hledani');
+                    if (current.pickerError) throw new Error('Simulated search error');
                     const query = new URLSearchParams(path.split('?')[1]).get('query').toLowerCase();
                     const issues = Object.entries(titles).filter(([key, title]) => `${key} ${title}`.toLowerCase().includes(query))
                         .map(([key, title]) => ({key, summaryText: title, summary: title}));
@@ -106,7 +106,7 @@
                 }
                 const issue = match[1];
                 if (match[2] === '?fields=project') {
-                    if (current.projectError) throw new Error('Simulovana chyba projektu');
+                    if (current.projectError) throw new Error('Simulated project error');
                     return {ok: true, json: async () => ({fields: {project: {name: projects[issue.split('-')[0]] || issue.split('-')[0]}}})};
                 }
                 if (match[2] === '?fields=summary') {
@@ -115,7 +115,7 @@
                 }
                 if (match[2] === '?fields=subtasks') {
                     if (method !== 'GET') throw new Error('Subtasks fixture is read-only');
-                    if (current.aggregateError) throw new Error('Simulovana chyba souhrnu subtasku');
+                    if (current.aggregateError) throw new Error('Simulated subtask summary error');
                     const subtasks = Object.keys(current.parents).filter(key => current.parents[key] === issue).map(key => ({key}));
                     return {ok: true, json: async () => ({fields: {subtasks}})};
                 }
@@ -126,13 +126,13 @@
                     const failure = current.failure;
                     current.failure = 'none';
                     $('#failure').value = 'none';
-                    if (failure === 'before') throw new Error('Simulovana ztrata spojeni pred ulozenim');
+                    if (failure === 'before') throw new Error('Simulated connection loss before saving');
                     const log = {id: `mock-${current.logs.length + 1}`, issue, author: clone(current.user), ...body};
                     current.logs.push(log);
-                    if (failure === 'after') throw new Error('Simulovana ztrata odpovedi po ulozeni');
+                    if (failure === 'after') throw new Error('Simulated response loss after saving');
                     return {ok: true, json: async () => clone(log)};
                 }
-                if (current.totalError || current.worklogErrorIssue === issue) throw new Error('Simulovana chyba nacteni worklogu');
+                if (current.totalError || current.worklogErrorIssue === issue) throw new Error('Simulated work log loading error');
                 const logs = current.logs.filter(log => log.issue === issue);
                 const offset = Number(new URLSearchParams(path.split('?')[1]).get('startAt'));
                 return {ok: true, json: async () => ({total: logs.length, worklogs: clone(logs.slice(offset, offset + 2))})};
@@ -245,7 +245,7 @@
         const link = event.target.closest('#jira-direct-timer a');
         if (!link) return;
         event.preventDefault();
-        $('#link-info').textContent = `Odkaz${link.target === '_blank' ? ' do nove karty' : ''} (bez externi navigace): ${link.href}`;
+        $('#link-info').textContent = `Link${link.target === '_blank' ? ' to a new tab' : ''} (external navigation blocked): ${link.href}`;
         if (link.target === '_blank') return;
         const issue = new URL(link.href).pathname.match(/^\/browse\/(DEMO-10[123])$/)?.[1];
         if (issue) navigate(issue);
@@ -260,7 +260,7 @@
                 const item = document.createElement('li');
                 item.textContent = window.regression.scenarios[index].title;
                 $('#results').appendChild(item);
-                $('#test-status').textContent = `Bezi: ${item.textContent}`;
+                $('#test-status').textContent = `Running: ${item.textContent}`;
                 try {
                     await window.regression.run(index);
                     item.dataset.result = 'passed';
@@ -268,11 +268,11 @@
                 } catch (error) {
                     failures++;
                     item.dataset.result = 'failed';
-                    item.textContent += ` - CHYBA: ${error.message}`;
+                    item.textContent += ` - ERROR: ${error.message}`;
                 }
                 await sleep(250);
             }
-            $('#test-status').textContent = `Hotovo: ${window.regression.scenarios.length - failures} OK, ${failures} chyb.`;
+            $('#test-status').textContent = `Done: ${window.regression.scenarios.length - failures} OK, ${failures} errors.`;
         } finally {
             controls.forEach(node => { node.disabled = false; });
         }

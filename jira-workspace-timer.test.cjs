@@ -21,7 +21,7 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
     let favorites = extra.favorites === undefined ? null : typeof extra.favorites === 'string' ? extra.favorites : JSON.stringify(extra.favorites);
     const pickerQueries = [];
     let onPicker = query => ({sections: [{id: 'cs', issues: [
-        {key: 'OPS-140', summaryText: 'Review pristupu', summary: 'Review <b>pristupu</b>'},
+        {key: 'OPS-140', summaryText: 'Access review', summary: 'Access <b>review</b>'},
         {key: 'DEMO-102', summaryText: 'Code review'}]}]});
     let confirmations = 0;
     const posts = [];
@@ -223,7 +223,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     const autoOff = setup(null);
     assert.equal(autoOff.nodes['[data-auto-open]'].dataset.state, 'off', 'show disabled AUTO by default');
     assert.equal(autoOff.nodes['[data-auto-open]'].textContent, 'auto');
-    assert.match(autoOff.nodes['[data-auto-open]'].attributes['aria-label'], /^AUTO vypnuto\./);
+    assert.match(autoOff.nodes['[data-auto-open]'].attributes['aria-label'], /^AUTO off\./);
     autoOff.click('auto-open');
     assert.equal(autoOff.nodes['[data-auto-enabled]'].checked, false);
     assert.equal(autoOff.nodes['[data-auto-minutes]'].disabled, true,
@@ -243,12 +243,12 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(configuredAuto.nodes['[data-auto-open]'].dataset.state, 'on',
         'show enabled AUTO in the panel without opening settings');
     assert.equal(configuredAuto.nodes['[data-auto-open]'].textContent, 'auto', 'keep the compact label to preserve layout');
-    assert.match(configuredAuto.nodes['[data-auto-open]'].attributes.title, /AUTO zapnuto: 10 min/);
+    assert.match(configuredAuto.nodes['[data-auto-open]'].attributes.title, /AUTO on: 10 min/);
     configuredAuto.configureAuto(false);
     assert.equal(configuredAuto.nodes['[data-auto-open]'].dataset.state, 'off');
-    assert.equal(configuredAuto.nodes['[data-auto-open]'].attributes.title, 'AUTO vypnuto');
+    assert.equal(configuredAuto.nodes['[data-auto-open]'].attributes.title, 'AUTO off');
     assert.match(setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 25}})
-        .nodes['[data-auto-open]'].attributes['aria-label'], /^AUTO zapnuto: 25 min/, 'show saved AUTO minutes after reload');
+        .nodes['[data-auto-open]'].attributes['aria-label'], /^AUTO on: 25 min/, 'show saved AUTO minutes after reload');
     const brokenAuto = setup(null, 0, '30', false, 0, {autoSettings: {enabled: 'yes', minutes: 10}});
     assert.equal(brokenAuto.nodes['[data-auto-open]'].dataset.state, 'error',
         'corrupted AUTO settings must not look like a normal disabled state');
@@ -256,7 +256,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     brokenAuto.configureAuto(true, 15);
     assert.equal(brokenAuto.nodes['[data-auto-open]'].dataset.state, 'on', 'saving valid settings clears the error indicator');
     assert.equal(brokenAuto.nodes['[data-auto-open]'].textContent, 'auto');
-    assert.match(brokenAuto.nodes['[data-auto-open]'].attributes.title, /AUTO zapnuto: 15 min/);
+    assert.match(brokenAuto.nodes['[data-auto-open]'].attributes.title, /AUTO on: 15 min/);
     const invalidAuto = setup(null);
     invalidAuto.click('auto-open');
     invalidAuto.nodes['[data-auto-enabled]'].checked = true;
@@ -264,7 +264,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     invalidAuto.nodes['[data-auto-minutes]'].value = '1.5';
     invalidAuto.click('auto-save');
     assert.equal(invalidAuto.settings(), null);
-    assert.match(invalidAuto.nodes['[data-auto-error]'].textContent, /kladn\u00fd/);
+    assert.match(invalidAuto.nodes['[data-auto-error]'].textContent, /positive/);
     const activeTimer = running();
     const automatic = setup(activeTimer, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 10}});
     await automatic.createIssue();
@@ -272,7 +272,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.match(automatic.posts[0].path, /DEMO-104\/worklog/);
     assert.equal(automatic.posts[0].body.timeSpentSeconds, 600);
     assert.equal(automatic.posts[0].body.started, new Date(200000000 - 600000).toISOString().replace('Z', '+0000'));
-    assert.match(automatic.posts[0].body.comment, /Automatick\u00fd v\u00fdkaz/);
+    assert.match(automatic.posts[0].body.comment, /Automatic work log/);
     assert.match(automatic.posts[0].body.comment, /\[jira-direct-timer:auto-DEMO-104\]/);
     assert.deepEqual(automatic.state(), activeTimer, 'automatic reporting must preserve a running timer');
     assert.equal(automatic.autoQueue().length, 0);
@@ -313,7 +313,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
             await invalid[via]('/secure/QuickCreateIssue.jspa');
             assert.equal(invalid.posts.length, 0, 'validation failures or invalid keys must not create worklogs');
             assert.equal(invalid.autoQueue().length, 0);
-            assert.match(invalid.nodes['[data-error]'].textContent, /nevr\u00e1tila jej\u00ed kl\u00ed\u010d/);
+            assert.match(invalid.nodes['[data-error]'].textContent, /did not return its key/);
         }
         const failed = setup(null, 0, '30', false, 0, {
             autoSettings: {enabled: true, minutes: 11}, createStatus: 400
@@ -338,7 +338,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     unrecognizedCreatedIssue.onCreatedIssue(() => ({}));
     await unrecognizedCreatedIssue.createIssue();
     assert.equal(unrecognizedCreatedIssue.posts.length, 0);
-    assert.match(unrecognizedCreatedIssue.nodes['[data-error]'].textContent, /nevr\u00e1tila jej\u00ed kl\u00ed\u010d/);
+    assert.match(unrecognizedCreatedIssue.nodes['[data-error]'].textContent, /did not return its key/);
     const uncertainAuto = setup(null, 1, '30', false, 0, {
         autoSettings: {enabled: true, minutes: 10}, failureMode: 'after'
     });
@@ -359,18 +359,16 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(missingMarkerAuto.posts.length, 1, 'a pending automatic POST without a marker must not be repeated');
     assert.equal(missingMarkerAuto.autoQueue()[0].phase, 'pending');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
+    assert.equal(legacyPanel.nodes['[data-worklog-total]'].textContent, 'Logged so far: 0h');
     assert.equal(legacyPanel.nodes['[data-worklog-total]'].hidden, false);
-    for (const [seconds, expected] of [[7200, 'Dosud vykaz\u00e1no: 2h'], [1440, 'Dosud vykaz\u00e1no: 0,4h'], [439200, 'Dosud vykaz\u00e1no: 122h']]) {
+    for (const [seconds, expected] of [[7200, 'Logged so far: 2h'], [1440, 'Logged so far: 0.4h'], [439200, 'Logged so far: 122h']]) {
         const formatted = setup(null);
         formatted.onFetch(() => ({total: 1, worklogs: [ownLog(seconds)]}));
         await new Promise(resolve => setImmediate(resolve));
         assert.equal(formatted.nodes['[data-worklog-total]'].textContent, expected);
     }
     const pagedTotal = setup(null);
-    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: na\u010d\u00edt\u00e1m...');
-    assert.doesNotMatch(source, /\b(nacitam|nevratila|vratila|zapis|ulozit|overit|poskozen[aeyý]|nastaveni|prohlizec|ukol[u]?|zamykani|tlacitkem|rucni|neni|zatim|ceka|over)\b/i,
-        'user-facing Czech texts keep their diacritics');
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Logged so far: loading...');
     pagedTotal.onFetch(path => {
         const offset = Number(new URLSearchParams(path.split('?')[1]).get('startAt'));
         if (offset === 0) return {total: 3, worklogs: [
@@ -379,7 +377,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         return {total: 3, worklogs: [ownLog(3661)]};
     });
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 2,5h',
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Logged so far: 2.5h',
         'sum all worklogs across Jira pages');
     const colleague = {key: 'colleague', name: 'other', displayName: currentUser.displayName};
     const personal = setup(null);
@@ -394,7 +392,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     });
     personal.onTotals(() => ({fields: {subtasks: [{key: 'DEMO-102'}]}}));
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(personal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0,3h (0,8h)',
+    assert.equal(personal.nodes['[data-worklog-total]'].textContent, 'Logged so far: 0.3h (0.8h)',
         'count only the signed-in author on every page of the issue and its subtasks, never updateAuthor or displayName');
     assert.ok(personalQueries.some(path => path.includes('/DEMO-102/') && path.includes('startAt=1')));
     assert.equal(personal.posts.length, 0);
@@ -407,13 +405,13 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         identity.onIdentity(() => user);
         identity.onFetch(() => ({total: 1, worklogs: [{timeSpentSeconds: 3600, author}]}));
         await new Promise(resolve => setImmediate(resolve));
-        assert.equal(identity.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 1h');
+        assert.equal(identity.nodes['[data-worklog-total]'].textContent, 'Logged so far: 1h');
     }
     for (const [user, author, message] of [
-        [{displayName: 'Demo User'}, currentUser, /p\u0159ihl\u00e1\u0161en\u00e9ho/],
-        [currentUser, undefined, /autora/],
-        [currentUser, {displayName: currentUser.displayName}, /autora/],
-        [{key: 'demo-user'}, {name: 'demo'}, /autora/]
+        [{displayName: 'Demo User'}, currentUser, /signed-in/],
+        [currentUser, undefined, /author/],
+        [currentUser, {displayName: currentUser.displayName}, /author/],
+        [{key: 'demo-user'}, {name: 'demo'}, /author/]
     ]) {
         const invalid = setup(null);
         invalid.onIdentity(() => user);
@@ -430,7 +428,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     identityFailure.onIdentity(() => currentUser);
     identityFailure.navigate('/browse/DEMO-102');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(identityFailure.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h',
+    assert.equal(identityFailure.nodes['[data-worklog-total]'].textContent, 'Logged so far: 0h',
         'identity lookup is retried when totals are refreshed');
     for (const broken of [
         {total: 2, worklogs: []},
@@ -448,11 +446,11 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await new Promise(resolve => setImmediate(resolve));
     assert.equal(overflow.nodes['[data-worklog-total]'].dataset.state, 'error');
     for (const [own, child, expected] of [
-        [7200, 3600, 'Dosud vykaz\u00e1no: 2h (3h)'],
-        [7200, 0, 'Dosud vykaz\u00e1no: 2h'],
-        [0, 3600, 'Dosud vykaz\u00e1no: 0h (1h)'],
-        [0, 0, 'Dosud vykaz\u00e1no: 0h'],
-        [7200, 60, 'Dosud vykaz\u00e1no: 2h (2h)']
+        [7200, 3600, 'Logged so far: 2h (3h)'],
+        [7200, 0, 'Logged so far: 2h'],
+        [0, 3600, 'Logged so far: 0h (1h)'],
+        [0, 0, 'Logged so far: 0h'],
+        [7200, 60, 'Logged so far: 2h (2h)']
     ]) {
         const total = setup(null);
         total.onFetch(path => ({total: 1, worklogs: [ownLog(path.includes('/DEMO-102/') ? child : own)]}));
@@ -471,7 +469,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         invalid.onTotals(() => ({fields}));
         await new Promise(resolve => setImmediate(resolve));
         assert.equal(invalid.nodes['[data-worklog-total]'].dataset.state, 'error');
-        assert.match(invalid.nodes['[data-worklog-total]'].textContent, /subtask\u016f/);
+        assert.match(invalid.nodes['[data-worklog-total]'].textContent, /subtask/);
     }
     const failedAggregate = setup(null);
     failedAggregate.onTotals(() => { throw new Error('Aggregate offline'); });
@@ -484,12 +482,12 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     });
     pagedTotal.navigate('/browse/DEMO-102');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Logged so far: 0h');
     assert.ok(issueQueries.some(path => path.includes('/DEMO-102/')), 'load a fresh total when the open issue changes');
     const queryCount = issueQueries.length;
     pagedTotal.navigate('/browse/DEMO-101');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
+    assert.equal(pagedTotal.nodes['[data-worklog-total]'].textContent, 'Logged so far: 0h');
     assert.ok(issueQueries.length > queryCount, 'refresh the total when reopening a previously viewed issue');
     const failedTotal = setup(null);
     failedTotal.onFetch(() => { throw new Error('Jira offline'); });
@@ -536,7 +534,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     }
     for (const initial of [null, running(), {...running(), issue: 'DEMO-101'}]) {
         const h = setup(initial);
-        assert.match(h.panel.innerHTML, /^<div data-favorites hidden>.*<div data-header><strong>Jira stopky<\/strong>/);
+        assert.match(h.panel.innerHTML, /^<div data-favorites hidden>.*<div data-header><strong>Jira timer<\/strong>/);
         await h.click('manual');
         assert.equal(h.confirmations(), 0, 'manual entry must save without a dialog');
         assert.equal(h.posts.length, 1);
@@ -544,11 +542,11 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         assert.match(last.path, /DEMO-101/);
         assert.equal(last.body.timeSpentSeconds, 1800);
         assert.equal(last.body.started, new Date(200000000 - 1800000).toISOString().replace('Z', '+0000'));
-        assert.match(last.body.comment, /Ru\u010dn\u00ed v\u00fdkaz/);
+        assert.match(last.body.comment, /Manual work log/);
         assert.equal(h.nodes['[data-minutes]'].value, '');
         assert.equal(h.toasts().length, 1);
-        assert.equal(h.toasts()[0].children[0].textContent, 'Zaznamenáno');
-        assert.equal(h.toasts()[0].children[1].attributes['aria-label'], '00:30:00 do tasku DEMO-101');
+        assert.equal(h.toasts()[0].children[0].textContent, 'Recorded');
+        assert.equal(h.toasts()[0].children[1].attributes['aria-label'], '00:30:00 logged to issue DEMO-101');
         assert.equal(h.toasts()[0].children[1].children[0].textContent, '00:30:00');
         assert.equal(h.toasts()[0].children[1].children[1].textContent, 'DEMO-101');
         assert.equal(h.toasts()[0].children[1].href, 'https://jira.alza.cz/browse/DEMO-101');
@@ -564,7 +562,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
             assert.equal(h.nodes['[data-clock]'].textContent, '00:02:10');
         } else {
             assert.equal(h.state().phase, 'saved');
-            assert.equal(h.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+            assert.equal(h.nodes['[data-status]'].textContent, 'Nothing is being tracked.');
         }
     }
     for (const input of ['', '0', '00', ' 0 ']) {
@@ -576,21 +574,21 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
         assert.equal(h.nodes['[data-minutes]'].value, '');
         assert.equal(h.toasts().length, 1);
         assert.equal(h.toasts()[0].dataset.toast, 'empty');
-        assert.match(h.toasts()[0].children.map(child => child.textContent).join(' '), /0 minut.*Nic se nezapsalo/);
+        assert.match(h.toasts()[0].children.map(child => child.textContent).join(' '), /0 minutes.*Nothing was logged/);
     }
     const typedText = setup(running(), 0, '');
     typedText.nodes['[data-minutes]'].validity = {badInput: true};
     await typedText.click('manual');
     assert.equal(typedText.toasts().length, 0, 'text in the number input is not treated as zero');
-    assert.match(typedText.nodes['[data-error]'].textContent, /kladn\u00fd/);
+    assert.match(typedText.nodes['[data-error]'].textContent, /positive/);
     for (const input of ['-1', '1.5', 'NaN', '9999999999999999999']) {
         const h = setup(running(), 0, input);
         await h.click('manual');
         assert.equal(h.posts.length, 0);
         assert.equal(h.toasts().length, 0);
         assert.equal(h.state().phase, 'running');
-        assert.match(h.nodes['[data-error]'].textContent, /kladn\u00fd/);
-        assert.doesNotMatch(h.nodes['[data-error]'].textContent, /duplicit/, 'validation errors omit the duplicate warning');
+        assert.match(h.nodes['[data-error]'].textContent, /positive/);
+        assert.doesNotMatch(h.nodes['[data-error]'].textContent, /duplicate/, 'validation errors omit the duplicate warning');
     }
     const h = setup(running(), 1);
     await h.click('manual');
@@ -615,7 +613,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     const uncertain = h.state();
     await h.click('save');
     assert.equal(h.posts.length, 1, 'uncertain writes must not be repeated');
-    assert.match(h.nodes['[data-error]'].textContent, /neopakuji/);
+    assert.match(h.nodes['[data-error]'].textContent, /not be retried automatically/);
     const reloaded = setup(uncertain, 0, '20', true);
     await reloaded.click('save');
     assert.equal(reloaded.posts.length, 0, 'recovery must find the manual marker, not the timer marker');
@@ -623,7 +621,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(reloaded.nodes['[data-stop]'].disabled, false);
     assert.equal(reloaded.nodes['[data-manual]'].disabled, false);
     assert.equal(reloaded.nodes['[data-save-row]'].hidden, true);
-    assert.equal(reloaded.toasts()[0].children[1].attributes['aria-label'], '00:02:00 do tasku DEMO-101');
+    assert.equal(reloaded.toasts()[0].children[1].attributes['aria-label'], '00:02:00 logged to issue DEMO-101');
     const completedManual = setup({...running(), manualEntry: {...uncertain.manualEntry, phase: 'saved'}});
     await completedManual.click('save');
     assert.equal(completedManual.posts.length, 0);
@@ -694,7 +692,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(switching.panel.dataset.running, 'true');
     assert.equal(switching.nodes['[data-issue]'].href, 'https://jira.alza.cz/browse/DEMO-102');
     assert.equal(switching.nodes['[data-title]'].href, 'https://jira.alza.cz/browse/DEMO-102');
-    assert.equal(switching.nodes['[data-measuring]'].textContent, 'Nyní se měří: DEMO-102');
+    assert.equal(switching.nodes['[data-measuring]'].textContent, 'Currently tracking: DEMO-102');
     assert.equal(switching.nodes['[data-measuring]'].hidden, false);
     assert.equal(switching.nodes['[data-stop]'].textContent, 'STOP');
     assert.equal(switching.nodes['[data-start]'].textContent, 'START');
@@ -702,7 +700,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(switching.posts.length, 1);
     assert.equal(switching.state().phase, 'running');
     assert.equal(switching.state().issue, 'DEMO-101');
-    assert.equal(switching.toasts()[0].children[1].attributes['aria-label'], '00:02:00 do tasku DEMO-102');
+    assert.equal(switching.toasts()[0].children[1].attributes['aria-label'], '00:02:00 logged to issue DEMO-102');
     assert.equal(switching.toasts()[0].children[2].textContent, 'Other issue full title');
     assert.equal(switching.panel.dataset.other, 'false');
     assert.equal(switching.nodes['[data-issue]'].href, 'https://jira.alza.cz/browse/DEMO-101');
@@ -717,7 +715,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(minimum.posts[0].body.timeSpentSeconds, 60);
     const fresh = setup(null);
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h');
+    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Logged so far: 0h');
     assert.equal(fresh.panel.dataset.running, 'false');
     assert.equal(fresh.panel.dataset.other, 'false');
     assert.equal(fresh.nodes['[data-issue]'].hidden, true);
@@ -739,35 +737,35 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(fresh.posts[0].body.timeSpentSeconds, 60);
     assert.equal(fresh.state().phase, 'saved');
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Dosud vykaz\u00e1no: 0h',
+    assert.equal(fresh.nodes['[data-worklog-total]'].textContent, 'Logged so far: 0h',
         'refresh the displayed total after saving a worklog');
     assert.equal(fresh.state().completedAt, 200004000);
     assert.equal(fresh.confirmations(), 0);
     assert.equal(fresh.nodes['[data-save-row]'].hidden, true);
-    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nothing is being tracked.');
     assert.equal(fresh.nodes['[data-issue]'].hidden, true);
     assert.equal(fresh.nodes['[data-clock]'].textContent, '00:00:00');
     assert.equal(fresh.toasts().length, 1);
-    assert.equal(fresh.toasts()[0].children[1].attributes['aria-label'], '00:01:00 do tasku DEMO-101');
+    assert.equal(fresh.toasts()[0].children[1].attributes['aria-label'], '00:01:00 logged to issue DEMO-101');
     assert.equal(fresh.toasts()[0].children[1].children[0].textContent, '00:01:00');
     fresh.advance(4999);
     fresh.render();
     assert.equal(fresh.toasts().length, 1);
-    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nothing is being tracked.');
     fresh.advance(1);
     fresh.render();
     assert.equal(fresh.toasts().length, 0);
     assert.equal(fresh.nodes['[data-issue]'].hidden, true);
     assert.equal(fresh.nodes['[data-title]'].textContent, '');
     assert.equal(fresh.nodes['[data-clock]'].textContent, '00:00:00');
-    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(fresh.nodes['[data-status]'].textContent, 'Nothing is being tracked.');
     assert.equal(fresh.panel.dataset.running, 'false');
     assert.equal(fresh.state().phase, 'saved', 'keep saved marker for duplicate protection');
     const oldSaved = setup({...fresh.state(), completedAt: 200000000 - 6000});
-    assert.equal(oldSaved.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(oldSaved.nodes['[data-status]'].textContent, 'Nothing is being tracked.');
     assert.equal(oldSaved.toasts().length, 0);
     const recentSaved = setup({...fresh.state(), completedAt: 200000000});
-    assert.equal(recentSaved.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(recentSaved.nodes['[data-status]'].textContent, 'Nothing is being tracked.');
     assert.equal(recentSaved.toasts().length, 0, 'reload must not replay completed notifications');
     const stopFailure = setup(running(), 1);
     await stopFailure.click('stop');
@@ -788,12 +786,12 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(cancelOther.nodes['[data-cancel]'].hidden, true);
     assert.equal(cancelOther.nodes['[data-issue]'].hidden, true);
     assert.equal(cancelOther.toasts()[0].dataset.toast, 'discarded');
-    assert.equal(cancelOther.toasts()[0].children[0].textContent, 'Zahozeno');
-    assert.equal(cancelOther.toasts()[0].children[1].attributes['aria-label'], '00:02:05 z tasku DEMO-102');
+    assert.equal(cancelOther.toasts()[0].children[0].textContent, 'Discarded');
+    assert.equal(cancelOther.toasts()[0].children[1].attributes['aria-label'], '00:02:05 discarded from issue DEMO-102');
     assert.equal(cancelOther.toasts()[0].children[1].children[0].textContent, '00:02:05');
     assert.equal(cancelOther.toasts()[0].children[1].children[1].textContent, 'DEMO-102');
     assert.equal(cancelOther.toasts()[0].children[2].textContent, 'Other issue full title');
-    assert.equal(cancelOther.nodes['[data-status]'].textContent, 'Nyní se nic neměří.');
+    assert.equal(cancelOther.nodes['[data-status]'].textContent, 'Nothing is being tracked.');
     cancelOther.advance(5000);
     cancelOther.render();
     assert.equal(cancelOther.toasts().length, 0);
@@ -855,8 +853,8 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await rapid.click('start');
     await rapid.click('stop');
     assert.equal(rapid.toasts().length, 2);
-    assert.equal(rapid.toasts()[0].children[1].attributes['aria-label'], '00:00:43 z tasku DEMO-101');
-    assert.equal(rapid.toasts()[1].children[1].attributes['aria-label'], '00:01:00 do tasku DEMO-101');
+    assert.equal(rapid.toasts()[0].children[1].attributes['aria-label'], '00:00:43 discarded from issue DEMO-101');
+    assert.equal(rapid.toasts()[1].children[1].attributes['aria-label'], '00:01:00 logged to issue DEMO-101');
     rapid.advance(4000);
     rapid.render();
     assert.equal(rapid.toasts().length, 1, 'each toast must expire independently');
@@ -895,14 +893,14 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     await new Promise(resolve => setTimeout(resolve, 10));
     assert.equal(foreignPending.posts.length, 0, 'an uncertain POST must not be confirmed by a foreign worklog');
     assert.equal(foreignPending.autoQueue()[0].phase, 'pending');
-    assert.match(foreignPending.nodes['[data-error]'].textContent, /nebyl nalezen/);
+    assert.match(foreignPending.nodes['[data-error]'].textContent, /not found/);
     const unknownIdentity = setup({id: 'stopped-2', issue: 'DEMO-101', started: 199000000, ended: 199600000, phase: 'stopped'});
     unknownIdentity.onIdentity(() => ({displayName: 'Demo User'}));
     unknownIdentity.onFetch(foreignMarker('stopped-2'));
     await unknownIdentity.click('save');
     assert.equal(unknownIdentity.posts.length, 0, 'do not write when ownership of an existing marker cannot be verified');
     assert.equal(unknownIdentity.state().phase, 'stopped');
-    assert.match(unknownIdentity.nodes['[data-error]'].textContent, /identitu p\u0159ihl\u00e1\u0161en\u00e9ho u\u017eivatele/);
+    assert.match(unknownIdentity.nodes['[data-error]'].textContent, /signed-in user identity/);
     for (const via of ['createIssue', 'createIssueViaXhr']) {
         const crossOrigin = setup(null, 0, '30', false, 0, {autoSettings: {enabled: true, minutes: 10}});
         await crossOrigin[via]('https://evil.example/rest/api/2/issue');
@@ -945,11 +943,11 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     const [opsResult, savedResult] = favResultRows(favorites);
     assert.equal(opsResult.children[0].href, 'https://jira.alza.cz/browse/OPS-140');
     assert.equal(opsResult.children[0].attributes.rel, 'noopener noreferrer');
-    assert.equal(opsResult.children[0].children[1].textContent, 'Review pristupu');
+    assert.equal(opsResult.children[0].children[1].textContent, 'Access review');
     assert.ok('favSaved' in savedResult.children[1].dataset, 'already saved results are marked instead of offering +');
     assert.equal(favorites.favorites().length, 1, 'searching or opening a result never changes favorites');
     opsResult.children[1].onclick();
-    assert.deepEqual(favorites.favorites(), [{issue: 'DEMO-102', title: 'Code review'}, {issue: 'OPS-140', title: 'Review pristupu'}]);
+    assert.deepEqual(favorites.favorites(), [{issue: 'DEMO-102', title: 'Code review'}, {issue: 'OPS-140', title: 'Access review'}]);
     assert.equal(favorites.nodes['[data-fav-search]'].value, '', 'adding clears the search field');
     assert.equal(favorites.nodes['[data-fav-search-wrap]'].hidden, true);
     assert.equal(favResultRows(favorites).length, 0, 'adding clears the results');
@@ -978,10 +976,10 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.deepEqual(favResultRows(stale).map(row => row.dataset.favIssue), ['NEW-1'], 'ignore stale search responses');
     stale.onPicker(() => { throw new Error('Picker offline'); });
     await typeSearch(stale, 'broken');
-    assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /Hled\u00e1n\u00ed selhalo: .*Picker offline/);
+    assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /Search failed: .*Picker offline/);
     stale.onPicker(() => ({sections: 'invalid'}));
     await typeSearch(stale, 'invalid');
-    assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /neo\u010dek\u00e1vanou odpov\u011b\u010f/);
+    assert.match(stale.nodes['[data-fav-results]'].children[0].textContent, /unexpected search response/);
 
     const favoriteSwitch = setup(running(), 0, '30', false, 0, {favorites: [{issue: 'DEMO-103', title: 'Third'}]});
     favoriteSwitch.click('fav-open');
@@ -1032,8 +1030,8 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     editor.children[1].children[0].oninput();
     await editor.children[1].children[1].onclick();
     assert.equal(favoriteMinutes.posts.length, 0);
-    assert.match(favoriteMinutes.nodes['[data-error]'].textContent, /kladn\u00fd/);
-    assert.doesNotMatch(favoriteMinutes.nodes['[data-error]'].textContent, /duplicit/);
+    assert.match(favoriteMinutes.nodes['[data-error]'].textContent, /positive/);
+    assert.doesNotMatch(favoriteMinutes.nodes['[data-error]'].textContent, /duplicate/);
     assert.ok(favEditor(favoriteMinutes), 'invalid minutes keep the editor open');
     editor.children[0].children[1].onclick();
     assert.equal(editor.children[1].children[0].value, '30', 'quick buttons only prefill the minutes');
@@ -1051,14 +1049,14 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(openTitle.children[0].textContent, 'Full issue title <safe text>');
     openFavorite.externalFavorites([]);
     assert.equal(openFavorite.nodes['[data-fav-count]'].textContent, '0', 'reflect favorites changed in another tab');
-    assert.match(openFavorite.nodes['[data-fav-list]'].children[0].textContent, /Zat\u00edm tu nic nen\u00ed/);
+    assert.match(openFavorite.nodes['[data-fav-list]'].children[0].textContent, /No favorites yet/);
 
     for (const raw of ['{broken', JSON.stringify([{issue: 'bad'}]), JSON.stringify([{issue: 'A-1', title: ''}, {issue: 'A-1', title: ''}])]) {
         const broken = setup(null, 0, '30', false, 0, {favorites: raw});
         assert.equal(broken.nodes['[data-fav-count]'].textContent, '!');
         assert.equal(broken.nodes['[data-fav-open]'].dataset.state, 'error');
         broken.click('fav-open');
-        assert.match(broken.nodes['[data-fav-error]'].textContent, /po\u0161kozen\u00fd/);
+        assert.match(broken.nodes['[data-fav-error]'].textContent, /corrupted/);
         assert.equal(broken.nodes['[data-fav-add]'].disabled, true, 'corrupted favorites must not be overwritten');
         assert.equal(favRows(broken).length, 0);
     }
@@ -1067,8 +1065,8 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     full.click('fav-open');
     full.click('fav-add');
     assert.equal(full.nodes['[data-fav-search]'].disabled, true, 'block the search field when the limit is reached');
-    assert.match(full.nodes['[data-fav-limit]'].textContent, /maximum 10 obl\u00edben\u00fdch/);
-    assert.match(full.nodes['[data-fav-add]'].attributes.title, /maximum 10/);
+    assert.match(full.nodes['[data-fav-limit]'].textContent, /10 favorites/);
+    assert.match(full.nodes['[data-fav-add]'].attributes.title, /10 favorites/);
     console.log('PASS: favorites chip, search/add/remove, stale and failed searches, start/stop/switch, collapse, minutes, cross-tab sync, corruption and limit');
     console.log('PASS: Enter/manual minutes, uninterrupted timer, second boundaries, slow API, failures, legacy recovery, deduplication, switching, cancellation, minimum duration, titles, immediate idle and save/discard toasts, write target, worklog ownership and same-origin issue creation');
 })().catch(e => { console.error(e); process.exitCode = 1; });

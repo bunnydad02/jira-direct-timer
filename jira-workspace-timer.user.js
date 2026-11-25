@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.19.0
+// @version      1.20.0
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -19,7 +19,7 @@
     const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
     const FAVORITES_LIMIT = 10;
     const ISSUE_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
-    const VERSION = '1.19.0';
+    const VERSION = '1.20.0';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -159,7 +159,7 @@
         }
     `;
     document.body.appendChild(styles);
-    panel.innerHTML = '<div data-favorites hidden><div data-fav-body><div data-fav-header><span data-fav-heading></span><button data-fav-add>+</button><button data-fav-close></button></div><div data-fav-search-wrap hidden><input data-fav-search type="text" autocomplete="off"><button data-fav-search-close></button><div data-fav-results hidden></div></div><div data-fav-limit hidden role="status"></div><div data-fav-list></div><div data-fav-error role="alert"></div></div></div><div data-header><strong>Jira stopky</strong><button data-fav-open><span data-fav-label></span><b data-fav-count></b></button><span data-version-wrap><a data-version></a></span></div><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save></button></div><div data-error role="alert"></div>';
+    panel.innerHTML = '<div data-favorites hidden><div data-fav-body><div data-fav-header><span data-fav-heading></span><button data-fav-add>+</button><button data-fav-close></button></div><div data-fav-search-wrap hidden><input data-fav-search type="text" autocomplete="off"><button data-fav-search-close></button><div data-fav-results hidden></div></div><div data-fav-limit hidden role="status"></div><div data-fav-list></div><div data-fav-error role="alert"></div></div></div><div data-header><strong>Jira timer</strong><button data-fav-open><span data-fav-label></span><b data-fav-count></b></button><span data-version-wrap><a data-version></a></span></div><a data-measuring hidden></a><a data-issue></a><a data-title></a><time data-clock>00:00:00</time><div data-worklog-total hidden role="status" aria-live="polite"></div><div data-status></div><div data-actions><button data-start>START</button><button data-stop>STOP</button></div><div data-save-row><button data-save></button></div><div data-error role="alert"></div>';
     const versionLink = panel.querySelector('[data-version]');
     versionLink.textContent = `v${VERSION}`;
     versionLink.setAttribute('href', 'https://github.com/bunnydad02/jira-direct-timer');
@@ -176,8 +176,8 @@
     autoSettingsDialog.hidden = true;
     autoSettingsDialog.setAttribute('role', 'dialog');
     autoSettingsDialog.setAttribute('aria-modal', 'true');
-    autoSettingsDialog.setAttribute('aria-label', 'Automatick\u00e9 vykazov\u00e1n\u00ed');
-    autoSettingsDialog.innerHTML = '<header><span data-auto-heading></span><button data-auto-close>x</button></header><label data-auto-enabled-label><input data-auto-enabled type="checkbox"><span data-auto-enabled-text></span></label><label data-auto-minutes-row>Minuty <input data-auto-minutes type="number" min="1" step="1"></label><button data-auto-save></button><button data-auto-retry hidden></button><div data-auto-error role="alert"></div>';
+    autoSettingsDialog.setAttribute('aria-label', 'Automatic work logging');
+    autoSettingsDialog.innerHTML = '<header><span data-auto-heading></span><button data-auto-close>x</button></header><label data-auto-enabled-label><input data-auto-enabled type="checkbox"><span data-auto-enabled-text></span></label><label data-auto-minutes-row>Minutes <input data-auto-minutes type="number" min="1" step="1"></label><button data-auto-save></button><button data-auto-retry hidden></button><div data-auto-error role="alert"></div>';
     panel.appendChild(autoSettingsDialog);
     const toasts = document.createElement('div');
     toasts.dataset.toasts = '';
@@ -209,13 +209,13 @@
     const autoSave = autoSettingsDialog.querySelector('[data-auto-save]');
     const autoRetry = autoSettingsDialog.querySelector('[data-auto-retry]');
     const autoError = autoSettingsDialog.querySelector('[data-auto-error]');
-    save.textContent = 'Ulo\u017eit do Jira worklogu';
-    autoOpen.setAttribute('aria-label', 'Otev\u0159\u00edt nastaven\u00ed AUTO');
-    autoSettingsDialog.querySelector('[data-auto-heading]').textContent = 'Automatick\u00e9 vykazov\u00e1n\u00ed';
-    autoClose.setAttribute('aria-label', 'Zav\u0159\u00edt bez ulo\u017een\u00ed');
-    autoSettingsDialog.querySelector('[data-auto-enabled-text]').textContent = 'P\u0159i zalo\u017een\u00ed nov\u00e9 issue vykazovat';
-    autoSave.textContent = 'Ulo\u017eit';
-    autoRetry.textContent = 'Zpracovat \u010dekaj\u00edc\u00ed z\u00e1pisy';
+    save.textContent = 'Save to Jira work log';
+    autoOpen.setAttribute('aria-label', 'Open AUTO settings');
+    autoSettingsDialog.querySelector('[data-auto-heading]').textContent = 'Automatic work logging';
+    autoClose.setAttribute('aria-label', 'Close without saving');
+    autoSettingsDialog.querySelector('[data-auto-enabled-text]').textContent = 'When creating an issue, log';
+    autoSave.textContent = 'Save';
+    autoRetry.textContent = 'Process pending entries';
     const favoritesSection = panel.querySelector('[data-favorites]');
     const favOpen = panel.querySelector('[data-fav-open]');
     const favCount = panel.querySelector('[data-fav-count]');
@@ -228,18 +228,18 @@
     const favLimit = panel.querySelector('[data-fav-limit]');
     const favList = panel.querySelector('[data-fav-list]');
     const favError = panel.querySelector('[data-fav-error]');
-    panel.querySelector('[data-fav-label]').textContent = 'obl\u00edben\u00e9';
-    panel.querySelector('[data-fav-heading]').textContent = 'Obl\u00edben\u00e9';
-    favAdd.setAttribute('aria-label', 'P\u0159idat task do obl\u00edben\u00fdch');
-    favAdd.setAttribute('title', 'P\u0159idat task do obl\u00edben\u00fdch');
+    panel.querySelector('[data-fav-label]').textContent = 'favorites';
+    panel.querySelector('[data-fav-heading]').textContent = 'Favorites';
+    favAdd.setAttribute('aria-label', 'Add issue to favorites');
+    favAdd.setAttribute('title', 'Add issue to favorites');
     favClose.textContent = '\u00d7';
-    favClose.setAttribute('aria-label', 'Zav\u0159\u00edt obl\u00edben\u00e9');
-    favClose.setAttribute('title', 'Zav\u0159\u00edt obl\u00edben\u00e9');
-    favSearch.setAttribute('placeholder', 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
-    favSearch.setAttribute('aria-label', 'Hledat task pro obl\u00edben\u00e9');
+    favClose.setAttribute('aria-label', 'Close favorites');
+    favClose.setAttribute('title', 'Close favorites');
+    favSearch.setAttribute('placeholder', 'Search: key or title');
+    favSearch.setAttribute('aria-label', 'Search for a favorite issue');
     favSearchClose.textContent = '\u00d7';
-    favSearchClose.setAttribute('aria-label', 'Zav\u0159\u00edt hled\u00e1n\u00ed');
-    favSearchClose.setAttribute('title', 'Zav\u0159\u00edt hled\u00e1n\u00ed');
+    favSearchClose.setAttribute('aria-label', 'Close search');
+    favSearchClose.setAttribute('title', 'Close search');
     let favoritesOpen = false;
     let favoritesClosing = false;
     let favoritesSignature = '';
@@ -272,7 +272,7 @@
     let autoSettingsValue;
     let autoSettingsBroken = false;
     let autoBusy = false;
-    const MANUAL_PENDING = 'Nejprve dokon\u010dit rozpracovan\u00fd ru\u010dn\u00ed z\u00e1pis tla\u010d\u00edtkem Ulo\u017eit / Ov\u011b\u0159it.';
+    const MANUAL_PENDING = 'First complete the pending manual entry using Save / Verify.';
 
     // render() runs every 100ms; writing unchanged values would still emit DOM mutations that wake Jira's observers.
     function update(target, key, value) {
@@ -295,13 +295,13 @@
     function renderAutoIndicator() {
         const state = autoSettingsBroken ? 'error' : autoSettingsValue.enabled ? 'on' : 'off';
         const label = {
-            on: `AUTO zapnuto: ${autoSettingsValue.minutes} min na novou issue`,
-            off: 'AUTO vypnuto',
-            error: 'Nastaven\u00ed AUTO je po\u0161kozen\u00e9'
+            on: `AUTO on: ${autoSettingsValue.minutes} min per new issue`,
+            off: 'AUTO off',
+            error: 'AUTO settings are corrupted'
         }[state];
         update(autoOpen.dataset, 'state', state);
         update(autoOpen, 'textContent', state === 'error' ? 'auto !' : 'auto');
-        updateAttr(autoOpen, 'aria-label', `${label}. Otev\u0159\u00edt nastaven\u00ed AUTO`);
+        updateAttr(autoOpen, 'aria-label', `${label}. Open AUTO settings`);
         updateAttr(autoOpen, 'title', label);
     }
 
@@ -314,7 +314,7 @@
         }
         const value = JSON.parse(raw);
         if (!value || typeof value.enabled !== 'boolean' || !validMinuteCount(value.minutes)) {
-            throw new Error('Nastaven\u00ed automatick\u00e9ho vykazov\u00e1n\u00ed je po\u0161kozen\u00e9. Oprav ho v nastaven\u00ed AUTO.');
+            throw new Error('Automatic work logging settings are corrupted. Fix them in AUTO settings.');
         }
         autoSettingsBroken = false;
         return value;
@@ -329,7 +329,7 @@
             !ISSUE_PATTERN.test(value.issue) || value.id !== `auto-${value.issue}` ||
             !Number.isFinite(value.started) || !Number.isFinite(value.ended) || value.ended < value.started ||
             !['stopped', 'pending', 'saved'].includes(value.phase))) {
-            throw new Error('Fronta automatick\u00fdch worklog\u016f je po\u0161kozen\u00e1. Nema\u017e data; je nutn\u00e1 kontrola.');
+            throw new Error('The automatic work log queue is corrupted. Do not delete the data; it needs inspection.');
         }
         return entries;
     }
@@ -341,7 +341,7 @@
     function persistAutoEntry(value) {
         const entries = readAutoQueue();
         const index = entries.findIndex(entry => entry.id === value.id);
-        if (index < 0) throw new Error('Automatick\u00fd worklog zmizel z fronty. Z\u00e1pis nebyl opakov\u00e1n.');
+        if (index < 0) throw new Error('The automatic work log disappeared from the queue. The entry was not retried.');
         entries[index] = value;
         writeAutoQueue(entries);
     }
@@ -357,7 +357,7 @@
         const tenths = Math.round(seconds / 360);
         const hours = Math.floor(tenths / 10);
         const decimal = tenths % 10;
-        return `${hours}${decimal ? `,${decimal}` : ''}h`;
+        return `${hours}${decimal ? `.${decimal}` : ''}h`;
     }
     function addToast(kind, heading, ...children) {
         const node = document.createElement('div');
@@ -371,7 +371,7 @@
         const details = document.createElement('a');
         details.href = browseUrl(value.issue);
         const seconds = discarded ? duration(value) : value.recordedSeconds;
-        details.setAttribute('aria-label', `${formatDuration(seconds)} ${discarded ? 'z' : 'do'} tasku ${value.issue}`);
+        details.setAttribute('aria-label', `${formatDuration(seconds)} ${discarded ? 'discarded from' : 'logged to'} issue ${value.issue}`);
         const elapsed = document.createElement('span');
         elapsed.dataset.toastDuration = '';
         elapsed.textContent = formatDuration(seconds);
@@ -383,7 +383,7 @@
         const title = document.createElement('a');
         title.href = details.href;
         title.textContent = titleFor(value);
-        const node = addToast(discarded ? 'discarded' : 'saved', discarded ? 'Zahozeno' : 'Zaznamen\u00e1no', details, title);
+        const node = addToast(discarded ? 'discarded' : 'saved', discarded ? 'Discarded' : 'Recorded', details, title);
         notifications.push({node, title, value, expiresAt: Date.now() + 5000});
     }
     function renderToasts() {
@@ -414,7 +414,7 @@
             titleRequests.add(value.issue);
             request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}?fields=summary`)
                 .then(body => {
-                    if (typeof body.fields?.summary !== 'string') throw new Error('Jira nevr\u00e1tila n\u00e1zev \u00fakolu.');
+                    if (typeof body.fields?.summary !== 'string') throw new Error('Jira did not return the issue title.');
                     titles.set(value.issue, body.fields.summary);
                     render();
                 })
@@ -434,7 +434,7 @@
     }
     function isOwnWorklog(worklog, user) {
         const field = userIdentifiers.find(field => hasIdentifier(user, field) && hasIdentifier(worklog.author, field));
-        if (!field) throw new Error('Jira nevr\u00e1tila identitu autora worklogu.');
+        if (!field) throw new Error('Jira did not return the work log author identity.');
         return worklog.author[field] === user[field];
     }
     async function totalLoggedSeconds(key, user) {
@@ -444,21 +444,21 @@
         do {
             const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}/worklog?startAt=${offset}&maxResults=100`);
             if (!Array.isArray(body.worklogs) || !Number.isSafeInteger(body.total) || body.total < 0) {
-                throw new Error('Neo\u010dek\u00e1van\u00e1 odpov\u011b\u010f Jira worklogu.');
+                throw new Error('Unexpected Jira work log response.');
             }
             total = body.total;
             for (const worklog of body.worklogs) {
                 if (!Number.isSafeInteger(worklog.timeSpentSeconds) || worklog.timeSpentSeconds < 0) {
-                    throw new Error('Jira vr\u00e1tila neplatnou d\u00e9lku worklogu.');
+                    throw new Error('Jira returned an invalid work log duration.');
                 }
                 if (isOwnWorklog(worklog, user)) {
                     seconds += worklog.timeSpentSeconds;
-                    if (!Number.isSafeInteger(seconds)) throw new Error('Jira vr\u00e1tila neplatn\u00fd sou\u010det worklogu.');
+                    if (!Number.isSafeInteger(seconds)) throw new Error('Jira returned an invalid work log total.');
                 }
             }
             offset += body.worklogs.length;
             if (offset < total && !body.worklogs.length) {
-                throw new Error('Jira nevr\u00e1tila v\u0161echny z\u00e1znamy worklogu.');
+                throw new Error('Jira did not return all work log entries.');
             }
         } while (offset < total);
         return seconds;
@@ -466,7 +466,7 @@
     async function currentUser(consequence = '') {
         const user = await request('/rest/api/2/myself');
         if (!userIdentifiers.some(field => hasIdentifier(user, field))) {
-            throw new Error(`Jira nevr\u00e1tila identitu p\u0159ihl\u00e1\u0161en\u00e9ho u\u017eivatele.${consequence}`);
+            throw new Error(`Jira did not return the signed-in user identity.${consequence}`);
         }
         return user;
     }
@@ -475,18 +475,18 @@
         const seconds = await totalLoggedSeconds(key, user);
         const body = await request(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=subtasks`);
         if (!Array.isArray(body.fields?.subtasks)) {
-            throw new Error('Jira nevr\u00e1tila seznam subtask\u016f.');
+            throw new Error('Jira did not return the subtask list.');
         }
         let secondsWithSubtasks = seconds;
         const seen = new Set([key]);
         for (const subtask of body.fields.subtasks) {
             if (!ISSUE_PATTERN.test(subtask?.key) || seen.has(subtask.key)) {
-                throw new Error('Jira vr\u00e1tila neplatn\u00fd seznam subtask\u016f.');
+                throw new Error('Jira returned an invalid subtask list.');
             }
             seen.add(subtask.key);
             secondsWithSubtasks += await totalLoggedSeconds(subtask.key, user);
             if (!Number.isSafeInteger(secondsWithSubtasks)) {
-                throw new Error('Jira vr\u00e1tila neplatn\u00fd sou\u010det \u010dasu subtask\u016f.');
+                throw new Error('Jira returned an invalid subtask time total.');
             }
         }
         return {seconds, secondsWithSubtasks};
@@ -514,14 +514,14 @@
             });
         }
         update(worklogTotal.dataset, 'state', state.status);
-        let text = 'Dosud vykaz\u00e1no: na\u010d\u00edt\u00e1m...';
+        let text = 'Logged so far: loading...';
         if (state.status === 'loaded') {
-            text = `Dosud vykaz\u00e1no: ${formatLoggedHours(state.seconds)}`;
+            text = `Logged so far: ${formatLoggedHours(state.seconds)}`;
             if (state.secondsWithSubtasks !== state.seconds) {
                 text += ` (${formatLoggedHours(state.secondsWithSubtasks)})`;
             }
         } else if (state.status === 'error') {
-            text = `Vyk\u00e1zan\u00fd \u010das se nepoda\u0159ilo na\u010d\u00edst: ${state.message}`;
+            text = `Could not load logged time: ${state.message}`;
         }
         update(worklogTotal, 'textContent', text);
     }
@@ -534,7 +534,7 @@
             typeof value.id !== 'string' || !Number.isFinite(value.started) ||
             (value.ended !== null && (!Number.isFinite(value.ended) || value.ended < value.started)) ||
             !['running', 'stopped', 'pending', 'saved'].includes(value.phase)) {
-            throw new Error('Ulo\u017een\u00fd stav stopek je po\u0161kozen\u00fd. Nema\u017e data; je nutn\u00e1 kontrola.');
+            throw new Error('The saved timer state is corrupted. Do not delete the data; it needs inspection.');
         }
         return value;
     }
@@ -553,7 +553,7 @@
     }
     function stamp(ms) {
         const date = new Date(ms);
-        if (!Number.isFinite(date.getTime())) throw new Error('Neplatn\u00fd \u010das za\u010d\u00e1tku.');
+        if (!Number.isFinite(date.getTime())) throw new Error('Invalid start time.');
         return date.toISOString().replace('Z', '+0000');
     }
     function render() {
@@ -573,13 +573,13 @@
             const displayValue = value && value.phase !== 'saved' ? value : null;
             const seconds = displayValue ? duration(displayValue) : 0;
             const title = displayValue ? titleFor(displayValue) : '';
-            const stateText = displayValue ? {running: '', stopped: 'Zastaveno, zat\u00edm neulo\u017eeno', pending: 'Nejist\u00fd v\u00fdsledek z\u00e1pisu. Ov\u011b\u0159 ulo\u017een\u00ed tla\u010d\u00edtkem n\u00ed\u017ee.'}[displayValue.phase] : '';
+            const stateText = displayValue ? {running: '', stopped: 'Stopped, not yet saved', pending: 'Uncertain save result. Verify it using the button below.'}[displayValue.phase] : '';
             const running = !!value && value.phase === 'running';
             update(panel.dataset, 'running', String(running));
             const other = running && value.issue !== currentIssue;
             update(panel.dataset, 'other', String(other));
             update(measuring, 'hidden', !other);
-            update(measuring, 'textContent', other ? `Nyn\u00ed se m\u011b\u0159\u00ed: ${value.issue}` : '');
+            update(measuring, 'textContent', other ? `Currently tracking: ${value.issue}` : '');
             update(issueLink, 'textContent', displayValue ? displayValue.issue : '');
             update(issueLink, 'hidden', other || !displayValue);
             update(clock, 'textContent', formatDuration(seconds));
@@ -588,9 +588,9 @@
             for (const link of [issueLink, titleLink, measuring]) {
                 if (link.getAttribute('href') !== href) link.href = href;
             }
-            let statusText = displayValue ? stateText : 'Nyn\u00ed se nic nem\u011b\u0159\u00ed.';
-            if (queuedManual) statusText += `\n\u010cek\u00e1 ru\u010dn\u00ed z\u00e1pis do ${queuedManual.issue}. Dokon\u010di tla\u010d\u00edtkem Ulo\u017eit / Ov\u011b\u0159it.`;
-            if (independentManual) statusText += `\n\u010cek\u00e1 ru\u010dn\u00ed z\u00e1pis do ${independentManual.issue}. Dokon\u010di tla\u010d\u00edtkem Ulo\u017eit / Ov\u011b\u0159it.`;
+            let statusText = displayValue ? stateText : 'Nothing is being tracked.';
+            if (queuedManual) statusText += `\nManual entry pending for ${queuedManual.issue}. Complete it using Save / Verify.`;
+            if (independentManual) statusText += `\nManual entry pending for ${independentManual.issue}. Complete it using Save / Verify.`;
             update(status, 'textContent', statusText);
             const switching = active && value.issue !== currentIssue;
             update(start, 'disabled', busy || !currentIssue || !!queuedManual || !!independentManual || (!!active && !switching));
@@ -599,7 +599,7 @@
             update(cancel, 'disabled', busy || !!independentManual || !running);
             update(save, 'disabled', busy || !value || (!['stopped', 'pending'].includes(value.phase) && !(value.phase === 'saved' && queuedManual) && !independentManual));
             update(saveRow, 'hidden', !value || (!['stopped', 'pending'].includes(value.phase) && !queuedManual && !independentManual));
-            update(save, 'textContent', value && (value.phase === 'pending' || independentManual?.phase === 'pending') ? 'Ov\u011b\u0159it p\u0159edchoz\u00ed z\u00e1pis (bez opakov\u00e1n\u00ed)' : 'Ulo\u017eit do Jira worklogu');
+            update(save, 'textContent', value && (value.phase === 'pending' || independentManual?.phase === 'pending') ? 'Verify previous entry (without retrying)' : 'Save to Jira work log');
             update(manual, 'disabled', busy || !currentIssue || !!queuedManual || !!independentManual || !!(value && value.phase === 'pending'));
             update(minutes, 'disabled', busy);
             update(error, 'textContent', notice);
@@ -632,16 +632,16 @@
         let offset = 0;
         while (true) {
             const body = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?startAt=${offset}&maxResults=100`);
-            if (!Array.isArray(body.worklogs) || !Number.isFinite(body.total)) throw new Error('Neo\u010dek\u00e1van\u00e1 odpov\u011b\u010f Jira worklogu.');
+            if (!Array.isArray(body.worklogs) || !Number.isFinite(body.total)) throw new Error('Unexpected Jira work log response.');
             for (const worklog of body.worklogs) {
                 if (typeof worklog.comment !== 'string' || !worklog.comment.includes(marker)) continue;
                 // Another user's worklog carrying our marker must not count as our saved entry.
-                if (!user) user = await currentUser(' Z\u00e1pis nebyl odesl\u00e1n.');
+                if (!user) user = await currentUser(' The entry was not sent.');
                 if (isOwnWorklog(worklog, user)) return worklog;
             }
             offset += body.worklogs.length;
             if (offset >= body.total) return null;
-            if (!body.worklogs.length) throw new Error('Jira nevr\u00e1tila v\u0161echny z\u00e1znamy. Z\u00e1pis nebyl opakov\u00e1n.');
+            if (!body.worklogs.length) throw new Error('Jira did not return all entries. The entry was not retried.');
         }
     }
     async function act(action) {
@@ -652,14 +652,14 @@
         try {
             actionDisplay = read();
             render();
-            if (!navigator.locks) throw new Error('Prohl\u00ed\u017ee\u010d nepodporuje zamyk\u00e1n\u00ed mezi kartami. Pou\u017eij standardn\u00ed Jira Log work.');
+            if (!navigator.locks) throw new Error('This browser does not support locking across tabs. Use Jira Log work instead.');
             await navigator.locks.request(KEY, {ifAvailable: true}, async lock => {
-                if (!lock) throw new Error('Stopky pr\u00e1v\u011b m\u011bn\u00ed jin\u00e1 karta. Zkus pozd\u011bji.');
+                if (!lock) throw new Error('Another tab is changing the timer. Try again later.');
                 await action();
             });
             completed = true;
         } catch (e) {
-            notice = e instanceof InputError ? e.message : `${e.message}\n\u010cas z\u016fst\u00e1v\u00e1 ulo\u017een\u00fd v tomto prohl\u00ed\u017ee\u010di. Neopakuj z\u00e1pis jin\u00fdm zp\u016fsobem bez kontroly duplicit.`;
+            notice = e instanceof InputError ? e.message : `${e.message}\nTime remains saved in this browser. Check for duplicates before logging it another way.`;
         } finally {
             busy = false;
             actionDisplay = null;
@@ -669,11 +669,11 @@
     }
     async function startTimer(key) {
         const old = read();
-        if (!key) throw new Error('Otev\u0159i konkr\u00e9tn\u00ed \u00fakol Jiry.');
+        if (!key) throw new Error('Open a Jira issue.');
         if (old && old.manualEntry) throw new Error(MANUAL_PENDING);
-        if (old && old.manualNext) throw new Error('Nejprve dokon\u010dit rozpracovan\u00fd ru\u010dn\u00ed z\u00e1pis tla\u010d\u00edtkem Ulo\u017eit.');
+        if (old && old.manualNext) throw new Error('First complete the pending manual entry using Save.');
         if (old && old.phase !== 'saved') {
-            if (old.issue === key) throw new Error('Tento \u00fakol u\u017e m\u00e1 rozpracovan\u00e9 stopky.');
+            if (old.issue === key) throw new Error('This issue already has an active timer.');
             if (old.phase === 'running') {
                 old.ended = Date.now();
                 old.phase = 'stopped';
@@ -689,7 +689,7 @@
     start.onclick = () => act(() => startTimer(issue()));
     function readRunning() {
         const value = read();
-        if (!value || value.phase !== 'running') throw new Error('Stopky u\u017e neb\u011b\u017e\u00ed.');
+        if (!value || value.phase !== 'running') throw new Error('The timer is no longer running.');
         if (value.manualEntry) throw new Error(MANUAL_PENDING);
         return value;
     }
@@ -724,7 +724,7 @@
         return !badInput && /^0*$/.test(String(raw).trim());
     }
     function showEmptyToast() {
-        const node = addToast('empty', 'P\u0159id\u00e1no 0 minut', favoriteNode('span', '', 'Nic se nezapsalo.'));
+        const node = addToast('empty', 'Added 0 minutes', favoriteNode('span', '', 'Nothing was logged.'));
         notifications.push({node, expiresAt: Date.now() + 5000});
     }
     function skipEmptyMinutes(raw, badInput) {
@@ -734,11 +734,11 @@
         return true;
     }
     async function addMinutes(key, raw) {
-        if (!key) throw new Error('Otev\u0159i konkr\u00e9tn\u00ed \u00fakol Jiry.');
+        if (!key) throw new Error('Open a Jira issue.');
         const count = parseMinutes(raw);
-        if (count === null) throw new InputError('Zadej kladn\u00fd cel\u00fd po\u010det minut.');
+        if (count === null) throw new InputError('Enter a positive whole number of minutes.');
         const old = read();
-        if (old && (old.phase === 'pending' || old.manualNext || old.manualEntry)) throw new Error('Nejprve ov\u011b\u0159 p\u0159edchoz\u00ed z\u00e1pis.');
+        if (old && (old.phase === 'pending' || old.manualNext || old.manualEntry)) throw new Error('First verify the previous entry.');
         const end = Date.now();
         const entry = {...newTimer(key, end - count * 60000), ended: end, phase: 'stopped', manual: true};
         if (old && old.phase === 'running') {
@@ -787,7 +787,7 @@
             !value || !ISSUE_PATTERN.test(value.issue) || typeof value.title !== 'string' || value.title.length > 500 ||
             (value.customTitle !== undefined && (typeof value.customTitle !== 'string' || !value.customTitle.trim() || value.customTitle.length > 500)) ||
             list.findIndex(other => other && other.issue === value.issue) !== index)) {
-            throw new Error('Seznam obl\u00edben\u00fdch task\u016f je po\u0161kozen\u00fd. Nema\u017e data; je nutn\u00e1 kontrola.');
+            throw new Error('The favorites list is corrupted. Do not delete the data; it needs inspection.');
         }
         return list;
     }
@@ -806,7 +806,7 @@
         changeFavorites(list => {
             if (list.some(value => value.issue === item.issue)) return null;
             if (list.length >= FAVORITES_LIMIT) {
-                throw new Error(`Obl\u00edben\u00fdch m\u016f\u017ee b\u00fdt nejv\u00fd\u0161 ${FAVORITES_LIMIT}. Nejprve n\u011bkter\u00fd odeber.`);
+                throw new Error(`You can have at most ${FAVORITES_LIMIT} favorites. Remove one first.`);
             }
             return [...list, {issue: item.issue, title: item.title}];
         });
@@ -828,7 +828,7 @@
         request(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=project`)
             .then(body => {
                 const name = body.fields?.project?.name;
-                if (typeof name !== 'string' || !name.trim()) throw new Error('Jira nevr\u00e1tila n\u00e1zev projektu.');
+                if (typeof name !== 'string' || !name.trim()) throw new Error('Jira did not return the project name.');
                 favoriteProjects.set(key, {state: 'ready', name: name.trim()});
                 render();
             })
@@ -874,7 +874,7 @@
         setTimeout(finish, 450);
     }
     function pickerIssues(body) {
-        if (!body || !Array.isArray(body.sections)) throw new Error('Jira vr\u00e1tila neo\u010dek\u00e1vanou odpov\u011b\u010f hled\u00e1n\u00ed.');
+        if (!body || !Array.isArray(body.sections)) throw new Error('Jira returned an unexpected search response.');
         const found = new Map();
         for (const section of body.sections) {
             for (const item of Array.isArray(section?.issues) ? section.issues : []) {
@@ -897,7 +897,7 @@
             if (sequence !== favSearchSeq) return;
             favSearchItems = [];
             favSearchState = 'error';
-            favMessage = `Hled\u00e1n\u00ed selhalo: ${e.message}`;
+            favMessage = `Search failed: ${e.message}`;
         }
         render();
     }
@@ -933,15 +933,15 @@
         input.min = '1';
         input.step = '1';
         input.value = favEditValue;
-        input.placeholder = 'minuty';
-        input.setAttribute('aria-label', `Minuty pro ${key}`);
+        input.placeholder = 'minutes';
+        input.setAttribute('aria-label', `Minutes for ${key}`);
         input.oninput = () => {
             favEditValue = input.value;
             favEditInvalid = !!(input.validity && input.validity.badInput);
         };
         for (const count of ['15', '30', '60']) {
             const button = favoriteNode('button', 'favQuick', count);
-            button.setAttribute('aria-label', `Vyplnit ${count} minut`);
+            button.setAttribute('aria-label', `Fill in ${count} minutes`);
             button.onclick = () => {
                 favEditValue = count;
                 favEditInvalid = false;
@@ -951,8 +951,8 @@
             quick.appendChild(button);
         }
         const row = favoriteNode('div', 'favEditorRow');
-        const submit = favoriteNode('button', 'favMinutesSave', 'ULO\u017dIT');
-        submit.setAttribute('aria-label', `Ulo\u017eit minuty do ${key}`);
+        const submit = favoriteNode('button', 'favMinutesSave', 'SAVE');
+        submit.setAttribute('aria-label', `Save minutes to ${key}`);
         submit.disabled = busy;
         submit.onclick = () => saveFavoriteMinutes(key);
         input.onkeydown = event => {
@@ -976,9 +976,9 @@
         input.type = 'text';
         input.maxLength = 500;
         input.value = favNameValue;
-        input.setAttribute('aria-label', `Vlastn\u00ed n\u00e1zev a emoji pro ${item.issue}`);
+        input.setAttribute('aria-label', `Custom name and emoji for ${item.issue}`);
         input.oninput = () => { favNameValue = input.value; };
-        const hint = favoriteNode('div', 'favNameHint', `P\u016fvodn\u00ed n\u00e1zev: ${item.originalTitle || item.issue}`);
+        const hint = favoriteNode('div', 'favNameHint', `Original name: ${item.originalTitle || item.issue}`);
         const actions = favoriteNode('div', 'favNameActions');
         const saveName = value => {
             changeFavorites(list => list.map(favorite => {
@@ -994,11 +994,11 @@
                 render();
             }
         };
-        const saveNameButton = favoriteNode('button', 'favNameSave', 'Ulo\u017eit');
+        const saveNameButton = favoriteNode('button', 'favNameSave', 'Save');
         saveNameButton.onclick = () => saveName(favNameValue.trim());
-        const cancel = favoriteNode('button', 'favNameCancel', 'Zru\u0161it');
+        const cancel = favoriteNode('button', 'favNameCancel', 'Cancel');
         cancel.onclick = () => { favNameKey = null; favFocusToggle = item.issue; render(); };
-        const reset = favoriteNode('button', 'favNameReset', 'Obnovit p\u016fvodn\u00ed n\u00e1zev');
+        const reset = favoriteNode('button', 'favNameReset', 'Restore original name');
         reset.onclick = () => saveName('');
         input.onkeydown = event => {
             if (event.key === 'Enter') { event.preventDefault(); saveNameButton.onclick(); }
@@ -1017,16 +1017,16 @@
         row.dataset.favIssue = item.issue;
         if (item.fresh) row.dataset.fresh = '';
         const info = issueAnchor(favoriteNode('a', 'favInfo'), item.issue);
-        info.setAttribute('title', `Otev\u0159\u00edt ${item.issue} v nov\u00e9 kart\u011b`);
+        info.setAttribute('title', `Open ${item.issue} in a new tab`);
         const summary = favoriteNode('span', 'favSummary');
         if (item.running) summary.appendChild(favoriteNode('span', 'favDot', '\u25cf'));
         summary.appendChild(favoriteNode('span', 'favSummaryText', item.title || item.issue));
         info.appendChild(summary);
-        const key = favoriteNode('span', 'favKey', `${item.project} \u00b7 ${item.issue}${item.projectError ? ' \u00b7 projekt nena\u010dten' : ''}`);
-        if (item.projectError) key.setAttribute('title', `N\u00e1zev projektu se nepoda\u0159ilo na\u010d\u00edst: ${item.projectError}`);
+        const key = favoriteNode('span', 'favKey', `${item.project} \u00b7 ${item.issue}${item.projectError ? ' \u00b7 project not loaded' : ''}`);
+        if (item.projectError) key.setAttribute('title', `Could not load project name: ${item.projectError}`);
         info.appendChild(key);
         const add = favoriteNode('button', 'favMinutes', '+min');
-        add.setAttribute('aria-label', `P\u0159idat minuty do ${item.issue}`);
+        add.setAttribute('aria-label', `Add minutes to ${item.issue}`);
         add.setAttribute('aria-expanded', String(item.editing));
         add.disabled = item.minutesDisabled;
         add.onclick = () => {
@@ -1039,12 +1039,12 @@
             render();
         };
         const play = favoriteNode('button', item.running ? 'favStop' : 'favStart', item.running ? '\u25a0' : '\u25b6');
-        play.setAttribute('aria-label', `${item.running ? 'Zastavit' : 'Spustit'} stopky na ${item.issue}`);
-        play.setAttribute('title', `${item.running ? 'Zastavit' : 'Spustit'} stopky na ${item.issue}`);
+        play.setAttribute('aria-label', `${item.running ? 'Stop' : 'Start'} timer for ${item.issue}`);
+        play.setAttribute('title', `${item.running ? 'Stop' : 'Start'} timer for ${item.issue}`);
         play.disabled = item.running ? item.stopDisabled : item.startDisabled;
         play.onclick = () => item.running ? stop.onclick() : startFavorite(item.issue);
         const menuToggle = favoriteNode('button', 'favMenuToggle', '\u22ef');
-        menuToggle.setAttribute('aria-label', `Dal\u0161\u00ed akce pro ${item.issue}`);
+        menuToggle.setAttribute('aria-label', `More actions for ${item.issue}`);
         menuToggle.setAttribute('aria-expanded', String(item.menuOpen));
         menuToggle.onclick = () => {
             favMenuKey = favMenuKey === item.issue ? null : item.issue;
@@ -1060,7 +1060,7 @@
         row.appendChild(menuToggle);
         if (item.menuOpen) {
             const menu = favoriteNode('div', 'favMenu');
-            const rename = favoriteNode('button', 'favRename', '\u270e  Upravit n\u00e1zev a emoji');
+            const rename = favoriteNode('button', 'favRename', '\u270e  Edit name and emoji');
             rename.onclick = () => {
                 favMenuKey = null;
                 favNameKey = item.issue;
@@ -1068,11 +1068,11 @@
                 favFocusName = true;
                 render();
             };
-            const remove = favoriteNode('button', 'favRemove', '\u00d7  Odebrat z obl\u00edben\u00fdch');
+            const remove = favoriteNode('button', 'favRemove', '\u00d7  Remove from favorites');
             remove.onclick = () => removeFavorite(item.issue);
             menu.appendChild(rename);
             if (item.projectError) {
-                const retry = favoriteNode('button', 'favProjectRetry', 'Zkusit znovu na\u010d\u00edst projekt');
+                const retry = favoriteNode('button', 'favProjectRetry', 'Retry loading project');
                 retry.onclick = () => { favoriteProjects.delete(item.issue); loadFavoriteProject(item.issue); render(); };
                 menu.appendChild(retry);
             }
@@ -1092,17 +1092,17 @@
         const row = favoriteNode('div', 'favResult');
         row.dataset.favIssue = item.issue;
         const link = issueAnchor(favoriteNode('a', 'favResultLink'), item.issue);
-        link.setAttribute('title', `Otev\u0159\u00edt ${item.issue} v nov\u00e9 kart\u011b`);
+        link.setAttribute('title', `Open ${item.issue} in a new tab`);
         link.appendChild(favoriteNode('b', '', item.issue));
         link.appendChild(favoriteNode('span', '', item.title));
         link.appendChild(favoriteNode('i', '', '\u2197'));
         row.appendChild(link);
         if (saved) {
-            row.appendChild(favoriteNode('em', 'favSaved', 'ulo\u017eeno'));
+            row.appendChild(favoriteNode('em', 'favSaved', 'saved'));
         } else {
             const pin = favoriteNode('button', 'favPin', '+');
-            pin.setAttribute('aria-label', `P\u0159idat ${item.issue} do obl\u00edben\u00fdch`);
-            pin.setAttribute('title', 'P\u0159idat do obl\u00edben\u00fdch');
+            pin.setAttribute('aria-label', `Add ${item.issue} to favorites`);
+            pin.setAttribute('title', 'Add to favorites');
             pin.disabled = full;
             pin.onclick = () => addFavorite(item);
             row.appendChild(pin);
@@ -1120,19 +1120,19 @@
         update(favOpen, 'hidden', favoritesOpen);
         update(favOpen.dataset, 'state', storageError ? 'error' : 'ok');
         update(favCount, 'textContent', storageError ? '!' : String(list.length));
-        updateAttr(favOpen, 'aria-label', storageError ? 'Obl\u00edben\u00e9 tasky: seznam je po\u0161kozen\u00fd. Otev\u0159\u00edt' :
-            `Obl\u00edben\u00e9 tasky (${list.length}). Otev\u0159\u00edt`);
-        updateAttr(favOpen, 'title', storageError ? 'Seznam obl\u00edben\u00fdch je po\u0161kozen\u00fd' : 'Obl\u00edben\u00e9 tasky');
+        updateAttr(favOpen, 'aria-label', storageError ? 'Favorites: list is corrupted. Open' :
+            `Favorites (${list.length}). Open`);
+        updateAttr(favOpen, 'title', storageError ? 'Favorites list is corrupted' : 'Favorite issues');
         updateAttr(favOpen, 'aria-expanded', String(favoritesOpen));
         update(favoritesSection, 'hidden', !favoritesOpen);
         update(favAdd, 'hidden', favSearchOpen);
         update(favAdd, 'disabled', !!storageError || favoritesClosing);
         const full = !storageError && list.length >= FAVORITES_LIMIT;
-        const limitText = `M\u00e1\u0161 maximum ${FAVORITES_LIMIT} obl\u00edben\u00fdch. Dal\u0161\u00ed task p\u0159id\u00e1\u0161, a\u017e n\u011bkter\u00fd odebere\u0161 (nab\u00eddka \u22ef).`;
+        const limitText = `You have ${FAVORITES_LIMIT} favorites. Remove one before adding another (\u22ef menu).`;
         update(favSearchWrap, 'hidden', !favSearchOpen);
         update(favSearch, 'disabled', full);
-        updateAttr(favSearch, 'placeholder', full ? `Limit ${FAVORITES_LIMIT} obl\u00edben\u00fdch je pln\u00fd` : 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
-        updateAttr(favAdd, 'title', full ? limitText : 'P\u0159idat task do obl\u00edben\u00fdch');
+        updateAttr(favSearch, 'placeholder', full ? `Favorites limit (${FAVORITES_LIMIT}) reached` : 'Search: key or title');
+        updateAttr(favAdd, 'title', full ? limitText : 'Add issue to favorites');
         update(favLimit, 'hidden', !(full && favSearchOpen));
         update(favLimit, 'textContent', full ? limitText : '');
         update(favError, 'textContent', [storageError, favSearchState === 'error' ? '' : favMessage].filter(Boolean).join('\n'));
@@ -1198,7 +1198,7 @@
             }
         }
         if (!items.length && !storageError) {
-            rows.push(favoriteNode('div', 'favEmpty', 'Zat\u00edm tu nic nen\u00ed. P\u0159idej task tla\u010d\u00edtkem +.'));
+            rows.push(favoriteNode('div', 'favEmpty', 'No favorites yet. Add an issue using +.'));
         }
         favList.replaceChildren(...rows);
         if (editorInput && (favFocusEditor || favFocusName || focusedName || focusedMinutes)) {
@@ -1218,8 +1218,8 @@
         favFocusToggle = null;
         const searchError = favoriteNode('div', 'favMessage', favMessage);
         searchError.dataset.state = 'error';
-        const results = favSearchState === 'error' ? [searchError] : favSearchState === 'loading' ? [favoriteNode('div', 'favMessage', 'Hled\u00e1m\u2026')] :
-            favSearchState === 'done' && !favSearchItems.length ? [favoriteNode('div', 'favMessage', 'Nic nenalezeno.')] :
+        const results = favSearchState === 'error' ? [searchError] : favSearchState === 'loading' ? [favoriteNode('div', 'favMessage', 'Searching...')] :
+            favSearchState === 'done' && !favSearchItems.length ? [favoriteNode('div', 'favMessage', 'No results found.')] :
                 favSearchItems.map(item => favoriteResult(item, saved.has(item.issue), full));
         favResults.replaceChildren(...results);
         favResults.hidden = !favSearchOpen || favSearchState === 'idle';
@@ -1284,7 +1284,7 @@
     autoSave.onclick = () => {
         const minutesValue = parseMinutes(autoMinutes.value);
         if (autoEnabled.checked && minutesValue === null) {
-            autoError.textContent = 'Zadej kladn\u00fd cel\u00fd po\u010det minut.';
+            autoError.textContent = 'Enter a positive whole number of minutes.';
             return;
         }
         const value = {
@@ -1305,25 +1305,25 @@
     autoRetry.onclick = async () => { await processAutomaticEntries(); };
 
     function reportAutomaticError(errorValue) {
-        notice = `Automatick\u00e9 vyk\u00e1z\u00e1n\u00ed: ${errorValue.message}`;
+        notice = `Automatic work logging: ${errorValue.message}`;
         autoError.textContent = errorValue.message;
         render();
     }
 
     async function saveEntry(value, persist = write, notify = true) {
-        if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('Nen\u00ed co ulo\u017eit.');
+        if (!value || !['stopped', 'pending'].includes(value.phase)) throw new Error('There is nothing to save.');
         let worklog = await findSaved(value);
         if (!worklog) {
-            if (value.phase === 'pending') throw new Error('Z\u00e1pis zat\u00edm nebyl nalezen. Automaticky ho neopakuji; ov\u011b\u0159 Work log v Ji\u0159e.');
+            if (value.phase === 'pending') throw new Error('Entry not found yet. It will not be retried automatically; check the Jira Work log.');
             const measuredSeconds = Math.max(1, duration(value));
             const seconds = Math.max(60, Math.floor(measuredSeconds / 60) * 60);
             value.phase = 'pending';
             persist(value);
             worklog = await request(`/rest/api/2/issue/${encodeURIComponent(value.issue)}/worklog?adjustEstimate=leave`, {
                 method: 'POST',
-                body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.automatic ? 'Automatick\u00fd v\u00fdkaz (Jira stopky)' : value.manual ? 'Ru\u010dn\u00ed v\u00fdkaz (Jira stopky)' : 'Pr\u00e1ce na \u00fakolu (Jira stopky)'}${measuredSeconds < 60 ? `\nM\u011b\u0159eno ${measuredSeconds} s; ulo\u017eeno minimum 1 minuta.` : ''}\n[jira-direct-timer:${value.id}]`})
+                body: JSON.stringify({started: stamp(value.started), timeSpentSeconds: seconds, comment: `${value.automatic ? 'Automatic work log (Jira timer)' : value.manual ? 'Manual work log (Jira timer)' : 'Work on issue (Jira timer)'}${measuredSeconds < 60 ? `\nTracked ${measuredSeconds} s; saved minimum 1 minute.` : ''}\n[jira-direct-timer:${value.id}]`})
             });
-            if (!worklog.id) throw new Error('Jira nevr\u00e1tila ID nov\u00e9ho worklogu. Ov\u011b\u0159 p\u0159edchoz\u00ed z\u00e1pis.');
+            if (!worklog.id) throw new Error('Jira did not return the new work log ID. Verify the previous entry.');
         }
         value.phase = 'saved';
         value.worklogId = worklog.id;
@@ -1339,9 +1339,9 @@
         autoBusy = true;
         const failures = [];
         try {
-            if (!navigator.locks) throw new Error('Prohl\u00ed\u017ee\u010d nepodporuje zamyk\u00e1n\u00ed mezi kartami. Automatick\u00fd z\u00e1pis nebyl odesl\u00e1n.');
+            if (!navigator.locks) throw new Error('This browser does not support locking across tabs. The automatic entry was not sent.');
             await navigator.locks.request(KEY, {ifAvailable: true}, async lock => {
-                if (!lock) throw new Error('Stopky pr\u00e1v\u011b m\u011bn\u00ed jin\u00e1 karta. \u010cekaj\u00edc\u00ed automatick\u00fd z\u00e1pis zpracuj v nastaven\u00ed AUTO.');
+                if (!lock) throw new Error('Another tab is changing the timer. Process the pending automatic entry in AUTO settings.');
                 for (const entry of readAutoQueue()) {
                     if (entry.phase === 'saved') {
                         removeAutoEntry(entry.id);
@@ -1400,7 +1400,7 @@
     function captureCreatedIssue(body) {
         const key = body && (body.key || body.issueKey || body.issue && body.issue.key);
         if (typeof key !== 'string' || !ISSUE_PATTERN.test(key)) {
-            throw new Error('Odpov\u011b\u010f na vytvo\u0159en\u00ed issue nevr\u00e1tila jej\u00ed kl\u00ed\u010d. Worklog nebyl odesl\u00e1n; ov\u011b\u0159 v\u00fdsledek v Ji\u0159e.');
+            throw new Error('The issue creation response did not return its key. The work log was not sent; check the result in Jira.');
         }
         return automaticIssueCreated(key);
     }
