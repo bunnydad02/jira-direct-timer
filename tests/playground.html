@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="cs">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="ajs-issue-key" content="DEMO-101">
-    <title>Jira stopky - lokalni regresni hriste</title>
+    <title>Jira timer - local regression playground</title>
     <style>
         body {margin:24px;font:15px/1.5 system-ui,sans-serif;background:#f4f6fa;color:#253249}
         main {max-width:1000px;margin:auto;padding-bottom:440px}
@@ -24,35 +24,35 @@
 </head>
 <body>
 <main>
-    <h1>Jira stopky: regresni hriste</h1>
-    <p id="safety">POUZE LOKALNI SIMULACE. Zadna Jira, zadne skutecne worklogy.
-        Stav i zaznamy jsou jen v pameti; obnoveni stranky vse zahodi.</p>
-    <section class="controls" aria-label="Testovaci ovladani">
-        <label>Otevreny task <select id="issue">
-            <option>DEMO-101</option><option>DEMO-102</option><option>DEMO-103</option><option value="">Bez tasku</option>
+    <h1>Jira timer: regression playground</h1>
+    <p id="safety">LOCAL SIMULATION ONLY. No Jira, no real work logs.
+        State and entries are kept in memory only; refreshing the page discards them.</p>
+    <section class="controls" aria-label="Test controls">
+        <label>Open issue <select id="issue">
+            <option>DEMO-101</option><option>DEMO-102</option><option>DEMO-103</option><option value="">No issue</option>
         </select></label>
         <h2 id="summary-val"></h2>
-        <button id="advance">Posunout cas +125 s</button>
-        <button id="reload">Simulovat reload (zachovat pamet)</button>
-        <button id="reset">Vynulovat simulaci</button>
-        <label>Pristi POST <select id="failure">
-            <option value="none">Uspech</option>
-            <option value="before">Chyba pred ulozenim</option>
-            <option value="after">Ulozeno, ale odpoved ztracena</option>
+        <button id="advance">Advance time +125 s</button>
+        <button id="reload">Simulate reload (keep memory)</button>
+        <button id="reset">Reset simulation</button>
+        <label>Next POST <select id="failure">
+            <option value="none">Success</option>
+            <option value="before">Failure before saving</option>
+            <option value="after">Saved, but response lost</option>
         </select></label>
         <p id="link-info" role="status"></p>
         <p id="harness-error" role="alert"></p>
     </section>
-    <section class="controls" aria-label="Automaticke regrese">
-        <button id="run">Spustit vsechny regresni scenare</button>
-        <p id="test-status" role="status">Pripraveno. Produkcni panel je vlevo dole.</p>
+    <section class="controls" aria-label="Automatic regressions">
+        <button id="run">Run all regression scenarios</button>
+        <p id="test-status" role="status">Ready. The production panel is at the bottom left.</p>
         <ol id="results"></ol>
     </section>
     <div class="columns">
-        <article><h2>Simulovane worklogy (jen pamet)</h2><pre id="worklogs"></pre></article>
-        <article><h2>Stav stopek (jen pamet)</h2><pre id="state"></pre></article>
+        <article><h2>Simulated work logs (memory only)</h2><pre id="worklogs"></pre></article>
+        <article><h2>Timer state (memory only)</h2><pre id="state"></pre></article>
     </div>
-    <article><h2>Mock API pozadavky</h2><pre id="requests"></pre></article>
+    <article><h2>Mock API requests</h2><pre id="requests"></pre></article>
 </main>
 </body>
 </html>

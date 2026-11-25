@@ -71,10 +71,10 @@ for compatibility with installed copies and saved timer state.
   the same author filter; Jira's aggregate time fields include other users
   and must not supply personal totals. Missing identities, malformed subtask
   lists, or unreadable worklogs are visible errors, not zero/partial totals.
-- Favorites: the `oblíbené N` chip next to "Jira stopky" opens a
+- Favorites: the `favorites N` chip next to "Jira timer" opens a
   compact section above the timer (the chip hides while open; × closes it).
   It is the only path that acts on a non-open issue, and only on an explicit
-  click: per-row `+min` (15/30/60 prefill only; ULOZIT/Enter writes, same
+  click: per-row `+min` (15/30/60 prefill only; SAVE/Enter writes, same
   rules as ADD MINUTES, never alters a running timer), `▶` (same switch rules
   as START, then collapse with a 0.45s animation, immediate under reduced
   motion; on failure stay open with the error), `■` on the tracked row
@@ -180,12 +180,12 @@ history and release tags. Images are rendered on Windows; CI renders a Linux
 set as the `screenshots-linux` artifact without failing on font differences.
 
 Release notes from `1.17.4` must contain a `## Screenshots` section embedding
-the relevant images as `![popis](../docs/screenshots/<name>.png)`; the files
+the relevant images as `![description](../docs/screenshots/<name>.png)`; the files
 must exist. Publishing rewrites these links to the release tag
 (`raw.githubusercontent.com/<owner>/<repo>/v<version>/...`), so each Release
 permanently shows that version's look.
 
-The current userscript metadata and in-panel version are `1.19.0`. On each
+The current userscript metadata and in-panel version are `1.20.0`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.

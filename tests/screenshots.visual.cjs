@@ -9,41 +9,41 @@ const twoMinutes = 125000;
 
 // Each state is serialized into the page (no closures) and runs with `p = window.playground`.
 const groups = [
-    {title: 'Stavy pocitadla', states: [
-        {name: 'idle', title: 'Nic se nemeri (cervena)', run: async p => { await p.reset(); }},
-        {name: 'running', title: 'Mereni otevreneho tasku (zelena)', run: async (p, ms) => {
+    {title: 'Timer states', states: [
+        {name: 'idle', title: 'Idle (red)', run: async p => { await p.reset(); }},
+        {name: 'running', title: 'Tracking the open issue (green)', run: async (p, ms) => {
             await p.reset();
             await p.click('start');
             p.advance(ms);
         }},
-        {name: 'running-other-issue', title: 'Mereni jineho tasku (modra)', run: async (p, ms) => {
+        {name: 'running-other-issue', title: 'Tracking another issue (blue)', run: async (p, ms) => {
             await p.reset();
             await p.click('start');
             p.advance(ms);
             p.navigate('DEMO-102');
             await p.idle();
         }},
-        {name: 'no-open-issue', title: 'Stranka bez otevreneho tasku', run: async p => { await p.reset({issue: ''}); }},
-        {name: 'saved-toast', title: 'STOP: ulozeny worklog a toast', run: async (p, ms) => {
+        {name: 'no-open-issue', title: 'No open issue', run: async p => { await p.reset({issue: ''}); }},
+        {name: 'saved-toast', title: 'STOP: saved work log and toast', run: async (p, ms) => {
             await p.reset();
             await p.click('start');
             p.advance(ms);
             await p.click('stop');
         }},
-        {name: 'discarded-toast', title: 'CANCEL: zahozene mereni a toast', run: async (p, ms) => {
+        {name: 'discarded-toast', title: 'CANCEL: discarded timer and toast', run: async (p, ms) => {
             await p.reset();
             await p.click('start');
             p.advance(ms);
             await p.click('cancel');
         }},
-        {name: 'save-failed', title: 'Chyba pred ulozenim: rucni opakovani', run: async (p, ms) => {
+        {name: 'save-failed', title: 'Save failure: manual retry', run: async (p, ms) => {
             await p.reset();
             await p.click('start');
             p.advance(ms);
             p.failure('before');
             await p.click('stop');
         }},
-        {name: 'save-uncertain', title: 'Ztracena odpoved: overeni markeru', run: async (p, ms) => {
+        {name: 'save-uncertain', title: 'Lost response: verify marker', run: async (p, ms) => {
             await p.reset();
             await p.click('start');
             p.advance(ms);
@@ -51,8 +51,8 @@ const groups = [
             await p.click('stop');
         }}
     ]},
-    {title: 'Soucty worklogu', states: [
-        {name: 'totals-with-subtasks', title: 'Vlastni soucet vcetne subtasku', run: async p => {
+    {title: 'Work log totals', states: [
+        {name: 'totals-with-subtasks', title: 'Personal total including subtasks', run: async p => {
             await p.reset({
                 parents: {'DEMO-102': 'DEMO-101', 'DEMO-103': 'DEMO-101'},
                 logs: [
@@ -62,99 +62,99 @@ const groups = [
                 ]
             });
         }},
-        {name: 'totals-error', title: 'Chyba nacteni souctu', run: async p => { await p.reset({totalError: true}); }},
-        {name: 'totals-loading', title: 'Nacitani souctu pred odpovedi Jiry', run: async p => {
+        {name: 'totals-error', title: 'Failed to load totals', run: async p => { await p.reset({totalError: true}); }},
+        {name: 'totals-loading', title: 'Loading totals before Jira responds', run: async p => {
             // Not awaited: the screenshot must capture the state before the mocked Jira responds.
             p.reset({latency: 4000});
             await p.sleep(50);
         }}
     ]},
-    {title: 'ADD MINUTES a AUTO', states: [
-        {name: 'manual-saved', title: 'ADD MINUTES: rucni zapis 15 minut', run: async p => {
+    {title: 'ADD MINUTES and AUTO', states: [
+        {name: 'manual-saved', title: 'ADD MINUTES: manual entry of 15 minutes', run: async p => {
             await p.reset();
             await p.manual('15');
         }},
-        {name: 'manual-invalid', title: 'ADD MINUTES: neplatna hodnota', run: async p => {
+        {name: 'manual-invalid', title: 'ADD MINUTES: invalid value', run: async p => {
             await p.reset();
             await p.manual('-5');
         }},
-        {name: 'manual-zero', title: 'ADD MINUTES: 0 minut nic nezapise', run: async p => {
+        {name: 'manual-zero', title: 'ADD MINUTES: zero minutes logs nothing', run: async p => {
             await p.reset();
             await p.manual('0');
         }},
-        {name: 'auto-enabled', title: 'AUTO zapnuto: indikator v panelu', run: async p => {
+        {name: 'auto-enabled', title: 'AUTO enabled: panel indicator', run: async p => {
             await p.reset({autoSettings: {enabled: true, minutes: 10}});
         }},
-        {name: 'auto-settings-error', title: 'AUTO: poskozene nastaveni v panelu', run: async p => {
+        {name: 'auto-settings-error', title: 'AUTO: corrupted settings indicator', run: async p => {
             await p.reset({autoSettings: {enabled: 'yes', minutes: 10}});
         }},
-        {name: 'auto-settings', title: 'AUTO: nastaveni automatickeho vykazovani', run: async p => {
+        {name: 'auto-settings', title: 'AUTO: automatic work logging settings', run: async p => {
             await p.reset({autoSettings: {enabled: true, minutes: 10}});
             await p.click('auto-open');
         }},
-        {name: 'auto-worklog', title: 'AUTO: vykazani pri zalozeni Sub-task Bugu', run: async p => {
+        {name: 'auto-worklog', title: 'AUTO: work log on Sub-task Bug creation', run: async p => {
             await p.reset({autoSettings: {enabled: true, minutes: 11}});
             await p.createIssue(true);
         }}
     ]},
-    {title: 'Oblibene tasky', states: [
-        {name: 'favorites-chip', title: 'Stitek oblibene s poctem', run: async p => {
+    {title: 'Favorites', states: [
+        {name: 'favorites-chip', title: 'Favorites chip with count', run: async p => {
             await p.reset({favorites: [
-                {issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'},
-                {issue: 'DEMO-101', title: 'Testovaci task: implementace'}]});
+                {issue: 'OPS-12', title: 'Meetings and communication'}, {issue: 'DEMO-102', title: 'Test issue: checks and fixes'},
+                {issue: 'DEMO-101', title: 'Test issue: implementation'}]});
         }},
-        {name: 'favorites-open', title: 'Otevrene oblibene nad stopkami', run: async p => {
+        {name: 'favorites-open', title: 'Favorites open above the timer', run: async p => {
             await p.reset({favorites: [
-                {issue: 'OPS-12', title: 'Porady a komunikace', customTitle: '🗣️ Schůzky'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'},
-                {issue: 'DEMO-101', title: 'Testovaci task: implementace'}]});
+                {issue: 'OPS-12', title: 'Meetings and communication', customTitle: '🗣️ Meetings'}, {issue: 'DEMO-102', title: 'Test issue: checks and fixes'},
+                {issue: 'DEMO-101', title: 'Test issue: implementation'}]});
             await p.click('fav-open');
             await p.idle();
         }},
-        {name: 'favorites-menu', title: 'Nabidka oblibeneho tasku', run: async p => {
-            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace', customTitle: '🗣️ Schůzky'}]});
+        {name: 'favorites-menu', title: 'Favorite issue menu', run: async p => {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Meetings and communication', customTitle: '🗣️ Meetings'}]});
             await p.click('fav-open');
             await p.idle();
             p.node('fav-menu-toggle').click();
         }},
-        {name: 'favorites-rename', title: 'Uprava vlastniho nazvu a emoji', run: async p => {
-            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace', customTitle: '🗣️ Schůzky'}]});
+        {name: 'favorites-rename', title: 'Edit custom name and emoji', run: async p => {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Meetings and communication', customTitle: '🗣️ Meetings'}]});
             await p.click('fav-open');
             await p.idle();
             p.node('fav-menu-toggle').click();
             p.node('fav-rename').click();
         }},
-        {name: 'favorites-search', title: 'Naseptavac: odkaz do nove karty, + prida', run: async p => {
-            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'ARCH-3', title: 'Architecture review board'}]});
+        {name: 'favorites-search', title: 'Search: new-tab link and + adds', run: async p => {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Meetings and communication'}, {issue: 'ARCH-3', title: 'Architecture review board'}]});
             await p.click('fav-open');
             await p.click('fav-add');
             p.node('fav-search').value = 'review';
             p.node('fav-search').dispatchEvent(new Event('input'));
             while (p.node('fav-results').querySelectorAll('[data-fav-issue]').length < 2) await p.sleep(20);
         }},
-        {name: 'favorites-minutes', title: '+min do oblibeneho tasku', run: async p => {
-            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'}]});
+        {name: 'favorites-minutes', title: '+min on a favorite issue', run: async p => {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Meetings and communication'}, {issue: 'DEMO-102', title: 'Test issue: checks and fixes'}]});
             await p.click('fav-open');
             p.node('fav-list').querySelector('[data-fav-minutes]').click();
             p.node('fav-quick').click();
         }},
-        {name: 'favorites-running', title: 'Bezici oblibeny task: stop misto startu', run: async (p, ms) => {
+        {name: 'favorites-running', title: 'Running favorite: stop instead of start', run: async (p, ms) => {
             await p.reset({issue: 'DEMO-101', state: {id: 'shot', issue: 'DEMO-102', started: p.now() - ms, ended: null, phase: 'running'},
-                favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'}]});
+                favorites: [{issue: 'OPS-12', title: 'Meetings and communication'}, {issue: 'DEMO-102', title: 'Test issue: checks and fixes'}]});
             await p.click('fav-open');
         }},
-        {name: 'favorites-limit', title: 'Plny seznam: hledani je zablokovane', run: async p => {
-            await p.reset({favorites: Array.from({length: 10}, (_, index) => ({issue: `OPS-${index + 1}`, title: 'Opakovana schuzka'}))});
+        {name: 'favorites-limit', title: 'Full list: search disabled', run: async p => {
+            await p.reset({favorites: Array.from({length: 10}, (_, index) => ({issue: `OPS-${index + 1}`, title: 'Recurring meeting'}))});
             await p.click('fav-open');
             await p.click('fav-add');
         }}
     ]},
-    {title: 'Ochrana stavu', states: [
-        {name: 'lock-busy', title: 'Zamek drzi jina karta', run: async p => {
+    {title: 'State protection', states: [
+        {name: 'lock-busy', title: 'Lock held by another tab', run: async p => {
             await p.reset({lock: 'busy'});
             p.node('start').click();
             await p.idle();
         }},
-        {name: 'corrupted-state', title: 'Poskozeny ulozeny stav', run: async p => { await p.reset({raw: '{"broken"'}); }}
+        {name: 'corrupted-state', title: 'Corrupted saved state', run: async p => { await p.reset({raw: '{"broken"'}); }}
     ]}
 ];
 const states = groups.flatMap(group => group.states);
@@ -207,16 +207,16 @@ test.afterAll(() => {
         if (file.endsWith('.png') && !expected.has(file)) fs.rmSync(path.join(OUTPUT, file));
     }
     const lines = [
-        '# Screenshoty stopek',
+        '# Timer screenshots',
         '',
-        'Generovano prikazem `npm run screenshots` (soucast `npm test`) z lokalniho',
-        'playgroundu s mocky, pevnym casem a skrytym cislem verze. Needitovat rucne;',
-        'nove stavy pridej do [tests/screenshots.visual.cjs](../../tests/screenshots.visual.cjs).',
-        'Zmeny vzhledu ukazuje diff PR, starsi podoby historie souboru a Git tagy vydani.',
+        'Generated by `npm run screenshots` (part of `npm test`) using the local',
+        'playground with mocks, fixed time and the version label hidden. Do not edit manually;',
+        'add new states to [tests/screenshots.visual.cjs](../../tests/screenshots.visual.cjs).',
+        'PR diffs show visual changes; file history and release tags preserve earlier versions.',
         ''
     ];
     for (const group of groups) {
-        lines.push(`## ${group.title}`, '', '| Stav | Screenshot |', '| --- | --- |');
+        lines.push(`## ${group.title}`, '', '| State | Screenshot |', '| --- | --- |');
         for (const state of group.states) lines.push(`| ${state.title} (\`${state.name}\`) | ![${state.title}](./${state.name}.png) |`);
         lines.push('');
     }

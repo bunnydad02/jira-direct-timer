@@ -1,93 +1,91 @@
-JIRA LOCAL WORKSPACE - Jira stopky
+JIRA LOCAL WORKSPACE - Jira timer
 
-Projekt obsahuje pouze samostatne Tampermonkey stopky pro Jira worklogy.
-Prehled projektu: README.md.
+This project contains only the standalone Tampermonkey Jira work log timer.
+See README.md for the project overview.
 
-Instalace a aktualizace:
-1. V Tampermonkey otevri EXISTUJICI Jira stopky (pri prvni instalaci vytvor novy skript).
-2. Nahrad cely obsah souborem jira-workspace-timer.user.js a uloz Ctrl+S.
-3. Povol Tampermonkey pristup k https://jira.alza.cz a spousteni userscriptu.
-4. Obnov stranku Jiry. Panel Jira stopky se zobrazi vlevo dole.
-5. Neinstaluj druhou kopii a pri aktualizaci nemaz data webu.
+Installation and updates:
+1. Open the EXISTING Jira timer in Tampermonkey (create one on first install).
+2. Replace its entire contents with jira-workspace-timer.user.js and save.
+3. Allow Tampermonkey access to https://jira.alza.cz and userscript execution.
+4. Refresh Jira. The timer appears at bottom left.
+5. Do not install a second copy or clear site data when updating.
 
-Skript obsahuje @updateURL a @downloadURL pro vetev main. Tampermonkey potrebuje
-verejne publikovany soubor a vyssi @version nez ma nainstalovana kopie.
-Pri vydani uprav @version i konstantu VERSION. Automaticke kontroly najdes v
-Tampermonkey -> Dashboard -> Settings -> Script Update. Nikdy nevkladej token
-do skriptu ani URL.
+The script has @updateURL and @downloadURL pointing to main. Tampermonkey
+requires a publicly published file and a higher @version than the installed
+copy. For a release update both @version and VERSION. Configure update checks
+under Tampermonkey -> Dashboard -> Settings -> Script Update. Never put a
+token in the script or URL.
 
-Pouziti:
-- Pred startem zastav jine stopky, vcetne Clockify. Jira stopky Clockify neridi.
-- START spusti mereni otevreneho ukolu. Pokud uz meri jiny ukol, nejprve jej
-  ulozi a nove mereni navaze v okamziku zastaveni.
-- Navigace na jiny ukol sama o sobe mereni neprepina.
-- STOP zastavi a ulozi mereny ukol. CANCEL zahodi neulozene mereni bez zapisu.
-- ADD MINUTES zapise kladny pocet celych minut na otevreny ukol. Zapis odesles
-  tlacitkem nebo Enterem; po uspechu se vstup vycisti. 0 nebo prazdne pole
-  (i u +min v Oblibenych) nic nezapise, jen ukaze toast "Pridano 0 minut".
-- Na strance /browse/<KLIC> je cilem vzdy tento ukol (selectedIssue v odkazu
-  plati jen na boardu / backlogu).
-- Tlacitko auto u ADD MINUTES otevre nastaveni automatickeho vykazovani.
-  Po zapnuti se pri vytvoreni issue pres Jira stranku automaticky vykaze
-  nastaveny pocet minut (vychozi hodnota 10), vcetne Sub-task Bugu pres Jira
-  formular i REST API. Vyzaduje platny klic v odpovedi na vytvoreni. Automatika je
-  ve vychozim stavu vypnuta a nemeni bezici stopky. Vytvoreni mimo tuto stranku
-  nezachyti. Pri nejistem vysledku zapis neodesila opakovane; pouzij
-  Zpracovat cekajici zapisy pro overeni znacky. Stav AUTO je videt v panelu:
-  zelene auto se zelenou teckou = zapnuto (minuty v tooltipu), sedy krouzek =
-  vypnuto, cervene auto ! = poskozene nastaveni.
-- Stitek oblibene N vedle nadpisu otevre seznam oblibenych tasku (max 10),
-  krizek ho zavre. U kazdeho tasku: +min zapise minuty primo do nej
-  (15/30/60 jen predvyplni, zapis az ULOZIT nebo Enter), zelene tlacitko
-  spusti stopky jako START i na neotevrenem tasku a seznam se zavre, cervene
-  u bezici polozky stopky ulozi a kos task z oblibenych odebere (worklogy
-  nemeni). Tlacitko + otevre hledani: klik na nazev otevre task v nove
-  karte, teprve + u vysledku ho ulozi. Krizek v poli hledani zavre jen hledani. Pri plnem seznamu je hledani
-  zablokovane, nejdriv nektery task odeber.
-- Rucni zapis nemeni bezici casovac. Intervaly se mohou prekryvat; zapisuj jen
-  cas, ktery jeste neni vykazany.
-- Pod casovacem se zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu
-  podle prihlaseneho Jira uctu, zaokrouhleny na desetiny hodiny. Vykazy kolegu
-  se nepricitaji. Pokud mas vlastni vykazy i na subtaskech, nasleduje
-  v zavorce tvuj soucet vcetne subtasku, napr. 2h (3,5h). Pri shodnem poctu
-  sekund se zavorka nezobrazuje. Chyba nacteni identity, autora nebo worklogu
-  se zobrazi v panelu, nikoli jako nula nebo castecny soucet.
-- Panel ma sirku 240 px, na uzke obrazovce se prizpusobi. Zelena znamena
-  mereni otevreneho ukolu, modra jineho ukolu a cervena neaktivni stav.
-- Ulozeni a zahozeni potvrdi samostatne docasne karty nad panelem.
-- Cela stara sekce Clockify je skryta bez prazdneho mista. Skryti ji neodinstaluje
-  na serveru a nezastavi pripadne bezici Clockify mereni.
+Usage:
+- Stop other timers, including Clockify, before starting. This timer does not
+  control Clockify.
+- START tracks the open issue. If another issue is running, it is saved first
+  and the new timer starts when the previous one ended.
+- Navigation alone does not switch timers.
+- STOP saves the tracked issue. CANCEL discards the unsaved timer without a write.
+- ADD MINUTES logs positive whole minutes to the open issue using the button or
+  Enter. After success the field is cleared. Zero or blank (including favorite
+  +min) logs nothing and shows the "Added 0 minutes" toast.
+- On /browse/<KEY>, the URL always identifies the target; selectedIssue applies
+  only on boards and backlogs.
+- The auto button opens automatic work logging settings. When enabled, creating
+  an issue through this Jira page logs the configured minutes (default 10),
+  including Sub-task Bugs via Jira forms and REST. A valid returned key is
+  required. It is off by default, does not affect a running timer, and cannot
+  observe creation outside this page. An uncertain result is not retried;
+  use Process pending entries to verify its marker. Green auto with a filled
+  dot means enabled (minutes in tooltip); gray hollow dot means off; red auto !
+  means corrupted settings.
+- The favorites N chip opens up to 10 favorites; the close button closes it.
+  Each displays its title, project name and key. +min logs to that issue (quick
+  choices 15/30/60 only prefill; Save or Enter submits). The green button starts
+  a timer even on a different issue and closes the list; the red button stops a
+  running favorite. The menu edits its local name and emoji, restores the
+  original, removes it, or retries a failed project name lookup. Removing a
+  favorite does not alter work logs. + opens search: clicking a result opens a
+  new tab; only its + adds it. The search close button closes only search.
+  At the limit, remove a favorite before searching again.
+- Manual entries do not change a running timer. Intervals can overlap; log only
+  time not already recorded.
+- Beneath the clock, the open issue shows only the signed-in user's time,
+  rounded to tenths of an hour. Colleagues' work logs are excluded. When exact
+  totals differ, parentheses show the personal total including subtasks, e.g.
+  2h (3.5h). Identity, author and loading errors appear instead of a partial
+  or zero total.
+- The panel is 240px wide and adapts to narrow screens. Green means tracking
+  the open issue, blue another issue, and red idle.
+- Save and discard confirmations are separate temporary cards above the panel.
+- The legacy Clockify section is hidden without leaving a gap. This does not
+  uninstall it on the server or stop any running Clockify timers.
 
-Vykazovany cas:
-- Worklogy se ukladaji primo do Jiry, nikoli do Clockify; nezapisuj stejny cas
-  dvakrat.
-- Odhad zbyvajici prace zustane nezmeneny.
-- Minimum zaznamu je jedna minuta. U kratsiho mereni komentar vysvetli
-  skutecnou delku a navyseni na minimum.
-- Delky nad jednu minutu se zaokrouhluji dolu na cele minuty.
+Logged time:
+- Work logs go directly to Jira, not Clockify; do not log the same time twice.
+- The remaining estimate is preserved.
+- The minimum work log is one minute. For a shorter timer, the comment
+  explains the actual duration and the increase to the minimum.
+- Durations longer than one minute are rounded down to whole minutes.
 
-Trvalost, chyby a obnova:
-- Mereni a stav ukladani jsou ulozene v localStorage pro jira.alza.cz.
-  Jsou sdilene mezi kartami stejneho profilu, ne mezi profily nebo zarizenimi.
-- Nastaveni AUTO a fronta automatickych zapisu jsou ulozeny oddelene od stavu
-  stopek; nemaz jejich polozky, dokud neni worklog overen.
-- Oblibene tasky jsou ulozene samostatne a sdilene mezi kartami. Poskozeny
-  seznam se neprepise; stitek ukaze ! a chyba je videt po otevreni.
-- Nemaz data webu a behem nedokonceneho zapisu nemen prihlaseneho uzivatele.
-- Chyby API zustavaji viditelne. Pri nejistem vysledku se POST automaticky
-  neopakuje.
-- Tlacitko Ulozit / Overit dohleda unikatni znacku ve tvem worklogu (worklog
-  jineho autora se stejnou znackou se nepocita). Nalezeny zapis
-  potvrdi bez duplicity. Pokud jej nenajde, zkontroluj Jira Work log rucne;
-  zapis bez kontroly znovu neposilej.
-- Po chybe prepnuti zustava ulozen puvodni ukol i cil prepnuti.
-- Pri chybe nezavisleho rucniho zapisu casovac stale bezi, ale dalsi akce
-  pockaji na vyreseni nedokonceneho zapisu.
-- Vyuzivaji se Jira session cookies; neni potreba API klic ani ucet Clockify.
+Persistence, errors and recovery:
+- Timer and save state use localStorage on jira.alza.cz, shared between tabs
+  of the same profile, not between profiles or devices.
+- AUTO settings and its queue are separate from timer state; do not delete
+  their entries while work logs remain unverified.
+- Favorites are stored separately and shared between tabs. A corrupted list
+  is never overwritten; the chip shows ! and the error appears when opened.
+- Do not clear site data or switch Jira users during unfinished work.
+- API errors remain visible. An uncertain POST is not repeated automatically.
+- Save / Verify looks for the unique marker on your own work log, never
+  another author's. A found entry is confirmed without duplication. If not
+  found, inspect Jira Work log manually before sending the same time again.
+- A failed switch preserves both the original issue and intended destination.
+- After an independent manual entry fails, the timer continues but other
+  actions wait until the unfinished entry is resolved.
+- Jira session cookies are used; no API key or Clockify account is needed.
 
-Overeni:
+Validation:
 - node --check .\jira-workspace-timer.user.js
 - node .\jira-workspace-timer.test.cjs
+- npm test (full local regression suite, including Chromium and screenshots)
 
-Testy nepouzivaji zive Jira odpovedi ani nevytvareji skutecne worklogy.
-Kontext, architektura a datove invarianty: HANDOFF.md.
+Tests use mocks, never live Jira responses or real work logs.
+Context, architecture and data invariants: HANDOFF.md.
