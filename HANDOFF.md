@@ -71,14 +71,18 @@ for compatibility with installed copies and saved timer state.
   the same author filter; Jira's aggregate time fields include other users
   and must not supply personal totals. Missing identities, malformed subtask
   lists, or unreadable worklogs are visible errors, not zero/partial totals.
-- Favorites (1.18.0): the `oblíbené N` chip next to "Jira stopky" opens a
+- Favorites: the `oblíbené N` chip next to "Jira stopky" opens a
   compact section above the timer (the chip hides while open; × closes it).
   It is the only path that acts on a non-open issue, and only on an explicit
   click: per-row `+min` (15/30/60 prefill only; ULOZIT/Enter writes, same
   rules as ADD MINUTES, never alters a running timer), `▶` (same switch rules
   as START, then collapse with a 0.45s animation, immediate under reduced
   motion; on failure stay open with the error), `■` on the tracked row
-  (same as STOP) and the trash icon (removes the favorite only). `+` opens a
+  (same as STOP). The `⋯` menu offers a local custom title (including emoji),
+  reset to the original, and removal. Show the task title first and the Jira
+  project name and issue key underneath. Fetch project names read-only per
+  issue; on failure show the project key and error with a retry in the menu.
+  `+` opens a
   search via `/rest/api/2/issue/picker` (>= 2 chars, 250ms debounce, stale
   responses dropped, response shape verified only against mocks). Result
   names open `/browse/<KEY>` in a new tab and store nothing; only the result's
@@ -105,7 +109,9 @@ for compatibility with installed copies and saved timer state.
   before POST, verify its exact marker after an uncertain result, and never
   retry an uncertain POST when no marker is found. Surface malformed state and
   errors; do not silently discard queued entries.
-- `jira-direct-timer-favorites-v1` stores an array of `{issue, title}`
+- `jira-direct-timer-favorites-v1` stores an array of `{issue, title}` with
+  optional `customTitle` (nonempty string up to 500 characters); old entries
+  remain valid and the original title is never replaced by the custom title
   (max 10, unique valid keys). Storage events re-render other tabs. A
   malformed list is reported (chip shows `!`) and never overwritten.
 - The base record contains `id`, `issue`, `started`, `ended`, and `phase`.
@@ -179,7 +185,7 @@ must exist. Publishing rewrites these links to the release tag
 (`raw.githubusercontent.com/<owner>/<repo>/v<version>/...`), so each Release
 permanently shows that version's look.
 
-The current userscript metadata and in-panel version are `1.18.5`. On each
+The current userscript metadata and in-panel version are `1.19.0`. On each
 release, keep `@version` and `VERSION` synchronized and retain both GitHub
 update URLs. Tampermonkey updates only after a higher version is published to
 the public `main` branch; a local commit alone does not publish an update.

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Jira Local Workspace - Worklog timer
 // @namespace    alza.jira-direct-timer
-// @version      1.18.5
+// @version      1.19.0
 // @updateURL    https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @downloadURL  https://raw.githubusercontent.com/bunnydad02/jira-direct-timer/main/jira-workspace-timer.user.js
 // @description  Persistent stopwatch that saves directly to Jira and hides the legacy Clockify panel.
@@ -19,7 +19,7 @@
     const FAVORITES_KEY = 'jira-direct-timer-favorites-v1';
     const FAVORITES_LIMIT = 10;
     const ISSUE_PATTERN = /^[A-Z][A-Z0-9_]*-\d+$/;
-    const VERSION = '1.18.5';
+    const VERSION = '1.19.0';
     const panel = document.createElement('section');
     panel.id = 'jira-direct-timer';
     const styles = document.createElement('style');
@@ -41,19 +41,27 @@
         #jira-direct-timer [data-favorites][data-closing] [data-fav-body] {overflow:hidden}
         #jira-direct-timer [data-fav-header] {display:flex;align-items:center;gap:4px;min-height:18px;margin-bottom:2px}
         #jira-direct-timer [data-fav-heading] {flex:1;color:#526078;font-size:10px;font-weight:600;letter-spacing:.3px;text-transform:uppercase}
-        #jira-direct-timer [data-fav-header] button,#jira-direct-timer [data-fav-remove] {display:inline-flex;flex-shrink:0;width:18px;height:18px;align-items:center;justify-content:center;padding:0;border:0;background:transparent;color:#526078;font-size:14px;font-weight:400;line-height:1}
-        #jira-direct-timer [data-fav-row] {display:flex;align-items:center;gap:3px;padding:3px 0;border-top:1px solid #172b4d12;border-radius:3px;transition:background-color .6s ease}
+        #jira-direct-timer [data-fav-header] button {display:inline-flex;flex-shrink:0;width:18px;height:18px;align-items:center;justify-content:center;padding:0;border:0;background:transparent;color:#526078;font-size:14px;font-weight:400;line-height:1}
+        #jira-direct-timer [data-fav-list] {max-height:45vh;overflow-y:auto}
+        #jira-direct-timer [data-fav-row] {position:relative;display:grid;grid-template-columns:1fr 54px 52px;gap:5px;padding:8px 0;border-top:1px solid #172b4d12;border-radius:3px;transition:background-color .6s ease}
         #jira-direct-timer [data-fav-row][data-fresh] {background:#e3f4e8}
-        #jira-direct-timer a[data-fav-info] {display:block;flex:1;min-width:0;line-height:1.25;color:inherit;text-decoration:none}
-        #jira-direct-timer a[data-fav-info]:hover [data-fav-key] {text-decoration:underline}
-        #jira-direct-timer [data-fav-key] {display:block;overflow:hidden;color:#253249;font-size:10px;font-weight:700;text-overflow:ellipsis;white-space:nowrap}
+        #jira-direct-timer a[data-fav-info] {display:block;grid-column:1/-1;min-width:0;line-height:1.3;color:inherit;text-decoration:none;overflow-wrap:anywhere}
+        #jira-direct-timer a[data-fav-info]:hover [data-fav-summary] {text-decoration:underline}
+        #jira-direct-timer [data-fav-key] {display:block;color:#526078;font-size:10px}
         #jira-direct-timer [data-fav-dot] {margin-right:3px;color:#20559a}
-        #jira-direct-timer [data-fav-summary] {display:block;overflow:hidden;color:#526078;font-size:9px;text-overflow:ellipsis;white-space:nowrap}
-        #jira-direct-timer [data-fav-minutes] {flex-shrink:0;height:19px;padding:0 4px;font-size:9px}
-        #jira-direct-timer [data-fav-start],#jira-direct-timer [data-fav-stop] {flex-shrink:0;width:20px;height:19px;padding:0;font-size:8px;color:#fff}
+        #jira-direct-timer [data-fav-summary] {display:block;color:#253249;font-size:13px;font-weight:700}
+        #jira-direct-timer [data-fav-minutes] {grid-row:2;grid-column:2;min-height:36px;padding:0 4px;font-size:11px}
+        #jira-direct-timer [data-fav-start],#jira-direct-timer [data-fav-stop] {grid-row:2;grid-column:3;min-height:36px;padding:0;font-size:15px;color:#fff}
         #jira-direct-timer [data-fav-start] {background:#176538;border-color:#176538}
         #jira-direct-timer [data-fav-stop] {background:#a73434;border-color:#a73434}
-        #jira-direct-timer [data-fav-remove] svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+        #jira-direct-timer [data-fav-menu-toggle] {grid-row:2;grid-column:1;justify-self:start;min-width:36px;min-height:36px;padding:0;font-size:18px}
+        #jira-direct-timer [data-fav-menu] {grid-column:1/-1;display:grid;gap:4px;padding:6px;border:1px solid #b9c4d2;border-radius:6px;background:#fff}
+        #jira-direct-timer [data-fav-menu] button {text-align:left;min-height:36px}
+        #jira-direct-timer [data-fav-name-editor] {display:grid;gap:7px;margin:2px 0 6px;padding:8px;border:1px solid #dfe3e8;border-radius:7px;background:#fff}
+        #jira-direct-timer [data-fav-name-input] {width:100%;height:36px}
+        #jira-direct-timer [data-fav-name-hint] {font-size:10px;color:#526078;overflow-wrap:anywhere}
+        #jira-direct-timer [data-fav-name-actions] {display:flex;flex-wrap:wrap;gap:4px}
+        #jira-direct-timer [data-fav-name-actions] button {min-height:34px}
         #jira-direct-timer [data-fav-editor] {display:grid;grid-template-columns:minmax(0,1fr);gap:7px;margin:2px 0 6px;padding:8px;border:1px solid #dfe3e8;border-radius:7px;background:#fff}
         #jira-direct-timer [data-fav-editor-row] {display:flex;align-items:center;gap:6px}
         #jira-direct-timer [data-fav-quick] {flex:1;height:24px;padding:0 6px;font-size:10px}
@@ -245,6 +253,12 @@
     let favEditValue = '';
     let favEditInvalid = false;
     let favFocusEditor = false;
+    let favMenuKey = null;
+    let favNameKey = null;
+    let favNameValue = '';
+    let favFocusName = false;
+    let favFocusMenu = false;
+    let favFocusToggle = null;
     let favHighlight = null;
     let busy = false;
     let actionDisplay = null;
@@ -252,6 +266,7 @@
     let notice = '';
     const titles = new Map();
     const titleRequests = new Set();
+    const favoriteProjects = new Map();
     const worklogTotals = new Map();
     let notifications = [];
     let autoSettingsValue;
@@ -770,6 +785,7 @@
         }
         if (!Array.isArray(list) || list.length > FAVORITES_LIMIT || list.some((value, index) =>
             !value || !ISSUE_PATTERN.test(value.issue) || typeof value.title !== 'string' || value.title.length > 500 ||
+            (value.customTitle !== undefined && (typeof value.customTitle !== 'string' || !value.customTitle.trim() || value.customTitle.length > 500)) ||
             list.findIndex(other => other && other.issue === value.issue) !== index)) {
             throw new Error('Seznam obl\u00edben\u00fdch task\u016f je po\u0161kozen\u00fd. Nema\u017e data; je nutn\u00e1 kontrola.');
         }
@@ -802,7 +818,24 @@
     }
     function removeFavorite(key) {
         if (favEditKey === key) favEditKey = null;
+        if (favNameKey === key) favNameKey = null;
+        favMenuKey = null;
         changeFavorites(list => list.filter(value => value.issue !== key));
+    }
+    function loadFavoriteProject(key) {
+        if (favoriteProjects.has(key)) return;
+        favoriteProjects.set(key, {state: 'loading'});
+        request(`/rest/api/2/issue/${encodeURIComponent(key)}?fields=project`)
+            .then(body => {
+                const name = body.fields?.project?.name;
+                if (typeof name !== 'string' || !name.trim()) throw new Error('Jira nevr\u00e1tila n\u00e1zev projektu.');
+                favoriteProjects.set(key, {state: 'ready', name: name.trim()});
+                render();
+            })
+            .catch(e => {
+                favoriteProjects.set(key, {state: 'error', error: e.message});
+                render();
+            });
     }
     function closeFavoriteSearch() {
         favSearchOpen = false;
@@ -822,6 +855,8 @@
         closeFavoriteSearch();
         favEditKey = null;
         favEditValue = '';
+        favMenuKey = null;
+        favNameKey = null;
         favMessage = '';
         const finish = () => {
             favoritesOpen = false;
@@ -935,22 +970,68 @@
         editor.appendChild(row);
         return {editor, input};
     }
+    function favoriteNameEditor(item) {
+        const editor = favoriteNode('div', 'favNameEditor');
+        const input = favoriteNode('input', 'favNameInput');
+        input.type = 'text';
+        input.maxLength = 500;
+        input.value = favNameValue;
+        input.setAttribute('aria-label', `Vlastn\u00ed n\u00e1zev a emoji pro ${item.issue}`);
+        input.oninput = () => { favNameValue = input.value; };
+        const hint = favoriteNode('div', 'favNameHint', `P\u016fvodn\u00ed n\u00e1zev: ${item.originalTitle || item.issue}`);
+        const actions = favoriteNode('div', 'favNameActions');
+        const saveName = value => {
+            changeFavorites(list => list.map(favorite => {
+                if (favorite.issue !== item.issue) return favorite;
+                const next = {...favorite};
+                if (value) next.customTitle = value;
+                else delete next.customTitle;
+                return next;
+            }));
+            if (!favMessage) {
+                favNameKey = null;
+                favFocusToggle = item.issue;
+                render();
+            }
+        };
+        const saveNameButton = favoriteNode('button', 'favNameSave', 'Ulo\u017eit');
+        saveNameButton.onclick = () => saveName(favNameValue.trim());
+        const cancel = favoriteNode('button', 'favNameCancel', 'Zru\u0161it');
+        cancel.onclick = () => { favNameKey = null; favFocusToggle = item.issue; render(); };
+        const reset = favoriteNode('button', 'favNameReset', 'Obnovit p\u016fvodn\u00ed n\u00e1zev');
+        reset.onclick = () => saveName('');
+        input.onkeydown = event => {
+            if (event.key === 'Enter') { event.preventDefault(); saveNameButton.onclick(); }
+            else if (event.key === 'Escape') { event.preventDefault(); cancel.onclick(); }
+        };
+        actions.appendChild(saveNameButton);
+        actions.appendChild(cancel);
+        actions.appendChild(reset);
+        editor.appendChild(input);
+        editor.appendChild(hint);
+        editor.appendChild(actions);
+        return {editor, input};
+    }
     function favoriteRow(item) {
         const row = favoriteNode('div', 'favRow');
         row.dataset.favIssue = item.issue;
         if (item.fresh) row.dataset.fresh = '';
         const info = issueAnchor(favoriteNode('a', 'favInfo'), item.issue);
         info.setAttribute('title', `Otev\u0159\u00edt ${item.issue} v nov\u00e9 kart\u011b`);
-        const key = favoriteNode('span', 'favKey');
-        if (item.running) key.appendChild(favoriteNode('span', 'favDot', '\u25cf'));
-        key.appendChild(favoriteNode('span', 'favKeyText', item.issue));
+        const summary = favoriteNode('span', 'favSummary');
+        if (item.running) summary.appendChild(favoriteNode('span', 'favDot', '\u25cf'));
+        summary.appendChild(favoriteNode('span', 'favSummaryText', item.title || item.issue));
+        info.appendChild(summary);
+        const key = favoriteNode('span', 'favKey', `${item.project} \u00b7 ${item.issue}${item.projectError ? ' \u00b7 projekt nena\u010dten' : ''}`);
+        if (item.projectError) key.setAttribute('title', `N\u00e1zev projektu se nepoda\u0159ilo na\u010d\u00edst: ${item.projectError}`);
         info.appendChild(key);
-        info.appendChild(favoriteNode('span', 'favSummary', item.title));
         const add = favoriteNode('button', 'favMinutes', '+min');
         add.setAttribute('aria-label', `P\u0159idat minuty do ${item.issue}`);
         add.setAttribute('aria-expanded', String(item.editing));
         add.disabled = item.minutesDisabled;
         add.onclick = () => {
+            favMenuKey = null;
+            favNameKey = null;
             favEditKey = favEditKey === item.issue ? null : item.issue;
             favEditValue = '';
             favEditInvalid = false;
@@ -962,15 +1043,49 @@
         play.setAttribute('title', `${item.running ? 'Zastavit' : 'Spustit'} stopky na ${item.issue}`);
         play.disabled = item.running ? item.stopDisabled : item.startDisabled;
         play.onclick = () => item.running ? stop.onclick() : startFavorite(item.issue);
-        const remove = favoriteNode('button', 'favRemove');
-        remove.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 10v7m4-7v7"/></svg>';
-        remove.setAttribute('aria-label', `Odebrat ${item.issue} z obl\u00edben\u00fdch`);
-        remove.setAttribute('title', `Odebrat z obl\u00edben\u00fdch`);
-        remove.onclick = () => removeFavorite(item.issue);
+        const menuToggle = favoriteNode('button', 'favMenuToggle', '\u22ef');
+        menuToggle.setAttribute('aria-label', `Dal\u0161\u00ed akce pro ${item.issue}`);
+        menuToggle.setAttribute('aria-expanded', String(item.menuOpen));
+        menuToggle.onclick = () => {
+            favMenuKey = favMenuKey === item.issue ? null : item.issue;
+            favFocusMenu = !!favMenuKey;
+            favFocusToggle = favMenuKey ? null : item.issue;
+            favEditKey = null;
+            favNameKey = null;
+            render();
+        };
         row.appendChild(info);
         row.appendChild(add);
         row.appendChild(play);
-        row.appendChild(remove);
+        row.appendChild(menuToggle);
+        if (item.menuOpen) {
+            const menu = favoriteNode('div', 'favMenu');
+            const rename = favoriteNode('button', 'favRename', '\u270e  Upravit n\u00e1zev a emoji');
+            rename.onclick = () => {
+                favMenuKey = null;
+                favNameKey = item.issue;
+                favNameValue = item.customTitle || item.originalTitle;
+                favFocusName = true;
+                render();
+            };
+            const remove = favoriteNode('button', 'favRemove', '\u00d7  Odebrat z obl\u00edben\u00fdch');
+            remove.onclick = () => removeFavorite(item.issue);
+            menu.appendChild(rename);
+            if (item.projectError) {
+                const retry = favoriteNode('button', 'favProjectRetry', 'Zkusit znovu na\u010d\u00edst projekt');
+                retry.onclick = () => { favoriteProjects.delete(item.issue); loadFavoriteProject(item.issue); render(); };
+                menu.appendChild(retry);
+            }
+            menu.appendChild(remove);
+            menu.onkeydown = event => {
+                if (event.key !== 'Escape') return;
+                event.preventDefault();
+                favMenuKey = null;
+                favFocusToggle = item.issue;
+                render();
+            };
+            row.appendChild(menu);
+        }
         return row;
     }
     function favoriteResult(item, saved, full) {
@@ -1013,7 +1128,7 @@
         update(favAdd, 'hidden', favSearchOpen);
         update(favAdd, 'disabled', !!storageError || favoritesClosing);
         const full = !storageError && list.length >= FAVORITES_LIMIT;
-        const limitText = `M\u00e1\u0161 maximum ${FAVORITES_LIMIT} obl\u00edben\u00fdch. Dal\u0161\u00ed task p\u0159id\u00e1\u0161, a\u017e n\u011bkter\u00fd odebere\u0161 (ikona ko\u0161e).`;
+        const limitText = `M\u00e1\u0161 maximum ${FAVORITES_LIMIT} obl\u00edben\u00fdch. Dal\u0161\u00ed task p\u0159id\u00e1\u0161, a\u017e n\u011bkter\u00fd odebere\u0161 (nab\u00eddka \u22ef).`;
         update(favSearchWrap, 'hidden', !favSearchOpen);
         update(favSearch, 'disabled', full);
         updateAttr(favSearch, 'placeholder', full ? `Limit ${FAVORITES_LIMIT} obl\u00edben\u00fdch je pln\u00fd` : 'Hledat task: kl\u00ed\u010d nebo n\u00e1zev');
@@ -1032,13 +1147,20 @@
         const fresh = favHighlight && Date.now() < favHighlight.until ? favHighlight.issue : '';
         for (const favorite of list) {
             if (favorite.title && !titles.has(favorite.issue)) titles.set(favorite.issue, favorite.title);
+            loadFavoriteProject(favorite.issue);
         }
         const items = list.map(favorite => ({
             issue: favorite.issue,
-            title: favorite.title || titleFor({issue: favorite.issue}),
+            originalTitle: favorite.title || titleFor({issue: favorite.issue}),
+            customTitle: favorite.customTitle || '',
+            title: favorite.customTitle || favorite.title || titleFor({issue: favorite.issue}),
+            project: favoriteProjects.get(favorite.issue)?.name || favorite.issue.split('-')[0],
+            projectError: favoriteProjects.get(favorite.issue)?.error || '',
             running: favorite.issue === runningIssue,
             fresh: favorite.issue === fresh,
             editing: favorite.issue === favEditKey,
+            nameEditing: favorite.issue === favNameKey,
+            menuOpen: favorite.issue === favMenuKey,
             startDisabled: blocked || (active && value.issue === favorite.issue),
             stopDisabled: timerBroken || busy || !!(value && value.manualEntry) || favoritesClosing,
             minutesDisabled: blocked || !!(value && value.phase === 'pending')
@@ -1047,22 +1169,53 @@
         const signature = JSON.stringify([items, storageError, favSearchOpen, favSearchState, favSearchItems, favMessage, favEditKey, busy, full]);
         if (signature === favoritesSignature) return;
         favoritesSignature = signature;
+        const focusedName = document.activeElement && document.activeElement.dataset && 'favNameInput' in document.activeElement.dataset;
+        const focusedMinutes = document.activeElement && document.activeElement.dataset && 'favMinutesInput' in document.activeElement.dataset;
+        const activeRow = document.activeElement && document.activeElement.closest && document.activeElement.closest('[data-fav-row]');
+        const activeAction = activeRow && ['favMenuToggle', 'favRename', 'favRemove', 'favProjectRetry', 'favMinutes', 'favStart', 'favStop']
+            .find(name => name in document.activeElement.dataset);
+        const activeIssue = activeRow && activeRow.dataset.favIssue;
+        const selectionStart = focusedName ? document.activeElement.selectionStart : null;
+        const selectionEnd = focusedName ? document.activeElement.selectionEnd : null;
         const rows = [];
         let editorInput = null;
+        let menuFocus = null;
+        let toggleFocus = null;
         for (const item of items) {
-            rows.push(favoriteRow(item));
+            const row = favoriteRow(item);
+            rows.push(row);
+            if (item.menuOpen && favFocusMenu) menuFocus = row.children[4].children[0];
+            if (favFocusToggle === item.issue) toggleFocus = row.children[3];
             if (item.editing) {
                 const {editor, input} = favoriteEditor(item.issue);
                 rows.push(editor);
-                editorInput = input;
+                if (favFocusEditor || focusedMinutes) editorInput = input;
+            }
+            if (item.nameEditing) {
+                const {editor, input} = favoriteNameEditor(item);
+                rows.push(editor);
+                if (favFocusName || focusedName) editorInput = input;
             }
         }
         if (!items.length && !storageError) {
             rows.push(favoriteNode('div', 'favEmpty', 'Zat\u00edm tu nic nen\u00ed. P\u0159idej task tla\u010d\u00edtkem +.'));
         }
         favList.replaceChildren(...rows);
-        if (editorInput && favFocusEditor) editorInput.focus();
+        if (editorInput && (favFocusEditor || favFocusName || focusedName || focusedMinutes)) {
+            editorInput.focus();
+            if (focusedName && selectionStart !== null && selectionEnd !== null) editorInput.setSelectionRange(selectionStart, selectionEnd);
+        } else if (menuFocus) menuFocus.focus();
+        else if (toggleFocus) toggleFocus.focus();
+        else if (activeIssue && activeAction) {
+            const row = favList.querySelector(`[data-fav-issue="${activeIssue}"]`);
+            const attribute = activeAction.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`);
+            const action = row && row.querySelector(`[data-${attribute}]`);
+            if (action) action.focus();
+        }
         favFocusEditor = false;
+        favFocusName = false;
+        favFocusMenu = false;
+        favFocusToggle = null;
         const searchError = favoriteNode('div', 'favMessage', favMessage);
         searchError.dataset.state = 'error';
         const results = favSearchState === 'error' ? [searchError] : favSearchState === 'loading' ? [favoriteNode('div', 'favMessage', 'Hled\u00e1m\u2026')] :
@@ -1080,6 +1233,8 @@
     favAdd.onclick = () => {
         favSearchOpen = true;
         favEditKey = null;
+        favMenuKey = null;
+        favNameKey = null;
         favMessage = '';
         render();
         favSearch.focus();

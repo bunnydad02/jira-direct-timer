@@ -44,6 +44,8 @@ Zmeny vzhledu ukazuje diff PR, starsi podoby historie souboru a Git tagy vydani.
 | --- | --- |
 | Stitek oblibene s poctem (`favorites-chip`) | ![Stitek oblibene s poctem](./favorites-chip.png) |
 | Otevrene oblibene nad stopkami (`favorites-open`) | ![Otevrene oblibene nad stopkami](./favorites-open.png) |
+| Nabidka oblibeneho tasku (`favorites-menu`) | ![Nabidka oblibeneho tasku](./favorites-menu.png) |
+| Uprava vlastniho nazvu a emoji (`favorites-rename`) | ![Uprava vlastniho nazvu a emoji](./favorites-rename.png) |
 | Naseptavac: odkaz do nove karty, + prida (`favorites-search`) | ![Naseptavac: odkaz do nove karty, + prida](./favorites-search.png) |
 | +min do oblibeneho tasku (`favorites-minutes`) | ![+min do oblibeneho tasku](./favorites-minutes.png) |
 | Bezici oblibeny task: stop misto startu (`favorites-running`) | ![Bezici oblibeny task: stop misto startu](./favorites-running.png) |
