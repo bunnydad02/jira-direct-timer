@@ -94,6 +94,9 @@ function setup(initial, failureAt = 0, input = '30', existing = false, latency =
             return {ok: true, json: async () => onPicker(query)};
         }
         if (path === '/rest/api/2/myself') return {ok: true, json: async () => onIdentity()};
+        if (/^\/rest\/api\/2\/issue\/[A-Z][A-Z0-9_]*-\d+\?fields=project$/.test(path)) {
+            return {ok: true, json: async () => ({fields: {project: {name: 'Example Project'}}})};
+        }
         const match = /^\/rest\/api\/2\/issue\/(DEMO-10[1-9])(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
         if (match && match[2] === '?fields=summary') {
             return {ok: true, json: async () => ({fields: {summary: 'Other issue full title'}})};
@@ -952,6 +955,7 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
     assert.equal(favResultRows(favorites).length, 0, 'adding clears the results');
     assert.ok('fresh' in favRow(favorites, 'OPS-140').dataset, 'highlight the newly added favorite');
     favRow(favorites, 'OPS-140').children[3].onclick();
+    favRow(favorites, 'OPS-140').children[4].children[1].onclick();
     assert.deepEqual(favorites.favorites(), [{issue: 'DEMO-102', title: 'Code review'}]);
     assert.equal(favorites.posts.length, 0);
     await favRow(favorites, 'DEMO-102').children[2].onclick();
@@ -1042,9 +1046,9 @@ const running = () => ({id: 'old', issue: 'DEMO-102', started: 199875000, ended:
 
     const openFavorite = setup(null, 0, '30', false, 0, {favorites: [{issue: 'DEMO-101', title: ''}]});
     openFavorite.click('fav-open');
-    const openKey = favRow(openFavorite, 'DEMO-101').children[0].children[0];
-    assert.equal(openKey.children.length, 1, 'do not label the favorite of the open issue');
-    assert.equal(favRow(openFavorite, 'DEMO-101').children[0].children[1].textContent, 'Full issue title <safe text>');
+    const openTitle = favRow(openFavorite, 'DEMO-101').children[0].children[0];
+    assert.equal(openTitle.children.length, 1, 'do not label the favorite of the open issue');
+    assert.equal(openTitle.children[0].textContent, 'Full issue title <safe text>');
     openFavorite.externalFavorites([]);
     assert.equal(openFavorite.nodes['[data-fav-count]'].textContent, '0', 'reflect favorites changed in another tab');
     assert.match(openFavorite.nodes['[data-fav-list]'].children[0].textContent, /Zat\u00edm tu nic nen\u00ed/);

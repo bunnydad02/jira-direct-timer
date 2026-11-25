@@ -65,9 +65,14 @@ prehled vydanych verzi a jejich zmen.
   zelenou teckou (minuty ukaze tooltip), vypnute sede s prazdnym krouzkem a
   poskozene nastaveni cervene jako `auto !`.
 - Stitek `oblibene N` vedle nadpisu otevre seznam oblibenych tasku (max 10).
+  Zobrazuje nazev tasku, cely nazev projektu a klic. Nabidka `⋯` umoznuje
+  nastavit vlastni nazev vcetne emoji nebo task odebrat; zmena nazvu plati
+  jen v oblibenych, nikoli v Jire. Puvodni nazev lze obnovit. Emoji lze vlozit
+  z klavesnice (ve Windows `Win + .`). Pri chybe nacteni projektu je videt
+  jeho klic a chyba, v nabidce lze nacteni opakovat.
   U kazdeho je `+min` (zapis minut primo do nej), `▶` (spusti stopky stejne
   jako START, i kdyz task neni otevreny, a seznam se zavre), `■` u
-  bezici polozky a kos pro odebrani. `+` otevre hledani: klik na nazev
+  bezici polozky. `+` otevre hledani: klik na nazev
   otevre task v nove karte, jen `+` u vysledku ho ulozi. Pri plnem seznamu
   je hledani zablokovane s vysvetlenim.
 - Panel zobrazuje pouze tvuj dosud vykazany cas otevreneho ukolu podle

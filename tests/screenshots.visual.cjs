@@ -105,9 +105,23 @@ const groups = [
         }},
         {name: 'favorites-open', title: 'Otevrene oblibene nad stopkami', run: async p => {
             await p.reset({favorites: [
-                {issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'},
+                {issue: 'OPS-12', title: 'Porady a komunikace', customTitle: '🗣️ Schůzky'}, {issue: 'DEMO-102', title: 'Testovaci task: kontrola a opravy'},
                 {issue: 'DEMO-101', title: 'Testovaci task: implementace'}]});
             await p.click('fav-open');
+            await p.idle();
+        }},
+        {name: 'favorites-menu', title: 'Nabidka oblibeneho tasku', run: async p => {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace', customTitle: '🗣️ Schůzky'}]});
+            await p.click('fav-open');
+            await p.idle();
+            p.node('fav-menu-toggle').click();
+        }},
+        {name: 'favorites-rename', title: 'Uprava vlastniho nazvu a emoji', run: async p => {
+            await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace', customTitle: '🗣️ Schůzky'}]});
+            await p.click('fav-open');
+            await p.idle();
+            p.node('fav-menu-toggle').click();
+            p.node('fav-rename').click();
         }},
         {name: 'favorites-search', title: 'Naseptavac: odkaz do nove karty, + prida', run: async p => {
             await p.reset({favorites: [{issue: 'OPS-12', title: 'Porady a komunikace'}, {issue: 'ARCH-3', title: 'Architecture review board'}]});

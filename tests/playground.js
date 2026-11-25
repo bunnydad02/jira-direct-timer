@@ -14,6 +14,7 @@
         'OPS-140': 'Review pristupu',
         'ARCH-3': 'Architecture review board'
     };
+    const projects = {DEMO: 'Demo projekt', OPS: 'Quality Assurance', ARCH: 'Architektura'};
     const nativeDate = Date;
     let model;
     let interval;
@@ -80,8 +81,8 @@
             const createForm = path === '/secure/QuickCreateIssue.jspa';
             const createIssue = (path === '/rest/api/2/issue' || createForm) && method === 'POST';
             const picker = path.startsWith('/rest/api/2/issue/picker?') && method === 'GET';
-            const fixture = /^\/rest\/api\/2\/issue\/([A-Z][A-Z0-9_]*-\d+)(\?fields=summary|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
-            const match = fixture && Object.hasOwn(titles, fixture[1]) ? fixture : null;
+            const fixture = /^\/rest\/api\/2\/issue\/([A-Z][A-Z0-9_]*-\d+)(\?fields=summary|\?fields=project|\?fields=subtasks|\/worklog\?.+)$/.exec(path);
+            const match = fixture && (Object.hasOwn(titles, fixture[1]) || fixture[2] === '?fields=project') ? fixture : null;
             if ((!match && !myself && !createIssue && !picker) || !['GET', 'POST'].includes(method)) throw new Error(`Blocked unexpected mock API request: ${method} ${path}`);
             current.requests.push({method, path});
             current.active++;
@@ -104,6 +105,10 @@
                     return {ok: true, clone: () => ({json: async () => body})};
                 }
                 const issue = match[1];
+                if (match[2] === '?fields=project') {
+                    if (current.projectError) throw new Error('Simulovana chyba projektu');
+                    return {ok: true, json: async () => ({fields: {project: {name: projects[issue.split('-')[0]] || issue.split('-')[0]}}})};
+                }
                 if (match[2] === '?fields=summary') {
                     if (method !== 'GET') throw new Error('Summary fixture is read-only');
                     return {ok: true, json: async () => ({fields: {summary: titles[issue]}})};
@@ -169,6 +174,7 @@
             autoQueueRaw: options.autoQueue ? JSON.stringify(options.autoQueue) : null,
             favoritesRaw: typeof options.favorites === 'string' ? options.favorites : options.favorites ? JSON.stringify(options.favorites) : null,
             pickerError: options.pickerError || false,
+            projectError: options.projectError || false,
             logs: clone(options.logs || []).map(log => ({author: clone(user), ...log})), requests: [], posts: [], offset: 0, active: 0,
             latency: options.latency ?? 30, failure: 'none', lock: options.lock || 'available',
             totalError: options.totalError || false, location: {pathname: '', search: '', origin: 'https://jira.alza.cz',
@@ -197,6 +203,7 @@
         now: () => nativeDate.now() + model.offset,
         advance(ms) { model.offset += ms; render(); },
         failure(value) { model.failure = value; $('#failure').value = value; },
+        projectFailure(value) { model.projectError = value; },
         async reload() { mount(); await idle(); },
         async createIssue(subtask = false) {
             await timerWindow.fetch(subtask ? '/secure/QuickCreateIssue.jspa' : '/rest/api/2/issue',
